@@ -1436,8 +1436,7 @@ template <typename T>
     }
 struct hash<beman::optional::optional<T>> {
     static_assert(!is_reference_v<T>, "hash is not enabled for reference types");
-    size_t operator()(const beman::optional::optional<T>& o) const
-        noexcept(noexcept(hash<remove_const_t<T>>{}(*o))) {
+    size_t operator()(const beman::optional::optional<T>& o) const noexcept(noexcept(hash<remove_const_t<T>>{}(*o))) {
         if (o) {
             return std::hash<std::remove_const_t<T>>{}(*o);
         } else {

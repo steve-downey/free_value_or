@@ -280,7 +280,7 @@ BEMAN_OPTIONAL_DETAIL_STL_INTERFACES_NAMESPACE_V1 {
             return retval;
         }
         friend BEMAN_OPTIONAL_DETAIL_STL_INTERFACES_HIDDEN_FRIEND_CONSTEXPR Derived operator+(difference_type i,
-                                                                                                Derived it) noexcept {
+                                                                                              Derived it) noexcept {
             return it + i;
         }
 
@@ -970,16 +970,16 @@ BEMAN_OPTIONAL_DETAIL_STL_INTERFACES_NAMESPACE_V3 {
 #define BEMAN_OPTIONAL_DETAIL_STL_INTERFACES_STATIC_ASSERT_CONCEPT(iter, concept_name)
 #endif
 
-#define BEMAN_OPTIONAL_DETAIL_STL_INTERFACES_STATIC_ASSERT_ITERATOR_TRAITS_IMPL(                    \
+#define BEMAN_OPTIONAL_DETAIL_STL_INTERFACES_STATIC_ASSERT_ITERATOR_TRAITS_IMPL(                      \
     iter, category, value_t, ref, ptr, diff_t)                                                        \
     static_assert(std::is_same<typename std::iterator_traits<iter>::value_type, value_t>::value, ""); \
     static_assert(std::is_same<typename std::iterator_traits<iter>::reference, ref>::value, "");      \
     static_assert(std::is_same<typename std::iterator_traits<iter>::pointer, ptr>::value, "");        \
     static_assert(std::is_same<typename std::iterator_traits<iter>::difference_type, diff_t>::value, "");
 
-#define BEMAN_OPTIONAL_DETAIL_STL_INTERFACES_STATIC_ASSERT_ITERATOR_TRAITS(  \
-    iter, category, concept, value_type, reference, pointer, difference_type)  \
-    BEMAN_OPTIONAL_DETAIL_STL_INTERFACES_STATIC_ASSERT_ITERATOR_TRAITS_IMPL( \
+#define BEMAN_OPTIONAL_DETAIL_STL_INTERFACES_STATIC_ASSERT_ITERATOR_TRAITS(   \
+    iter, category, concept, value_type, reference, pointer, difference_type) \
+    BEMAN_OPTIONAL_DETAIL_STL_INTERFACES_STATIC_ASSERT_ITERATOR_TRAITS_IMPL(  \
         iter, category, value_type, reference, pointer, difference_type)
 #endif
 
