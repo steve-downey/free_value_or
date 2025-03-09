@@ -101,6 +101,17 @@ TEST(OptionalRefTest, BaseDerivedCastConstruction) {
     EXPECT_TRUE(dopt2.has_value());
 }
 
+TEST(OptionalRefTest, BaseDerivedCastEmplace) {
+    base                                b;
+    derived&                            dref(b); // ok
+    beman::optional::optional<derived&> dopt1;
+    dopt1.emplace(b);
+    beman::optional::optional<derived&> dopt2;
+    dopt2.emplace(dref);
+    EXPECT_TRUE(dopt1.has_value());
+    EXPECT_TRUE(dopt2.has_value());
+}
+
 TEST(OptionalRefTest, Assignment) {
     beman::optional::optional<int&> i1;
     EXPECT_FALSE(i1);
