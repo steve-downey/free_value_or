@@ -257,7 +257,7 @@ TEST(RangeSupportTest, LoopOverEmptyRange) {
 
 TEST(RangeSupportTest, LoopOverNonEmptyRange) {
     auto lambda = [&] {
-        const auto                     expected_value = 0xCAFEBABE;
+        const int                      expected_value = 0xCAFEBABE;
         beman::optional::optional<int> empty{expected_value};
         CONSTEXPR_ASSERT_TRUE(empty.has_value());
 
