@@ -699,21 +699,15 @@ inline constexpr bool optional<T>::has_value() const noexcept {
 /// bad_optional_access
 template <class T>
 inline constexpr T& optional<T>::value() & {
-    if (has_value())
-        return value_;
-    throw bad_optional_access();
+    return has_value() ? value_ : throw bad_optional_access();
 }
 template <class T>
 inline constexpr const T& optional<T>::value() const& {
-    if (has_value())
-        return value_;
-    throw bad_optional_access();
+    return has_value() ? value_ : throw bad_optional_access();
 }
 template <class T>
 inline constexpr T&& optional<T>::value() && {
-    if (has_value())
-        return std::move(value_);
-    throw bad_optional_access();
+    return has_value() ? std::move(value_) : throw bad_optional_access();
 }
 
 /// Returns the stored value if there is one, otherwise returns `u`
@@ -1342,9 +1336,7 @@ constexpr bool optional<T&>::has_value() const noexcept {
 
 template <class T>
 constexpr T& optional<T&>::value() const {
-    if (has_value())
-        return *value_;
-    throw bad_optional_access();
+    return has_value() ? *value_ : throw bad_optional_access();
 }
 
 template <class T>
@@ -1352,11 +1344,7 @@ template <class U>
 constexpr std::remove_cv_t<T> optional<T&>::value_or(U&& u) const {
     static_assert(std::is_constructible_v<std::remove_cv_t<T>, T&>, "T must be constructible from a T&");
     static_assert(std::is_convertible_v<U, std::remove_cv_t<T>>, "Must be able to convert u to T");
-    if (has_value()) {
-        return std::remove_cv_t<T>(*value_);
-    } else {
-        return std::forward<U>(u);
-    }
+    return has_value() ? std::remove_cv_t<T>(*value_) : std::forward<U>(u);
 }
 
 //   \rSec3[optionalref.monadic]{Monadic operations}
