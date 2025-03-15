@@ -1180,7 +1180,7 @@ class optional<T&> {
     constexpr explicit operator bool() const noexcept;
     constexpr bool     has_value() const noexcept;
     constexpr T&       value() const;
-    template <class U>
+    template <class U = std::remove_cv_t<T>>
     constexpr T value_or(U&& u) const;
 
     // \ref{optionalref.monadic}, monadic operations
