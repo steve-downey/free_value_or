@@ -476,6 +476,11 @@ TEST(OptionalRefTest, Observers) {
     // auto t4 = so2.value_or("bark");
     // std::tuple<const std::string&> t("meow");
 
+    auto t5 = so1.value_or({});
+    auto t6 = so2.value_or({});
+    EXPECT_EQ(t5, std::string());
+    EXPECT_EQ(t6, meow);
+
     auto success = std::is_same<decltype(o1.value()), int&>::value;
     static_assert(std::is_same<decltype(o1.value()), int&>::value);
     EXPECT_TRUE(success);
