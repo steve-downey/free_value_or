@@ -1187,7 +1187,7 @@ class optional<T&> {
     template <class F>
     constexpr auto and_then(F&& f) const;
     template <class F>
-    constexpr auto transform(F&& f) const -> optional<std::invoke_result_t<F, T&>>;
+    constexpr optional<std::invoke_result_t<F, T&>> transform(F&& f) const;
     template <class F>
     constexpr optional or_else(F&& f) const;
 
@@ -1362,7 +1362,7 @@ constexpr auto optional<T&>::and_then(F&& f) const {
 
 template <class T>
 template <class F>
-constexpr auto optional<T&>::transform(F&& f) const -> optional<std::invoke_result_t<F, T&>> {
+constexpr optional<std::invoke_result_t<F, T&>> optional<T&>::transform(F&& f) const {
     using U = std::invoke_result_t<F, T&>;
     static_assert(!std::is_same_v<std::remove_cvref_t<U>, in_place_t>, "Result must not be in_place_t");
     static_assert(!std::is_same_v<std::remove_cvref_t<U>, nullopt_t>, "Result must not be nullopt_t");
