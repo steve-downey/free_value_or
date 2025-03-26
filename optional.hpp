@@ -1195,14 +1195,14 @@ class optional<T&> {
     constexpr void reset() noexcept;
 
   private:
-    T* value_; // exposition only
+    T* value_ = nullptr; // exposition only
 
     // \ref{optionalref.expos}, exposition only helper functions
     template <class U>
     constexpr void convert_ref_init_val(U&& u) {
-        //  Creates a variable, \tcode{r}, as if by \tcode{T\&
-        //  r(std::forward<Arg>(arg));} and then initializes \exposid{val} with
-        //  \tcode{addressof(r)}
+        // Creates a variable, \tcode{r},
+        // as if by \tcode{T\& r(std::forward<U>(u));}
+        // and then initializes \exposid{val} with \tcode{addressof(r)}
         T& r(std::forward<U>(u));
         value_ = std::addressof(r);
     }
@@ -1210,16 +1210,16 @@ class optional<T&> {
 
 //  \rSec3[optionalref.ctor]{Constructors}
 template <class T>
-constexpr optional<T&>::optional() noexcept : value_(nullptr) {}
+constexpr optional<T&>::optional() noexcept {}
 
 template <class T>
-constexpr optional<T&>::optional(nullopt_t) noexcept : value_(nullptr) {}
+constexpr optional<T&>::optional(nullopt_t) noexcept {}
 
 template <class T>
 template <class Arg>
     requires(std::is_constructible_v<T&, Arg> && !detail::reference_constructs_from_temporary_v<T&, Arg>)
 constexpr optional<T&>::optional(in_place_t, Arg&& arg) {
-    convert_ref_init_val(arg);
+    convert_ref_init_val(std::forward<Arg>(arg));
 }
 
 // Clang is unhappy with the out-of-line definition
@@ -1238,8 +1238,6 @@ template <class U>
 constexpr optional<T&>::optional(optional<U>& rhs) noexcept(std::is_nothrow_constructible_v<T&, U&>) {
     if (rhs.has_value()) {
         convert_ref_init_val(*rhs);
-    } else {
-        value_ = nullptr;
     }
 }
 
@@ -1250,8 +1248,6 @@ template <class U>
 constexpr optional<T&>::optional(const optional<U>& rhs) noexcept(std::is_nothrow_constructible_v<T&, const U&>) {
     if (rhs.has_value()) {
         convert_ref_init_val(*rhs);
-    } else {
-        value_ = nullptr;
     }
 }
 
@@ -1262,8 +1258,6 @@ template <class U>
 constexpr optional<T&>::optional(optional<U>&& rhs) noexcept(noexcept(std::is_nothrow_constructible_v<T&, U>)) {
     if (rhs.has_value()) {
         convert_ref_init_val(*std::move(rhs));
-    } else {
-        value_ = nullptr;
     }
 }
 
@@ -1275,8 +1269,6 @@ constexpr optional<T&>::optional(const optional<U>&& rhs) noexcept(
     noexcept(std::is_nothrow_constructible_v<T&, const U>)) {
     if (rhs.has_value()) {
         convert_ref_init_val(*std::move(rhs));
-    } else {
-        value_ = nullptr;
     }
 }
 
@@ -1291,7 +1283,7 @@ template <class T>
 template <class U>
     requires(std::is_constructible_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, U>)
 constexpr T& optional<T&>::emplace(U&& u) noexcept(std::is_nothrow_constructible_v<T&, U>) {
-    convert_ref_init_val(u);
+    convert_ref_init_val(std::forward<U>(u));
     return *value_;
 }
 
@@ -1379,7 +1371,7 @@ template <class T>
 template <class F>
 constexpr optional<T&> optional<T&>::or_else(F&& f) const {
     using U = std::invoke_result_t<F>;
-    static_assert(std::is_same_v<std::remove_cvref_t<U>, optional>);
+    static_assert(std::is_same_v<std::remove_cvref_t<U>, optional>, "Result must be an optioanl");
     if (has_value()) {
         return *value_;
     } else {
