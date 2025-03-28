@@ -69,7 +69,7 @@ inline constexpr bool std::ranges::enable_view<beman::optional::optional<T>> = t
 
 // Iterators for optional<T&> have life times that are not tied to the optional.
 template <class T>
-inline constexpr bool std::ranges::enable_borrowed_range<beman::optional::optional<T>> = std::is_reference_v<T>;
+inline constexpr bool std::ranges::enable_borrowed_range<beman::optional::optional<T&>> = true;
 
 // Since P3168R2: Give std::optional Range Support.
 #if defined(__cpp_lib_format_ranges)
