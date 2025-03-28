@@ -1084,8 +1084,8 @@ class optional<T&> {
   public:
     // \ref{optionalref.ctor}, constructors
 
-    constexpr optional() noexcept;
-    constexpr optional(nullopt_t) noexcept;
+    constexpr optional() noexcept = default;
+    constexpr optional(nullopt_t) noexcept : optional() {}
     constexpr optional(const optional& rhs) noexcept = default;
 
     template <class Arg>
@@ -1209,12 +1209,6 @@ class optional<T&> {
 };
 
 //  \rSec3[optionalref.ctor]{Constructors}
-template <class T>
-constexpr optional<T&>::optional() noexcept {}
-
-template <class T>
-constexpr optional<T&>::optional(nullopt_t) noexcept {}
-
 template <class T>
 template <class Arg>
     requires(std::is_constructible_v<T&, Arg> && !detail::reference_constructs_from_temporary_v<T&, Arg>)
