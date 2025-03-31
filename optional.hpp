@@ -1365,7 +1365,7 @@ template <class T>
 template <class F>
 constexpr optional<T&> optional<T&>::or_else(F&& f) const {
     using U = std::invoke_result_t<F>;
-    static_assert(std::is_same_v<std::remove_cvref_t<U>, optional>, "Result must be an optioanl");
+    static_assert(std::is_same_v<std::remove_cvref_t<U>, optional>, "Result must be an optional");
     if (has_value()) {
         return *value_;
     } else {
