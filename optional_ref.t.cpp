@@ -541,6 +541,24 @@ TEST(OptionalRefTest, Observers) {
     EXPECT_TRUE(success);
 }
 
+TEST(OptionalRefTest, AmbiguousConversion) {
+    struct TypedInt {
+        int c;
+        TypedInt(int i) : c(i) {}
+        operator int() const { return c; }
+    };
+    TypedInt c{42};
+    auto x1 = beman::optional::optional<int>{}.value_or(c);
+    auto x2 = beman::optional::optional<TypedInt>{}.value_or(7);
+
+    auto x3 = beman::optional::optional<int&>{}.value_or(c);
+    auto x4 = beman::optional::optional<TypedInt&>{}.value_or(7);
+    EXPECT_EQ(x1, 42);
+    EXPECT_EQ(x2, 7);
+    EXPECT_EQ(x3, 42);
+    EXPECT_EQ(x4, 7);
+}
+
 TEST(OptionalRefTest, MoveCheck) {
     int  x = 0;
     int& y = std::move(beman::optional::optional<int&>(x)).value();
