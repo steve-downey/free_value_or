@@ -547,7 +547,9 @@ TEST(OptionalRefTest, AmbiguousConversion) {
         TypedInt(int i) : c(i) {}
         operator int() const { return c; }
     };
+
     TypedInt c{42};
+
     auto x1 = beman::optional::optional<int>{}.value_or(c);
     auto x2 = beman::optional::optional<TypedInt>{}.value_or(7);
 
