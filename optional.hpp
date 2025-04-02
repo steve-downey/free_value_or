@@ -1330,7 +1330,7 @@ template <class U>
 constexpr std::remove_cv_t<T> optional<T&>::value_or(U&& u) const {
     static_assert(std::is_constructible_v<std::remove_cv_t<T>, T&>, "T must be constructible from a T&");
     static_assert(std::is_convertible_v<U, std::remove_cv_t<T>>, "Must be able to convert u to T");
-    return has_value() ? *value_ : std::forward<U>(u);
+    return has_value() ? *value_ : static_cast<std::remove_cv_t<T>>(std::forward<U>(u));
 }
 
 //   \rSec3[optionalref.monadic]{Monadic operations}
