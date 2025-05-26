@@ -509,6 +509,16 @@ TEST(OptionalTest, MakeOptional) {
     EXPECT_TRUE(o5->v[1] == 1);
     EXPECT_TRUE(std::get<0>(o5->t) == 2);
     EXPECT_TRUE(std::get<1>(o5->t) == 3);
+
+    struct for_variadic {
+        int a;
+        int b;
+        int c;
+    };
+
+    auto o6 = beman::optional::make_optional<for_variadic>(0, 1, 3);
+    EXPECT_TRUE(o6);
+    EXPECT_EQ(o6->a, 0);
 }
 
 TEST(OptionalTest, Nullopt) {
