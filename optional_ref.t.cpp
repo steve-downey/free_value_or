@@ -527,17 +527,21 @@ TEST(OptionalRefTest, Observers) {
     beman::optional::optional<int_box&>       ob1 = i1;
     beman::optional::optional<int_box&>       ob2;
     const beman::optional::optional<int_box&> ob3 = i1;
-    success                                       = std::is_same<decltype(ob1->i_), int>::value;
-    static_assert(std::is_same<decltype(ob1->i_), int>::value);
+
+    EXPECT_EQ(ob1->i_, 3);
+    EXPECT_EQ(ob3->i_, 3);
+
+    success = std::is_same_v<decltype(ob1->i_), int>;
+    static_assert(std::is_same_v<decltype(ob1->i_), int>);
     EXPECT_TRUE(success);
-    success = std::is_same<decltype(ob2->i_), int>::value;
-    static_assert(std::is_same<decltype(ob2->i_), int>::value);
+    success = std::is_same_v<decltype(ob2->i_), int>;
+    static_assert(std::is_same_v<decltype(ob2->i_), int>);
     EXPECT_TRUE(success);
-    success = std::is_same<decltype(ob3->i_), int>::value;
-    static_assert(std::is_same<decltype(ob3->i_), int>::value);
+    success = std::is_same_v<decltype(ob3->i_), int>;
+    static_assert(std::is_same_v<decltype(ob3->i_), int>);
     EXPECT_TRUE(success);
-    success = std::is_same<decltype(std::move(ob1)->i_), int>::value;
-    static_assert(std::is_same<decltype(std::move(ob1)->i_), int>::value);
+    success = std::is_same_v<decltype(std::move(ob1)->i_), int>;
+    static_assert(std::is_same_v<decltype(std::move(ob1)->i_), int>);
     EXPECT_TRUE(success);
 }
 
