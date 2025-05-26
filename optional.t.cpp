@@ -153,6 +153,52 @@ TEST(OptionalTest, OptionalOfOptional) {
     EXPECT_TRUE(oo2.value() == 43);
 }
 
+TEST(OptionalTest, EmplaceVariadic) {
+    struct for_emplace {
+        int a;
+        int b;
+        int c;
+    } f{4, 5, 6};
+
+    beman::optional::optional<for_emplace> o3;
+    o3.emplace(1, 2, 3);
+    EXPECT_TRUE(o3.has_value());
+
+    beman::optional::optional<for_emplace> engaged{f};
+    engaged.emplace(1, 2, 3);
+    EXPECT_TRUE(engaged.has_value());
+    EXPECT_EQ(engaged->a, 1);
+}
+
+TEST(OptionalTest, EmplaceInitializerList) {
+    struct for_emplace {
+        std::vector<int> v; //something to construct with list
+        std::string name = "";
+        for_emplace(std::initializer_list<int> l) : v(l){
+        }
+        for_emplace(std::initializer_list<int> l, std::string n) : v(l), name(n) {}
+    } f{{1,2,3}};
+
+    beman::optional::optional<for_emplace> o3;
+    o3.emplace({1, 2, 3});
+    EXPECT_TRUE(o3.has_value());
+
+    beman::optional::optional<for_emplace> engaged{f};
+    auto e1 = engaged.emplace({1, 2, 3});
+    EXPECT_TRUE(engaged.has_value());
+    EXPECT_EQ(engaged->v[0], 1);
+    EXPECT_EQ(engaged->name, std::string(""));
+    EXPECT_EQ(engaged->v[0], e1.v[0]);
+    EXPECT_EQ(engaged->name, e1.name);
+
+    auto e2 = engaged.emplace({2, 3, 4}, "Name");
+    EXPECT_TRUE(engaged.has_value());
+    EXPECT_EQ(engaged->v[0], 2);
+    EXPECT_EQ(engaged->name, std::string("Name"));
+    EXPECT_EQ(engaged->v[0], e2.v[0]);
+    EXPECT_EQ(engaged->name, e2.name);
+}
+
 TEST(OptionalTest, AssignmentValue) {
     beman::optional::optional<int> o1 = 42;
     beman::optional::optional<int> o2 = 12;
@@ -241,6 +287,31 @@ TEST(OptionalTest, AssignmentValue) {
     // Move from empty into engaged optional.
     o8 = std::move(o5);
     EXPECT_FALSE(o8);
+}
+
+TEST(OptionalTest, ValueObserver) {
+    beman::optional::optional<int> empty;
+    beman::optional::optional<int> bound{5};
+    EXPECT_TRUE(bound);
+    EXPECT_FALSE(empty);
+    EXPECT_EQ(*bound, 5);
+    EXPECT_EQ(bound.value(), 5);
+    EXPECT_EQ(std::as_const(bound).value(), 5);
+    EXPECT_EQ(std::move(bound).value(), 5);
+
+    EXPECT_THROW(
+        {
+            try {
+                empty.value();
+            } catch (const beman::optional::bad_optional_access& e) {
+                EXPECT_STREQ("Optional has no value", e.what());
+                throw;
+            }
+        },
+        beman::optional::bad_optional_access);
+
+    EXPECT_THROW({ std::as_const(empty).value(); }, beman::optional::bad_optional_access);
+    EXPECT_THROW({ std::move(empty).value(); }, beman::optional::bad_optional_access);
 }
 
 TEST(OptionalTest, Triviality) {
