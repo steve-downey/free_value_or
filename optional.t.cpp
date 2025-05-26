@@ -313,15 +313,15 @@ TEST(OptionalTest, ConvertingAssignmentValue) {
 TEST(OptionalTest, ConvertingValueAssignment) {
     struct base {};
 
-    struct convertable {
+    struct convertible {
         operator base() { return base{}; }
     };
 
     beman::optional::optional<base> empty;
     beman::optional::optional<base> engaged(base{});
 
-    empty   = convertable{};
-    engaged = convertable{};
+    empty   = convertible{};
+    engaged = convertible{};
     EXPECT_TRUE(empty);
     EXPECT_TRUE(engaged);
 }
