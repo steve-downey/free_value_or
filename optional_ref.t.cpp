@@ -152,6 +152,19 @@ TEST(OptionalRefTest, Assignment) {
     EXPECT_EQ(*o2, 7);
 }
 
+TEST(OptionalRefTest, NullOptAssignment) {
+    beman::optional::optional<int&> i1;
+    EXPECT_FALSE(i1);
+    int i = 5;
+    i1    = i;
+
+    EXPECT_TRUE(i1);
+    i1 = beman::optional::nullopt;
+    EXPECT_FALSE(i1);
+    i1 = beman::optional::optional<int&>{i};
+    EXPECT_TRUE(i1);
+}
+
 TEST(OptionalRefTest, RelationalOps) {
     int                             i1 = 4;
     int                             i2 = 42;
