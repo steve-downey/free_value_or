@@ -162,6 +162,16 @@ TEST(OptionalRefTest, NullOptAssignment) {
     i1 = beman::optional::nullopt;
     EXPECT_FALSE(i1);
     i1 = beman::optional::optional<int&>{i};
+TEST(OptionalRefTest, NullOptConstruction) {
+    beman::optional::optional<int&> i1(beman::optional::nullopt);
+    EXPECT_FALSE(i1);
+    int i = 5;
+    i1    = i;
+
+    EXPECT_TRUE(i1);
+    i1 = beman::optional::nullopt;
+    EXPECT_FALSE(i1);
+    i1 = i;
     EXPECT_TRUE(i1);
 }
 
