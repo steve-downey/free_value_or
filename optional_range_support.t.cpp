@@ -231,6 +231,23 @@ TEST(RangeSupportTest, EndOnNonEmptyOptional) {
     lambda();
 }
 
+#if ((__GNUC__ >= 15) && (__GNUC_MINOR__ >= 1) && (__GNUC_PATCHLEVEL__ >= 1)) || \
+  ((__GNUC__ >= 16))
+static_assert(std::format_kind<beman::optional::optional<int>> == std::range_format::disabled);
+#endif
+
+#if defined(__cpp_lib_format_ranges)
+static_assert(std::format_kind<beman::optional::optional<int>> == std::range_format::disabled);
+static_assert(std::format_kind<beman::optional::optional<int&>> == std::range_format::disabled);
+static_assert(std::format_kind<beman::optional::optional<int*>> == std::range_format::disabled);
+static_assert(std::format_kind<beman::optional::optional<empty>> == std::range_format::disabled);
+static_assert(std::format_kind<beman::optional::optional<empty&>> == std::range_format::disabled);
+static_assert(std::format_kind<beman::optional::optional<base>> == std::range_format::disabled);
+static_assert(std::format_kind<beman::optional::optional<base&>> == std::range_format::disabled);
+static_assert(std::format_kind<beman::optional::optional<derived>> == std::range_format::disabled);
+static_assert(std::format_kind<beman::optional::optional<derived&>> == std::range_format::disabled);
+#endif
+
 TEST(RangeSupportTest, FormatOptionalIsStillDisabled) {
 // TODO: Always enable when all major compilers implement P2585R1: "Improve default container formatting".
 #if defined(__cpp_lib_format_ranges)
