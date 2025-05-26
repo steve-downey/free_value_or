@@ -187,6 +187,23 @@ TEST(OptionalRefTest, ConstRefAssignment) {
     EXPECT_FALSE(c1);
 }
 
+TEST(OptionalRefTest, ConvertingConstRvalRef) {
+    int                                   i = 7;
+    beman::optional::optional<int&>       i1{i};
+    const beman::optional::optional<int&> i2 = i1;
+
+    beman::optional::optional<const int&> c1;
+    c1 = std::move(i2);
+    EXPECT_TRUE(c1);
+    EXPECT_EQ(*c1, 7);
+
+    i = 5;
+    EXPECT_EQ(*c1, 5);
+    const beman::optional::optional<int&> empty(beman::optional::nullopt);
+    c1 = std::move(empty);
+    EXPECT_FALSE(c1);
+}
+
 TEST(OptionalRefTest, NullOptConstruction) {
     beman::optional::optional<int&> i1(beman::optional::nullopt);
     EXPECT_FALSE(i1);
