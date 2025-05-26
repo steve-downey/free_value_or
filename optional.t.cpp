@@ -172,19 +172,20 @@ TEST(OptionalTest, EmplaceVariadic) {
 
 TEST(OptionalTest, EmplaceInitializerList) {
     struct for_emplace {
-        std::vector<int> v; //something to construct with list
-        std::string name = "";
-        for_emplace(std::initializer_list<int> l) : v(l){
-        }
+        std::vector<int> v; // something to construct with list
+        std::string      name = "";
+        for_emplace(std::initializer_list<int> l) : v(l) {}
         for_emplace(std::initializer_list<int> l, std::string n) : v(l), name(n) {}
-    } f{{1,2,3}};
+    } f{{1, 2, 3}};
 
     beman::optional::optional<for_emplace> o3;
     o3.emplace({1, 2, 3});
     EXPECT_TRUE(o3.has_value());
 
     beman::optional::optional<for_emplace> engaged{f};
+
     auto e1 = engaged.emplace({1, 2, 3});
+
     EXPECT_TRUE(engaged.has_value());
     EXPECT_EQ(engaged->v[0], 1);
     EXPECT_EQ(engaged->name, std::string(""));
@@ -242,6 +243,11 @@ TEST(OptionalTest, AssignmentValue) {
     o1 = emptyShort;
     EXPECT_FALSE(o1);
 
+    o1 = o4;
+    EXPECT_TRUE(*o1 == 42);
+    o1 = std::move(emptyShort);
+    EXPECT_FALSE(o1);
+
     struct not_trivial_copy_assignable {
         int i_;
         constexpr not_trivial_copy_assignable(int i) : i_(i) {}
@@ -291,6 +297,33 @@ TEST(OptionalTest, AssignmentValue) {
     // Move from empty into engaged optional.
     o8 = std::move(o5);
     EXPECT_FALSE(o8);
+}
+
+TEST(OptionalTest, ConvertingAssignmentValue) {
+    beman::optional::optional<int> o1 = 42;
+    beman::optional::optional<int> o2;
+
+    short s = 9;
+    o1      = s;
+    o2      = s;
+    EXPECT_TRUE(o1);
+    EXPECT_TRUE(o2);
+}
+
+TEST(OptionalTest, ConvertingValueAssignment) {
+    struct base {};
+
+    struct convertable {
+        operator base() { return base{}; }
+    };
+
+    beman::optional::optional<base> empty;
+    beman::optional::optional<base> engaged(base{});
+
+    empty   = convertable{};
+    engaged = convertable{};
+    EXPECT_TRUE(empty);
+    EXPECT_TRUE(engaged);
 }
 
 TEST(OptionalTest, ValueObserver) {
