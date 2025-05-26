@@ -4,6 +4,7 @@
 #ifndef BEMAN_OPTIONAL_OPTIONAL_HPP
 #define BEMAN_OPTIONAL_OPTIONAL_HPP
 
+#include <version>
 #include <compare>
 #include <concepts>
 #if defined(__cpp_lib_format_ranges)
