@@ -238,6 +238,10 @@ TEST(OptionalTest, AssignmentValue) {
     o1      = s;
     EXPECT_TRUE(*o1 == 54);
 
+    beman::optional::optional<short> emptyShort;
+    o1 = emptyShort;
+    EXPECT_FALSE(o1);
+
     struct not_trivial_copy_assignable {
         int i_;
         constexpr not_trivial_copy_assignable(int i) : i_(i) {}
