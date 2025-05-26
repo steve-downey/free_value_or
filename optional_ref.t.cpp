@@ -92,6 +92,8 @@ beman::optional::optional<Thing&> process() {
     return t;
 }
 
+beman::optional::optional<Thing&> processEmpty() { return beman::optional::nullopt; }
+
 TEST(OptionalRefTest, BaseDerivedCastConstruction) {
     base                                b;
     derived&                            dref(b); // ok
@@ -145,6 +147,9 @@ TEST(OptionalRefTest, Assignment) {
     o = process(); // well-formed
     EXPECT_TRUE(o);
 
+    o = processEmpty(); // well-formed
+    EXPECT_FALSE(o);
+
     beman::optional::optional<const int&> o2;
     EXPECT_FALSE(o2);
     o2 = [&]() { return i1; }();
@@ -161,7 +166,10 @@ TEST(OptionalRefTest, NullOptAssignment) {
     EXPECT_TRUE(i1);
     i1 = beman::optional::nullopt;
     EXPECT_FALSE(i1);
-    i1 = beman::optional::optional<int&>{i};
+    i1 = i;
+    EXPECT_TRUE(i1);
+}
+
 TEST(OptionalRefTest, NullOptConstruction) {
     beman::optional::optional<int&> i1(beman::optional::nullopt);
     EXPECT_FALSE(i1);
