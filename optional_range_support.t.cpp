@@ -231,8 +231,7 @@ TEST(RangeSupportTest, EndOnNonEmptyOptional) {
     lambda();
 }
 
-#if ((__GNUC__ >= 15) && (__GNUC_MINOR__ >= 1) && (__GNUC_PATCHLEVEL__ >= 1)) || \
-  ((__GNUC__ >= 16))
+#if ((__GNUC__ >= 15) && (__GNUC_MINOR__ >= 1) && (__GNUC_PATCHLEVEL__ >= 1)) || ((__GNUC__ >= 16))
 static_assert(std::format_kind<beman::optional::optional<int>> == std::range_format::disabled);
 #endif
 
