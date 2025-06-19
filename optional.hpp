@@ -818,7 +818,7 @@ constexpr auto optional<T>::transform(F&& f) const&& {
     static_assert(!std::is_same_v<U, in_place_t>);
     static_assert(!std::is_same_v<U, nullopt_t>);
     static_assert(std::is_object_v<U> || std::is_reference_v<U>); /// References now allowed
-    return (has_value()) ? optional<U>{std::invoke(std::forward<F>(f), value_)} : optional<U>{};
+    return (has_value()) ? optional<U>{std::invoke(std::forward<F>(f), std::move(value_))} : optional<U>{};
 }
 
 /// Calls `f` if the optional is empty
