@@ -343,3 +343,28 @@ TEST(OptionalMonadicTest, Constexpr_or_else) {
     constexpr auto test4 = *(std::move(o2).or_else([] { return beman::optional::make_optional(13); })) == 13;
     EXPECT_TRUE(test4);
 }
+
+constexpr bool optional_or_else_do_not_dereference_impl() {
+    // create a dangling optional<T&>
+    int*                            ptr  = new int(42);
+    beman::optional::optional<int&> iref = *ptr;
+    delete ptr;
+
+    if (!iref)
+        return false;
+
+    const auto or_else_fun = []() { return beman::optional::optional<int&>(); };
+
+    // This must not dereference the pointer inside `iref`
+    beman::optional::optional<int&> iref2 = iref.or_else(or_else_fun);
+    if (!iref2)
+        return false;
+
+    return true;
+}
+
+static_assert(optional_or_else_do_not_dereference_impl());
+
+TEST(OptionalMonadicTest, optional_or_else_do_not_derefence) {
+    EXPECT_TRUE(optional_or_else_do_not_dereference_impl());
+}
