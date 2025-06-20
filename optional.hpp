@@ -49,6 +49,12 @@ template <typename T, typename U>
 concept optional_ge_rel = requires(const T& t, const U& u) {
     { t >= u } -> std::convertible_to<bool>;
 };
+
+struct from_function_t {
+    explicit from_function_t() = default;
+};
+
+inline constexpr from_function_t from_function{};
 } // namespace detail
 
 struct in_place_t {
@@ -403,6 +409,13 @@ class optional {
         std::destroy_at(std::addressof(value_));
         engaged_ = false;
     }
+
+    template <class U>
+    friend class optional;
+
+    template <class F, class Arg>
+    constexpr optional(detail::from_function_t, F&& f, Arg&& arg)
+        : value_(std::invoke(std::forward<F>(f), std::forward<Arg>(arg))), engaged_(true) {}
 };
 
 class bad_optional_access : public std::exception {
@@ -785,7 +798,7 @@ constexpr auto optional<T>::transform(F&& f) & {
     static_assert(!std::is_same_v<U, in_place_t>);
     static_assert(!std::is_same_v<U, nullopt_t>);
     static_assert(std::is_object_v<U> || std::is_reference_v<U>); /// References now allowed
-    return (has_value()) ? optional<U>{std::invoke(std::forward<F>(f), value_)} : optional<U>{};
+    return (has_value()) ? optional<U>{detail::from_function, std::forward<F>(f), value_} : optional<U>{};
 }
 
 template <class T>
@@ -796,7 +809,7 @@ constexpr auto optional<T>::transform(F&& f) && {
     static_assert(!std::is_same_v<U, in_place_t>);
     static_assert(!std::is_same_v<U, nullopt_t>);
     static_assert(std::is_object_v<U> || std::is_reference_v<U>); /// References now allowed
-    return (has_value()) ? optional<U>{std::invoke(std::forward<F>(f), std::move(value_))} : optional<U>{};
+    return (has_value()) ? optional<U>{detail::from_function, std::forward<F>(f), std::move(value_)} : optional<U>{};
 }
 
 template <class T>
@@ -807,7 +820,7 @@ constexpr auto optional<T>::transform(F&& f) const& {
     static_assert(!std::is_same_v<U, in_place_t>);
     static_assert(!std::is_same_v<U, nullopt_t>);
     static_assert(std::is_object_v<U> || std::is_reference_v<U>); /// References now allowed
-    return (has_value()) ? optional<U>{std::invoke(std::forward<F>(f), value_)} : optional<U>{};
+    return (has_value()) ? optional<U>{detail::from_function, std::forward<F>(f), value_} : optional<U>{};
 }
 
 template <class T>
@@ -818,7 +831,7 @@ constexpr auto optional<T>::transform(F&& f) const&& {
     static_assert(!std::is_same_v<U, in_place_t>);
     static_assert(!std::is_same_v<U, nullopt_t>);
     static_assert(std::is_object_v<U> || std::is_reference_v<U>); /// References now allowed
-    return (has_value()) ? optional<U>{std::invoke(std::forward<F>(f), std::move(value_))} : optional<U>{};
+    return (has_value()) ? optional<U>{detail::from_function, std::forward<F>(f), std::move(value_)} : optional<U>{};
 }
 
 /// Calls `f` if the optional is empty
@@ -1207,6 +1220,14 @@ class optional<T&> {
         T& r(std::forward<U>(u));
         value_ = std::addressof(r);
     }
+
+    template <class U>
+    friend class optional;
+
+    template <class F, class Arg>
+    constexpr optional(detail::from_function_t, F&& f, Arg&& arg) {
+        convert_ref_init_val(std::invoke(std::forward<F>(f), std::forward<Arg>(arg)));
+    }
 };
 
 //  \rSec3[optionalref.ctor]{Constructors}
@@ -1356,7 +1377,7 @@ constexpr optional<std::invoke_result_t<F, T&>> optional<T&>::transform(F&& f) c
     static_assert((std::is_object_v<U> && !std::is_array_v<U>) || std::is_lvalue_reference_v<U>,
                   "Result must be an non-array object or an lvalue reference");
     if (has_value()) {
-        return optional<U>{std::invoke(std::forward<F>(f), *value_)};
+        return optional<U>{detail::from_function, std::forward<F>(f), *value_};
     } else {
         return optional<U>{};
     }
