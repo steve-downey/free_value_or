@@ -3,6 +3,8 @@
 
 #include <beman/optional/optional.hpp>
 
+#include <beman/optional/test_types.hpp>
+
 #include <gtest/gtest.h>
 
 constexpr int                            get_int(int) { return 42; }
@@ -81,6 +83,24 @@ TEST(OptionalMonadicTest, Transform) {
     beman::optional::optional<const int&> o38r = o38.transform([](int& i) -> const int& { return i; });
     EXPECT_TRUE(o38r);
     EXPECT_TRUE(*o38r == 42);
+
+    // transform and return a non-movable class
+    using immovable                     = beman::optional::tests::immovable;
+    beman::optional::optional<int> o39  = 42;
+    auto                           o39r = o39.transform([](int) { return immovable(); });
+    EXPECT_TRUE(o39r);
+
+    beman::optional::optional<int> o40  = 42;
+    auto                           o40r = std::move(o40).transform([](int) { return immovable(); });
+    EXPECT_TRUE(o40r);
+
+    const beman::optional::optional<int> o41  = 42;
+    auto                                 o41r = o41.transform([](int) { return immovable(); });
+    EXPECT_TRUE(o41r);
+
+    const beman::optional::optional<int> o42  = 42;
+    auto                                 o42r = std::move(o42).transform([](int) { return immovable(); });
+    EXPECT_TRUE(o42r);
 }
 
 TEST(OptionalMonadicTest, TransformConstexpr) {
