@@ -27,7 +27,6 @@
 #include <unordered_set>
 #include <vector>
 
-
 #define CONSTEXPR_EXPECT_TRUE(val)        \
     if (::std::is_constant_evaluated()) { \
         if (!(val)) {                     \
@@ -112,7 +111,6 @@ TEST(RangeSupportTest, IteratorConcepts) {
     test(beman::optional::optional<base>{});
     test(beman::optional::optional<derived>{});
 }
-
 
 TEST(RangeSupportTest, BeginOnEmptyOptional) {
     auto lambda = [&] {
@@ -227,7 +225,7 @@ TEST(RangeSupportTest, EndOnNonEmptyOptional) {
     EXPECT_TRUE(lambda());
 }
 
-#if (__cplusplus >=  202302L) && \
+#if (__cplusplus >= 202302L) && \
     (((__GNUC__ >= 15) && (__GNUC_MINOR__ >= 1) && (__GNUC_PATCHLEVEL__ >= 1)) || ((__GNUC__ >= 16)))
 static_assert(std::format_kind<beman::optional::optional<int>> == std::range_format::disabled);
 #endif
@@ -323,7 +321,7 @@ TEST(RangeSupportTest, LoopOptionalAssignment) {
         // Example from P3168R2: should mutate the value from an optional object.
         constexpr int  initial_expected_value = 0xCAFEBABE;
         constexpr int  expected_value         = 0xDEADBEEF;
-        constexpr auto get_optional           = [=]() -> beman::optional::optional<int> { return initial_expected_value; };
+        constexpr auto get_optional = [=]() -> beman::optional::optional<int> { return initial_expected_value; };
         constexpr_assert(get_optional().has_value());
         constexpr_assert(get_optional().value() == initial_expected_value);
 
