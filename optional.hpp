@@ -57,6 +57,10 @@ struct from_function_t {
 inline constexpr from_function_t from_function{};
 } // namespace detail
 
+/**
+ *
+ * @brief Tag type for in place construction
+ */
 struct in_place_t {
     explicit in_place_t() = default;
 };
@@ -91,11 +95,20 @@ concept is_derived_from_optional = requires(const T& t) { // exposition only
 };
 
 // \ref{optional.nullopt}, no-value state indicator
+/**
+ * @brief Tag type for nullopt construction
+ */
 struct nullopt_t {
-    // Used for constructing nullopt.
+    /**
+     * @brief Tag type for nullopt_t construction
+     */
     enum class Tag { tag };
 
-    // Must be constexpr for nullopt_t to be literal.
+    /**
+     * @brief Construct a new nullopt_t object
+     * @arg Tag
+     * @details constexpr for nullopt_t to be literal.
+     */
     explicit constexpr nullopt_t(Tag) noexcept {}
 };
 
@@ -254,10 +267,24 @@ class optional {
     static_assert(std::is_object_v<T> && !std::is_array_v<T>);
 
   public:
+    /**
+     * @brief Type alias for the value type stored in the optional.
+     *
+     */
     using value_type = T;
-    // Since P3168R2: Give std::optional Range Support.
-    using iterator       = detail::contiguous_iterator<T,
-                                                       optional>; // see~\ref{optional.iterators}
+
+    /**
+     * @brief Type alias for the iterator type of the optional.
+     *
+     * @details Since P3168R2: Give std::optional Range Support.
+     */
+    using iterator = detail::contiguous_iterator<T,
+                                                 optional>; // see~\ref{optional.iterators}
+    /**
+     * @brief Type alias for the const iterator type of the optional.
+     *
+     * @details Since P3168R2: Give std::optional Range Support.
+     */
     using const_iterator = detail::contiguous_iterator<const T,
                                                        optional>; // see~\ref{optional.iterators}
 
@@ -267,25 +294,35 @@ class optional {
      *
      */
     constexpr optional() noexcept;
+
     /**
      * @brief Constructs an empty optional.
      *
      */
     constexpr optional(nullopt_t) noexcept;
+
     /**
      * @brief   Copy constructs the value from \p rhs if it has one.
      *
      */
     constexpr optional(const optional& rhs)
         requires std::is_copy_constructible_v<T> && (!std::is_trivially_copy_constructible_v<T>);
+    /**
+     * @brief Copy constructs the value from \p rhs if it has one.
+     * @details Defaulted if T is trivially copy constructible.
+     */
     constexpr optional(const optional&)
         requires std::is_copy_constructible_v<T> && std::is_trivially_copy_constructible_v<T>
     = default;
     /**
-     *  @brief   Move constructs the value from \p rhs if it has one.
+     *  @brief Move constructs the value from \p rhs if it has one.
      */
     constexpr optional(optional&& rhs) noexcept(std::is_nothrow_move_constructible_v<T>)
         requires std::is_move_constructible_v<T> && (!std::is_trivially_move_constructible_v<T>);
+    /**
+     * @brief Move constructs the value from \p rhs if it has one.
+     * @details Defaulted if T is trivially move constructible.
+     */
     constexpr optional(optional&&)
         requires std::is_move_constructible_v<T> && std::is_trivially_move_constructible_v<T>
     = default;
@@ -358,9 +395,9 @@ class optional {
                  (!std::is_trivially_copy_assignable_v<T>);
 
     /**
-     * @brief   Copy assigns the value from \p rhs if it has one.
+     * @brief Copy assigns the value from \p rhs if it has one.
      *
-     * @return * constexpr optional&
+     * @return optional&
      */
     constexpr optional& operator=(const optional&)
         requires std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T> &&
@@ -387,7 +424,7 @@ class optional {
      *
      * @tparam U
      * @param u
-     * @return constexpr optional&
+     * @return optional&
      */
     template <class U = T>
     constexpr optional& operator=(U&& u)
@@ -412,7 +449,7 @@ class optional {
      *
      * @tparam Args
      * @param args
-     * @return constexpr T&
+     * @return T&
      */
     template <class... Args>
     constexpr T& emplace(Args&&... args);
@@ -423,7 +460,7 @@ class optional {
      * @tparam Args
      * @param il
      * @param args
-     * @return constexpr T&
+     * @return T&
      */
     template <class U, class... Args>
     constexpr T& emplace(std::initializer_list<U> il, Args&&... args);
@@ -441,24 +478,24 @@ class optional {
     /**
      * @brief   Returns an iterator to the beginning of the optional.
      */
-    constexpr iterator       begin() noexcept;
+    constexpr iterator begin() noexcept;
 
     /**
      * @brief   Returns a const iterator to the beginning of the optional.
      *
-     * @return constexpr const_iterator
+     * @return const_iterator
      */
     constexpr const_iterator begin() const noexcept;
 
     /**
      * @brief   Returns an iterator to the end of the optional.
      */
-    constexpr iterator       end() noexcept;
+    constexpr iterator end() noexcept;
 
     /**
      * @brief   Returns a const iterator to the end of the optional.
      *
-     * @return constexpr const_iterator
+     * @return const_iterator
      */
     constexpr const_iterator end() const noexcept;
 
@@ -471,73 +508,71 @@ class optional {
     /**
      * @brief   Returns a pointer to the stored value.
      *
-     * @return constexpr T*
+     * @return T*
      */
-    constexpr T*       operator->();
+    constexpr T* operator->();
     /**
      * @brief Returns a reference to the stored value.
      *
-     * @return constexpr T&
+     * @return T&
      */
-    constexpr T&       operator*() &;
+    constexpr T& operator*() &;
 
     /**
      * @brief  Returns a reference to the stored value.
      *
-     * @return constexpr const T&
+     * @return const T&
      */
     constexpr const T& operator*() const&;
 
     /**
      * @brief   Returns a reference to the stored value.
      *
-     * @return constexpr T&&
+     * @return T&&
      */
-    constexpr T&&      operator*() &&;
+    constexpr T&& operator*() &&;
 
     /**
      * @brief Converts the optional to a boolean indicating whether it has a value.
      *
-     * @return true
-     * @return false
+     * @return bool
      */
     constexpr explicit operator bool() const noexcept;
 
     /**
      * @brief   Returns whether or not the optional has a value.
      *
-     * @return true
-     * @return false
+     * @return bool
      */
-    constexpr bool     has_value() const noexcept;
+    constexpr bool has_value() const noexcept;
 
     /**
      * @brief Returns a reference to the stored value.
      *
-     * @return constexpr T&
+     * @return T&
      */
-    constexpr T&       value() &;
+    constexpr T& value() &;
 
     /**
      * @brief Returns a reference to the stored value.
      *
-     * @return constexpr const T&
+     * @return const T&
      */
     constexpr const T& value() const&;
 
     /**
      * @brief Returns a reference to the stored value.
      *
-     * @return constexpr T&&
+     * @return T&&
      */
-    constexpr T&&      value() &&;
+    constexpr T&& value() &&;
 
     /**
      * @brief Returns a reference to the stored value.
      *
      * @tparam U
      * @param u
-     * @return constexpr T
+     * @return T
      */
     template <class U = std::remove_cv_t<T>>
     constexpr T value_or(U&& u) const&;
@@ -546,7 +581,7 @@ class optional {
      *
      * @tparam U
      * @param u
-     * @return constexpr T
+     * @return T
      */
     template <class U = std::remove_cv_t<T>>
     constexpr T value_or(U&& u) &&;
@@ -558,7 +593,7 @@ class optional {
      *
      * @tparam F
      * @param f
-     * @return constexpr auto
+     * @return auto
      */
     template <class F>
     constexpr auto and_then(F&& f) &;
@@ -568,7 +603,7 @@ class optional {
      *
      * @tparam F
      * @param f
-     * @return constexpr auto
+     * @return auto
      */
     template <class F>
     constexpr auto and_then(F&& f) &&;
@@ -578,7 +613,7 @@ class optional {
      *
      * @tparam F
      * @param f
-     * @return constexpr auto
+     * @return auto
      */
     template <class F>
     constexpr auto and_then(F&& f) const&;
@@ -588,7 +623,7 @@ class optional {
      *
      * @tparam F
      * @param f
-     * @return constexpr auto
+     * @return auto
      */
     template <class F>
     constexpr auto and_then(F&& f) const&&;
@@ -599,7 +634,7 @@ class optional {
      *
      * @tparam F
      * @param f
-     * @return constexpr optional
+     * @return optional
      */
     template <class F>
     constexpr auto transform(F&& f) &;
@@ -610,7 +645,7 @@ class optional {
      *
      * @tparam F
      * @param f
-     * @return constexpr auto
+     * @return auto
      */
     template <class F>
     constexpr auto transform(F&& f) &&;
@@ -621,7 +656,7 @@ class optional {
      *
      * @tparam F
      * @param f
-     * @return constexpr auto
+     * @return auto
      */
     template <class F>
     constexpr auto transform(F&& f) const&;
@@ -632,7 +667,7 @@ class optional {
 
      * @tparam F
      * @param f
-     * @return constexpr auto
+     * @return auto
      */
     template <class F>
     constexpr auto transform(F&& f) const&&;
@@ -643,7 +678,7 @@ class optional {
      *
      * @tparam F
      * @param f
-     * @return constexpr optional
+     * @return optional
      */
     template <class F>
     constexpr optional or_else(F&& f) const&;
@@ -654,7 +689,7 @@ class optional {
      *
      * @tparam F
      * @param f
-     * @return constexpr auto
+     * @return auto
      */
     template <class F>
     constexpr optional or_else(F&& f) &&;
@@ -669,7 +704,16 @@ class optional {
   private:
     struct empty {};
     union {
+        /**
+         * @brief The empty state of the optional.
+         *
+         */
         empty _{};
+
+        /**
+         * @brief The stored value of the optional.
+         *
+         */
         T     value_;
     };
     bool engaged_ = false;
@@ -693,9 +737,22 @@ class optional {
         : value_(std::invoke(std::forward<F>(f), std::forward<Arg>(arg))), engaged_(true) {}
 };
 
+/**
+ * @brief Exception thrown when trying to access the value of an empty optional
+ */
 class bad_optional_access : public std::exception {
   public:
+    /**
+     * @brief Construct a new bad optional access object
+     *
+     */
     bad_optional_access() = default;
+
+    /**
+     * @brief Get the error message for bad optional access
+     *
+     * @return const char*
+     */
     const char* what() const noexcept { return "Optional has no value"; }
 };
 
@@ -1109,7 +1166,15 @@ constexpr auto optional<T>::transform(F&& f) const&& {
     return (has_value()) ? optional<U>{detail::from_function, std::forward<F>(f), std::move(value_)} : optional<U>{};
 }
 
-/// Calls `f` if the optional is empty
+/**
+ * @brief Returns an optional containing the stored value if it has one, or the result of calling
+ * \p `f` if it does not.
+ *
+ * @tparam T
+ * @tparam F
+ * @param f
+ * @return optional<T>
+ */
 template <class T>
 template <class F>
 constexpr optional<T> optional<T>::or_else(F&& f) const& {
@@ -1120,6 +1185,15 @@ constexpr optional<T> optional<T>::or_else(F&& f) const& {
     return std::forward<F>(f)();
 }
 
+/**
+ * @brief Returns an optional containing the stored value if it has one, or the result of calling
+ * \p `f` if it does not.
+ *
+ * @tparam T
+ * @tparam F
+ * @param f
+ * @return optional<T>
+ */
 template <class T>
 template <class F>
 constexpr optional<T> optional<T>::or_else(F&& f) && {
@@ -1371,7 +1445,15 @@ template <class T>
  */
 class optional<T&> {
   public:
+    /**
+     * @brief The type of the value stored in the optional.
+     *
+     */
     using value_type = T;
+    /**
+     * @brief The type of the iterator for the optional.
+     *
+     */
     using iterator   = detail::contiguous_iterator<T,
                                                    optional>; // see [optionalref.iterators]
   public:
@@ -1379,7 +1461,7 @@ class optional<T&> {
 
     /**
      * @brief Default constructor.
-    */
+     */
     constexpr optional() noexcept = default;
 
     /**
@@ -1407,13 +1489,13 @@ class optional<T&> {
 
     /**
      * @brief Construct from a U
-     * @param u
      * @tparam U
+     * @param u
      * @details
      * Constructs the stored value from `u` if it is convertible to `T&`.
      * If `T&` can be constructed from a temporary, this constructor is
      * deleted to prevent binding a temporary to a reference.
-    */
+     */
     template <class U>
         requires(std::is_constructible_v<T&, U> && !(std::is_same_v<std::remove_cvref_t<U>, in_place_t>) &&
                  !(std::is_same_v<std::remove_cvref_t<U>, optional>) &&
@@ -1441,8 +1523,9 @@ class optional<T&> {
 
     /**
      * @brief Constructs an optional from another optional of type U.
-     * @param
+     *
      * @tparam U
+     * @param rhs
      * @details
      * Constructs the stored value from the rhs if it has a value, otherwise
      * constructs an empty optional.
@@ -1455,66 +1538,66 @@ class optional<T&> {
     constexpr explicit(!std::is_convertible_v<U&, T&>)
         optional(optional<U>& rhs) noexcept(std::is_nothrow_constructible_v<T&, U&>);
 
-        /**
-         * @brief Constructs an optional from another optional of type U.
-         * @param rhs
-         * @tparam U
-         * @details
-         * Constructs the stored value from the rhs if it has a value, otherwise
-         * constructs an empty optional.
-         * If `T&` can be constructed from a temporary, this constructor is
-         * deleted to prevent binding a temporary to a reference.
-         */
+    /**
+     * @brief Constructs an optional from another optional of type U.
+     * @param rhs
+     * @tparam U
+     * @details
+     * Constructs the stored value from the rhs if it has a value, otherwise
+     * constructs an empty optional.
+     * If `T&` can be constructed from a temporary, this constructor is
+     * deleted to prevent binding a temporary to a reference.
+     */
     template <class U>
         requires(std::is_constructible_v<T&, const U&> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
                  !std::is_same_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, const U&>)
     constexpr explicit(!std::is_convertible_v<const U&, T&>)
         optional(const optional<U>& rhs) noexcept(std::is_nothrow_constructible_v<T&, const U&>);
 
-        /**
-         * @brief Constructs an optional from another optional of type U.
-         * @param rhs
-         * @tparam U
-         * @details
-         * Constructs the stored value from the rhs if it has a value, otherwise
-         * constructs an empty optional.
-         * If `T&` can be constructed from a temporary, this constructor is
-         * deleted to prevent binding a temporary to a reference.
-         */
+    /**
+     * @brief Constructs an optional from another optional of type U.
+     * @param rhs
+     * @tparam U
+     * @details
+     * Constructs the stored value from the rhs if it has a value, otherwise
+     * constructs an empty optional.
+     * If `T&` can be constructed from a temporary, this constructor is
+     * deleted to prevent binding a temporary to a reference.
+     */
     template <class U>
         requires(std::is_constructible_v<T&, U> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
                  !std::is_same_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, U>)
     constexpr explicit(!std::is_convertible_v<U, T&>)
         optional(optional<U>&& rhs) noexcept(noexcept(std::is_nothrow_constructible_v<T&, U>));
 
-        /**
-         * @brief Constructs an optional from another optional of type U.
-         *
-         * @tparam U
-         * @param rhs
-         * @details
-         * Constructs the stored value from the rhs if it has a value, otherwise
-         * constructs an empty optional.
-         * If `T&` can be constructed from a temporary, this constructor is
-         * deleted to prevent binding a temporary to a reference.
-         */
+    /**
+     * @brief Constructs an optional from another optional of type U.
+     *
+     * @tparam U
+     * @param rhs
+     * @details
+     * Constructs the stored value from the rhs if it has a value, otherwise
+     * constructs an empty optional.
+     * If `T&` can be constructed from a temporary, this constructor is
+     * deleted to prevent binding a temporary to a reference.
+     */
     template <class U>
         requires(std::is_constructible_v<T&, const U> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
                  !std::is_same_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, const U>)
     constexpr explicit(!std::is_convertible_v<const U, T&>)
         optional(const optional<U>&& rhs) noexcept(noexcept(std::is_nothrow_constructible_v<T&, const U>));
 
-        /**
-         * @brief Constructs an optional from another optional of type U
-         *
-         * @tparam U
-         * @param rhs
-         * @details
-         * Constructs the stored value from the rhs if it has a value, otherwise
-         * constructs an empty optional.
-         * If `T&` can be constructed from a temporary, this constructor is
-         * deleted to prevent binding a temporary to a reference.
-         */
+    /**
+     * @brief Constructs an optional from another optional of type U
+     *
+     * @tparam U
+     * @param rhs
+     * @details
+     * Constructs the stored value from the rhs if it has a value, otherwise
+     * constructs an empty optional.
+     * If `T&` can be constructed from a temporary, this constructor is
+     * deleted to prevent binding a temporary to a reference.
+     */
     template <class U>
         requires(std::is_constructible_v<T&, U&> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
                  !std::is_same_v<T&, U> && detail::reference_constructs_from_temporary_v<T&, U&>)
@@ -1589,7 +1672,7 @@ class optional<T&> {
      * @brief Copy assignment operator.
      *
      * @param rhs
-     * @return constexpr optional&
+     * @return optional&
      */
     constexpr optional& operator=(const optional& rhs) noexcept = default;
 
@@ -1597,8 +1680,8 @@ class optional<T&> {
      * @brief Converting copy assignment operator.
      *
      * @tparam U
-     * @param rhs
-     * @return constexpr optional&
+     * @param u
+     * @return optional&
      * @details
      * If `rhs` has a value, assigns it to the stored value. Otherwise resets
      * the stored value in `*this`.
@@ -1628,7 +1711,7 @@ class optional<T&> {
     /**
      * @brief Returns an iterator to the end of the optional.
      *
-     * @return constexpr iterator
+     * @return iterator
      */
     constexpr iterator end() const noexcept;
 
@@ -1638,42 +1721,40 @@ class optional<T&> {
      *
      * @return T*
      */
-    constexpr T*       operator->() const noexcept;
+    constexpr T* operator->() const noexcept;
     /**
      * @brief Returns a reference to the stored value.
      *
-     * @return constexpr T&
+     * @return T&
      */
-    constexpr T&       operator*() const noexcept;
+    constexpr T& operator*() const noexcept;
 
     /**
      * @brief Converts the optional to a boolean value.
      *
-     * @return true
-     * @return false
+     * @return bool
      */
     constexpr explicit operator bool() const noexcept;
     /**
      * @brief Checks if the optional has a value.
      *
-     * @return true
-     * @return false
+     * @return bool
      */
-    constexpr bool     has_value() const noexcept;
+    constexpr bool has_value() const noexcept;
 
     /**
      * @brief Returns the stored value if there is one, otherwise throws
      *
-     * @return constexpr T&
+     * @return T&
      */
-    constexpr T&       value() const;
+    constexpr T& value() const;
 
     /**
      * @brief Returns the stored value if there is one, otherwise returns `u`.
      *
      * @tparam U
      * @param u
-     * @return constexpr std::remove_cv_t<T>
+     * @return std::remove_cv_t<T>
      */
     template <class U = std::remove_cv_t<T>>
     constexpr std::remove_cv_t<T> value_or(U&& u) const;
@@ -1694,7 +1775,7 @@ class optional<T&> {
      *
      * @tparam F
      * @param f
-     * @return constexpr optional<std::invoke_result_t<F, T&>>
+     * @return optional<std::invoke_result_t<F, T&>>
      */
     template <class F>
     constexpr optional<std::invoke_result_t<F, T&>> transform(F&& f) const;
@@ -1704,7 +1785,7 @@ class optional<T&> {
      *
      * @tparam F
      * @param f
-     * @return constexpr optional
+     * @return optional
      */
     template <class F>
     constexpr optional or_else(F&& f) const;
@@ -1876,6 +1957,11 @@ constexpr auto optional<T&>::and_then(F&& f) const {
     }
 }
 
+/**
+ * @brief Transforms the value contained in the optional, if it exists.
+ *
+ * @return optional<std::invoke_result_t<F, T&>>
+ */
 template <class T>
 template <class F>
 constexpr optional<std::invoke_result_t<F, T&>> optional<T&>::transform(F&& f) const {
@@ -1891,6 +1977,15 @@ constexpr optional<std::invoke_result_t<F, T&>> optional<T&>::transform(F&& f) c
     }
 }
 
+/**
+ * @brief Returns an optional containing the stored value if it has one, or the result of calling
+ * \p `f` if it does not.
+ *
+ * @tparam T
+ * @tparam F
+ * @param f
+ * @return optional<T&>
+ */
 template <class T>
 template <class F>
 constexpr optional<T&> optional<T&>::or_else(F&& f) const {
@@ -1917,6 +2012,12 @@ template <typename T>
     }
 struct hash<beman::optional::optional<T>> {
     static_assert(!is_reference_v<T>, "hash is not enabled for reference types");
+    /**
+     * @brief Hashes the optional value.
+     *
+     * @param o
+     * @return size_t
+     */
     size_t operator()(const beman::optional::optional<T>& o) const noexcept(noexcept(hash<remove_const_t<T>>{}(*o))) {
         if (o) {
             return std::hash<std::remove_const_t<T>>{}(*o);
