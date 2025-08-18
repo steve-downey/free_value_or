@@ -714,7 +714,7 @@ class optional {
          * @brief The stored value of the optional.
          *
          */
-        T     value_;
+        T value_;
     };
     bool engaged_ = false;
 
@@ -1454,8 +1454,8 @@ class optional<T&> {
      * @brief The type of the iterator for the optional.
      *
      */
-    using iterator   = detail::contiguous_iterator<T,
-                                                   optional>; // see [optionalref.iterators]
+    using iterator = detail::contiguous_iterator<T,
+                                                 optional>; // see [optionalref.iterators]
   public:
     // \ref{optionalref.ctor}, constructors
 
