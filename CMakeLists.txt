@@ -6,12 +6,12 @@
 target_sources(
     beman_optional_test
     PRIVATE
-        optional.t.cpp
-        optional_constexpr.t.cpp
-        optional_monadic.t.cpp
-        optional_range_support.t.cpp
-        optional_ref.t.cpp
-        optional_ref_monadic.t.cpp
+        optional.test.cpp
+        optional_constexpr.test.cpp
+        optional_monadic.test.cpp
+        optional_range_support.test.cpp
+        optional_ref.test.cpp
+        optional_ref_monadic.test.cpp
 )
 
 target_sources(
