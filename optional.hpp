@@ -1662,31 +1662,35 @@ class optional<T&> {
 
     // \ref{optionalref.assign}, assignment
     /**
-     * @brief Assignment operator.
+     * @brief Nullopt assignment operator.
      *
      * @return optional&
+     * 
+     * @details
+     * Destroys the current value if there is one, and leaves the optional
+     * in an empty state.
      */
     constexpr optional& operator=(nullopt_t) noexcept;
 
     /**
-     * @brief Copy assignment operator.
+     * @brief Assignment operator.
      *
      * @param rhs
-     * @return optional&
-     */
-    constexpr optional& operator=(const optional& rhs) noexcept = default;
-
-    /**
-     * @brief Converting copy assignment operator.
-     *
-     * @tparam U
-     * @param u
      * @return optional&
      * @details
      * If `rhs` has a value, assigns it to the stored value. Otherwise resets
      * the stored value in `*this`.
-     * If `T&` can be constructed from a temporary, this assignment operator
-     * is deleted to prevent binding a temporary to a reference.
+     */
+    constexpr optional& operator=(const optional& rhs) noexcept = default;
+
+    /**
+     * @brief Emplaces a new value in the optional, destroying the current one if
+     *
+     * @tparam U
+     * @param u
+     * @return T&
+     * @details
+     * Constructs the stored value from `u` if it is convertible to `T&`.
      */
     template <class U>
         requires(std::is_constructible_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, U>)
@@ -1722,6 +1726,7 @@ class optional<T&> {
      * @return T*
      */
     constexpr T* operator->() const noexcept;
+
     /**
      * @brief Returns a reference to the stored value.
      *
@@ -1735,6 +1740,7 @@ class optional<T&> {
      * @return bool
      */
     constexpr explicit operator bool() const noexcept;
+
     /**
      * @brief Checks if the optional has a value.
      *
@@ -1766,6 +1772,10 @@ class optional<T&> {
      * @tparam F
      * @param f
      * @return auto
+     * 
+     * @details
+     * The return type is the same as \tcode{std::invoke_result_t<F, T&>},
+     * but wrapped in an optional. The function \p f must return an optional type.  
      */
     template <class F>
     constexpr auto and_then(F&& f) const;
@@ -1776,6 +1786,10 @@ class optional<T&> {
      * @tparam F
      * @param f
      * @return optional<std::invoke_result_t<F, T&>>
+     * 
+     * @details
+     * The return type is the same as \tcode{std::invoke_result_t<F, T&>},
+     * but wrapped in an optional.
      */
     template <class F>
     constexpr optional<std::invoke_result_t<F, T&>> transform(F&& f) const;
@@ -1786,6 +1800,9 @@ class optional<T&> {
      * @tparam F
      * @param f
      * @return optional
+     * @details
+     * The return type is the same as the return type of \p f, which must
+     * return an optional type. 
      */
     template <class F>
     constexpr optional or_else(F&& f) const;
