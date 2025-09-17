@@ -1665,7 +1665,7 @@ class optional<T&> {
      * @brief Nullopt assignment operator.
      *
      * @return optional&
-     * 
+     *
      * @details
      * Destroys the current value if there is one, and leaves the optional
      * in an empty state.
@@ -1772,10 +1772,10 @@ class optional<T&> {
      * @tparam F
      * @param f
      * @return auto
-     * 
+     *
      * @details
      * The return type is the same as \tcode{std::invoke_result_t<F, T&>},
-     * but wrapped in an optional. The function \p f must return an optional type.  
+     * but wrapped in an optional. The function \p f must return an optional type.
      */
     template <class F>
     constexpr auto and_then(F&& f) const;
@@ -1786,7 +1786,7 @@ class optional<T&> {
      * @tparam F
      * @param f
      * @return optional<std::invoke_result_t<F, T&>>
-     * 
+     *
      * @details
      * The return type is the same as \tcode{std::invoke_result_t<F, T&>},
      * but wrapped in an optional.
@@ -1802,7 +1802,7 @@ class optional<T&> {
      * @return optional
      * @details
      * The return type is the same as the return type of \p f, which must
-     * return an optional type. 
+     * return an optional type.
      */
     template <class F>
     constexpr optional or_else(F&& f) const;
