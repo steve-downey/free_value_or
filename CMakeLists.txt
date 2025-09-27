@@ -18,8 +18,8 @@ target_sources(
     beman_optional_test
     PRIVATE
         FILE_SET beman_optional_test_headers
-        TYPE HEADERS
-        FILES test_types.hpp test_utilities.hpp
+            TYPE HEADERS
+            FILES test_types.hpp test_utilities.hpp
 )
 
 target_link_libraries(
