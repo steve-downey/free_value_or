@@ -5,13 +5,13 @@ target_sources(
     beman_optional
     PUBLIC
         FILE_SET beman_optional_headers
-        TYPE HEADERS
-        FILES
-            optional.hpp
-            detail/iterator.hpp
-            detail/stl_interfaces/config.hpp
-            detail/stl_interfaces/fwd.hpp
-            detail/stl_interfaces/iterator_interface.hpp
+            TYPE HEADERS
+            FILES
+                optional.hpp
+                detail/iterator.hpp
+                detail/stl_interfaces/config.hpp
+                detail/stl_interfaces/fwd.hpp
+                detail/stl_interfaces/iterator_interface.hpp
 )
 
 install(
@@ -24,8 +24,7 @@ install(
 install(
     TARGETS beman_optional
     EXPORT beman_optional_export
-    DESTINATION
-    ${CMAKE_INSTALL_LIBDIR}
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
     FILE_SET beman_optional_headers
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         COMPONENT beman_optional_development
