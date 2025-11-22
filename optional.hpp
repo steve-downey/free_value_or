@@ -1812,7 +1812,6 @@ class optional<T&> {
         requires(std::is_object_v<T> && !std::is_array_v<T>)
     constexpr std::decay_t<T> value_or(U&& u) const;
 
-
     // \ref{optionalref.monadic}, monadic operations
     /**
      * @brief Applies a function to the contained value if there is one.
