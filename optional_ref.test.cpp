@@ -864,6 +864,30 @@ TEST(OptionalRefTest, OverloadResolutionChecksDangling) {
     //    static_assert(std::is_same_v<decltype(check_dangling("abc")), void>);
 }
 
+namespace {
+    int int_func(void) { return 7; }
+}
+
+TEST(OptionalRefTest, NonReturnableRef) {
+    using IntArray5 = int[5];
+    beman::optional::optional<IntArray5&>o1;
+    IntArray5                            array;
+    beman::optional::optional<IntArray5&> o2{array};
+    EXPECT_FALSE(o1.has_value());
+    EXPECT_TRUE(o2.has_value());
+    // value_or removed for array types
+    // IntArray5 array2;
+    // auto t1 = o1.value_or(array2);
+    // auto t2 = o2.value_or(array2);
+
+    using IntFunc = int(void);
+    beman::optional::optional<IntFunc&> o3;
+    beman::optional::optional<IntFunc&> o4{int_func};
+    EXPECT_FALSE(o3.has_value());
+    EXPECT_TRUE(o4.has_value());
+}
+
+
 // beman::optional::optional<int const&> foo() {
 //     beman::optional::optional<int> o(10);
 //     return o; // Thanks to a simpler implicit move.
