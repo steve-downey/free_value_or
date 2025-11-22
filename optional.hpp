@@ -1791,6 +1791,16 @@ class optional<T&> {
      */
     constexpr T& value() const;
 
+    // LWG4304. std::optional<NonReturnable&> is ill-formed due to value_o
+    // Resolution:
+    // -?- Constraints: T is a non-array object type.
+    // -?- Remarks: The return type is unspecified if T is an array type or a
+    //     non-object type. [Note ?: This is to avoid the declaration being
+    //     ill-formed. — end note]
+    //
+    // Implementer Note: Using decay_t as a detail as it is remove_cv_t for
+    // non-array objects, and produces a valid type for arrays and functions,
+    // which are otherwise `required` out.
     /**
      * @brief Returns the contained value if there is one, otherwise returns `u`.
      *
@@ -1799,7 +1809,9 @@ class optional<T&> {
      * @return std::remove_cv_t<T>
      */
     template <class U = std::remove_cv_t<T>>
-    constexpr std::remove_cv_t<T> value_or(U&& u) const;
+        requires(std::is_object_v<T> && !std::is_array_v<T>)
+    constexpr std::decay_t<T> value_or(U&& u) const;
+
 
     // \ref{optionalref.monadic}, monadic operations
     /**
@@ -1991,7 +2003,8 @@ constexpr T& optional<T&>::value() const {
 
 template <class T>
 template <class U>
-constexpr std::remove_cv_t<T> optional<T&>::value_or(U&& u) const {
+    requires(std::is_object_v<T> && !std::is_array_v<T>)
+constexpr std::decay_t<T> optional<T&>::value_or(U&& u) const {
     static_assert(std::is_constructible_v<std::remove_cv_t<T>, T&>, "T must be constructible from a T&");
     static_assert(std::is_convertible_v<U, std::remove_cv_t<T>>, "Must be able to convert u to T");
     return has_value() ? *value_ : static_cast<std::remove_cv_t<T>>(std::forward<U>(u));
