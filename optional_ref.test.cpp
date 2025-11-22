@@ -865,13 +865,13 @@ TEST(OptionalRefTest, OverloadResolutionChecksDangling) {
 }
 
 namespace {
-    int int_func(void) { return 7; }
-}
+int int_func(void) { return 7; }
+} // namespace
 
 TEST(OptionalRefTest, NonReturnableRef) {
     using IntArray5 = int[5];
-    beman::optional::optional<IntArray5&>o1;
-    IntArray5                            array;
+    beman::optional::optional<IntArray5&> o1;
+    IntArray5                             array;
     beman::optional::optional<IntArray5&> o2{array};
     EXPECT_FALSE(o1.has_value());
     EXPECT_TRUE(o2.has_value());
@@ -886,7 +886,6 @@ TEST(OptionalRefTest, NonReturnableRef) {
     EXPECT_FALSE(o3.has_value());
     EXPECT_TRUE(o4.has_value());
 }
-
 
 // beman::optional::optional<int const&> foo() {
 //     beman::optional::optional<int> o(10);
