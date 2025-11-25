@@ -92,6 +92,12 @@ inline constexpr auto std::format_kind<beman::optional::optional<T>> = range_for
 #endif
 
 namespace beman::optional {
+namespace detail {
+template <typename T>
+inline constexpr bool is_optional = false;
+template <typename T>
+inline constexpr bool is_optional<optional<T>> = true;
+} // namespace detail
 /**
  * @brief Concept for checking if derived from optional.
  */
@@ -155,42 +161,54 @@ constexpr std::strong_ordering operator<=>(const optional<T>&, nullopt_t) noexce
 // \ref{optional.comp.with.t}, comparison with \tcode{T}
 template <typename T, typename U>
 constexpr bool operator==(const optional<T>& lhs, const U& rhs)
-    requires detail::optional_eq_rel<T, U>;
+    requires (!detail::is_optional<U>) && detail::optional_eq_rel<T, U>;
+
 template <typename T, typename U>
 constexpr bool operator==(const T& lhs, const optional<U>& rhs)
-    requires detail::optional_eq_rel<T, U>;
+    requires (!detail::is_optional<T>) && detail::optional_eq_rel<T, U>;
+
 template <typename T, typename U>
 constexpr bool operator!=(const optional<T>& lhs, const U& rhs)
-    requires detail::optional_ne_rel<T, U>;
+    requires (!detail::is_optional<U>) && detail::optional_ne_rel<T, U>;
+
 template <typename T, typename U>
 constexpr bool operator!=(const T& lhs, const optional<U>& rhs)
-    requires detail::optional_ne_rel<T, U>;
+    requires (!detail::is_optional<T>) && detail::optional_ne_rel<T, U>;
+
 template <typename T, typename U>
 constexpr bool operator<(const optional<T>& lhs, const U& rhs)
-    requires detail::optional_lt_rel<T, U>;
+    requires (!detail::is_optional<U>) && detail::optional_lt_rel<T, U>;
+
 template <typename T, typename U>
 constexpr bool operator<(const T& lhs, const optional<U>& rhs)
-    requires detail::optional_lt_rel<T, U>;
+    requires (!detail::is_optional<T>) && detail::optional_lt_rel<T, U>;
+
 template <typename T, typename U>
 constexpr bool operator>(const optional<T>& lhs, const U& rhs)
-    requires detail::optional_gt_rel<T, U>;
+    requires (!detail::is_optional<U>) && detail::optional_gt_rel<T, U>;
+
 template <typename T, typename U>
 constexpr bool operator>(const T& lhs, const optional<U>& rhs)
-    requires detail::optional_gt_rel<T, U>;
+    requires (!detail::is_optional<T>) && detail::optional_gt_rel<T, U>;
+
 template <typename T, typename U>
 constexpr bool operator<=(const optional<T>& lhs, const U& rhs)
-    requires detail::optional_le_rel<T, U>;
+    requires (!detail::is_optional<U>) && detail::optional_le_rel<T, U>;
+
 template <typename T, typename U>
 constexpr bool operator<=(const T& lhs, const optional<U>& rhs)
-    requires detail::optional_le_rel<T, U>;
+    requires (!detail::is_optional<T>) && detail::optional_le_rel<T, U>;
+
 template <typename T, typename U>
 constexpr bool operator>=(const optional<T>& lhs, const U& rhs)
-    requires detail::optional_ge_rel<T, U>;
+    requires (!detail::is_optional<U>) && detail::optional_ge_rel<T, U>;
+
 template <typename T, typename U>
 constexpr bool operator>=(const T& lhs, const optional<U>& rhs)
-    requires detail::optional_ge_rel<T, U>;
+    requires (!detail::is_optional<T>) && detail::optional_ge_rel<T, U>;
+
 template <typename T, typename U>
-    requires(!is_derived_from_optional<U>) && std::three_way_comparable_with<T, U>
+    requires (!is_derived_from_optional<U>) && std::three_way_comparable_with<T, U>
 constexpr std::compare_three_way_result_t<T, U> operator<=>(const optional<T>& x, const U& v);
 
 // \ref{optional.specalg}, specialized algorithms
@@ -259,14 +277,6 @@ concept enable_assign_from_other =
     !std::is_convertible_v<const optional<U>&, T> && !std::is_convertible_v<const optional<U>&&, T> &&
     !std::is_assignable_v<T&, optional<U>&> && !std::is_assignable_v<T&, optional<U>&&> &&
     !std::is_assignable_v<T&, const optional<U>&> && !std::is_assignable_v<T&, const optional<U>&&>;
-} // namespace detail
-
-namespace detail {
-template <class T>
-concept is_optional = requires(const T& t) { // exposition only
-    []<class U>(const optional<U>&) {}(t);
-};
-
 } // namespace detail
 
 // 22.5.3.1 General[optional.optional.general]
@@ -377,14 +387,14 @@ class optional {
      */
     template <class U>
     constexpr explicit(!std::is_convertible_v<U, T>) optional(const optional<U>& rhs)
-        requires(detail::enable_from_other<T, U, const U&>);
+        requires (detail::enable_from_other<T, U, const U&>);
 
     /**
      * @brief   Constructs the value from \p rhs if it has one.
      */
     template <class U>
     constexpr explicit(!std::is_convertible_v<U, T>) optional(optional<U>&& rhs)
-        requires(detail::enable_from_other<T, U, U &&>);
+        requires (detail::enable_from_other<T, U, U &&>);
 
     // \ref{optional.dtor}, destructor
     /**
@@ -399,7 +409,7 @@ class optional {
      *  @brief   Destroys the optional and its value if it has one.
      */
     constexpr ~optional()
-        requires(!std::is_trivially_destructible_v<T>);
+        requires (!std::is_trivially_destructible_v<T>);
 
     // \ref{optional.assign}, assignment
     /**
@@ -456,14 +466,14 @@ class optional {
      */
     template <class U>
     constexpr optional& operator=(const optional<U>& rhs)
-        requires(detail::enable_assign_from_other<T, U, const U&>);
+        requires (detail::enable_assign_from_other<T, U, const U&>);
 
     /**
      * @brief   Assigns the contained value from \p rhs if it has one, destroying the old value if there
      */
     template <class U>
     constexpr optional& operator=(optional<U>&& rhs)
-        requires(detail::enable_assign_from_other<T, U, U>);
+        requires (detail::enable_assign_from_other<T, U, U>);
     /**
      * @brief Constructs the value in-place, destroying the current one if there
      *
@@ -841,7 +851,7 @@ inline constexpr optional<T>::optional(U&& u)
 template <class T>
 template <class U>
 inline constexpr optional<T>::optional(const optional<U>& rhs)
-    requires(detail::enable_from_other<T, U, const U&>)
+    requires (detail::enable_from_other<T, U, const U&>)
 {
     if (rhs.has_value()) {
         construct(*rhs);
@@ -852,7 +862,7 @@ inline constexpr optional<T>::optional(const optional<U>& rhs)
 template <class T>
 template <class U>
 inline constexpr optional<T>::optional(optional<U>&& rhs)
-    requires(detail::enable_from_other<T, U, U &&>)
+    requires (detail::enable_from_other<T, U, U &&>)
 {
     if (rhs.has_value()) {
         construct(*std::move(rhs));
@@ -863,7 +873,7 @@ inline constexpr optional<T>::optional(optional<U>&& rhs)
 
 template <class T>
 inline constexpr optional<T>::~optional()
-    requires(!std::is_trivially_destructible_v<T>)
+    requires (!std::is_trivially_destructible_v<T>)
 {
     if (has_value())
         std::destroy_at(std::addressof(value_));
@@ -929,7 +939,7 @@ inline constexpr optional<T>& optional<T>::operator=(U&& u)
 template <class T>
 template <class U>
 inline constexpr optional<T>& optional<T>::operator=(const optional<U>& rhs)
-    requires(detail::enable_assign_from_other<T, U, const U&>)
+    requires (detail::enable_assign_from_other<T, U, const U&>)
 {
     if (has_value()) {
         if (rhs.has_value()) {
@@ -953,7 +963,7 @@ inline constexpr optional<T>& optional<T>::operator=(const optional<U>& rhs)
 template <class T>
 template <class U>
 inline constexpr optional<T>& optional<T>::operator=(optional<U>&& rhs)
-    requires(detail::enable_assign_from_other<T, U, U>)
+    requires (detail::enable_assign_from_other<T, U, U>)
 {
     if (has_value()) {
         if (rhs.has_value()) {
@@ -1324,90 +1334,90 @@ constexpr std::strong_ordering operator<=>(const optional<T>& x, nullopt_t) noex
 // 22.5.8 Comparison with T[optional.comp.with.t]
 template <typename T, typename U>
 constexpr bool operator==(const optional<T>& lhs, const U& rhs)
-    requires detail::optional_eq_rel<T, U>
+    requires (!detail::is_optional<U>) && detail::optional_eq_rel<T, U>
 {
     return lhs && *lhs == rhs;
 }
 
 template <typename T, typename U>
 constexpr bool operator==(const T& lhs, const optional<U>& rhs)
-    requires detail::optional_eq_rel<T, U>
+    requires (!detail::is_optional<T>) && detail::optional_eq_rel<T, U>
 {
     return rhs && lhs == *rhs;
 }
 
 template <typename T, typename U>
 constexpr bool operator!=(const optional<T>& lhs, const U& rhs)
-    requires detail::optional_ne_rel<T, U>
+    requires (!detail::is_optional<U>) && detail::optional_ne_rel<T, U>
 {
     return !lhs || *lhs != rhs;
 }
 
 template <typename T, typename U>
 constexpr bool operator!=(const T& lhs, const optional<U>& rhs)
-    requires detail::optional_ne_rel<T, U>
+    requires (!detail::is_optional<T>) && detail::optional_ne_rel<T, U>
 {
     return !rhs || lhs != *rhs;
 }
 
 template <typename T, typename U>
 constexpr bool operator<(const optional<T>& lhs, const U& rhs)
-    requires detail::optional_lt_rel<T, U>
+    requires (!detail::is_optional<U>) && detail::optional_lt_rel<T, U>
 {
     return !lhs || *lhs < rhs;
 }
 
 template <typename T, typename U>
 constexpr bool operator<(const T& lhs, const optional<U>& rhs)
-    requires detail::optional_lt_rel<T, U>
+    requires (!detail::is_optional<T>) && detail::optional_lt_rel<T, U>
 {
     return rhs && lhs < *rhs;
 }
 
 template <typename T, typename U>
 constexpr bool operator>(const optional<T>& lhs, const U& rhs)
-    requires detail::optional_gt_rel<T, U>
+    requires (!detail::is_optional<U>) && detail::optional_gt_rel<T, U>
 {
     return lhs && *lhs > rhs;
 }
 
 template <typename T, typename U>
 constexpr bool operator>(const T& lhs, const optional<U>& rhs)
-    requires detail::optional_gt_rel<T, U>
+    requires (!detail::is_optional<T>) && detail::optional_gt_rel<T, U>
 {
     return !rhs || lhs > *rhs;
 }
 
 template <typename T, typename U>
 constexpr bool operator<=(const optional<T>& lhs, const U& rhs)
-    requires detail::optional_le_rel<T, U>
+    requires (!detail::is_optional<U>) && detail::optional_le_rel<T, U>
 {
     return !lhs || *lhs <= rhs;
 }
 
 template <typename T, typename U>
 constexpr bool operator<=(const T& lhs, const optional<U>& rhs)
-    requires detail::optional_le_rel<T, U>
+    requires (!detail::is_optional<T>) && detail::optional_le_rel<T, U>
 {
     return rhs && lhs <= *rhs;
 }
 
 template <typename T, typename U>
 constexpr bool operator>=(const optional<T>& lhs, const U& rhs)
-    requires detail::optional_ge_rel<T, U>
+    requires (!detail::is_optional<U>) && detail::optional_ge_rel<T, U>
 {
     return lhs && *lhs >= rhs;
 }
 
 template <typename T, typename U>
 constexpr bool operator>=(const T& lhs, const optional<U>& rhs)
-    requires detail::optional_ge_rel<T, U>
+    requires (!detail::is_optional<T>) && detail::optional_ge_rel<T, U>
 {
     return !rhs || lhs >= *rhs;
 }
 
 template <typename T, typename U>
-    requires(!is_derived_from_optional<U>) && std::three_way_comparable_with<T, U>
+    requires (!is_derived_from_optional<U>) && std::three_way_comparable_with<T, U>
 constexpr std::compare_three_way_result_t<T, U> operator<=>(const optional<T>& x, const U& v) {
     return bool(x) ? *x <=> v : std::strong_ordering::less;
 }
@@ -1527,7 +1537,7 @@ class optional<T&> {
      * @param arg The value to construct in-place from.
      */
     template <class Arg>
-        requires(std::is_constructible_v<T&, Arg> && !detail::reference_constructs_from_temporary_v<T&, Arg>)
+        requires (std::is_constructible_v<T&, Arg> && !detail::reference_constructs_from_temporary_v<T&, Arg>)
     constexpr explicit optional(in_place_t, Arg&& arg);
 
     /**
@@ -1540,9 +1550,9 @@ class optional<T&> {
      * deleted to prevent binding a temporary to a reference.
      */
     template <class U>
-        requires(std::is_constructible_v<T&, U> && !(std::is_same_v<std::remove_cvref_t<U>, in_place_t>) &&
-                 !(std::is_same_v<std::remove_cvref_t<U>, optional>) &&
-                 !detail::reference_constructs_from_temporary_v<T&, U>)
+        requires (std::is_constructible_v<T&, U> && !(std::is_same_v<std::remove_cvref_t<U>, in_place_t>) &&
+                  !(std::is_same_v<std::remove_cvref_t<U>, optional>) &&
+                  !detail::reference_constructs_from_temporary_v<T&, U>)
     constexpr explicit(!std::is_convertible_v<U, T&>)
         optional(U&& u) noexcept(std::is_nothrow_constructible_v<T&, U>) {
         convert_ref_init_val(u);
@@ -1554,9 +1564,9 @@ class optional<T&> {
      * @tparam U
      */
     template <class U>
-        requires(std::is_constructible_v<T&, U> && !(std::is_same_v<std::remove_cvref_t<U>, in_place_t>) &&
-                 !(std::is_same_v<std::remove_cvref_t<U>, optional>) &&
-                 detail::reference_constructs_from_temporary_v<T&, U>)
+        requires (std::is_constructible_v<T&, U> && !(std::is_same_v<std::remove_cvref_t<U>, in_place_t>) &&
+                  !(std::is_same_v<std::remove_cvref_t<U>, optional>) &&
+                  detail::reference_constructs_from_temporary_v<T&, U>)
     constexpr optional(U&& u) = delete;
 
     // The full set of 4 overloads on optional<U> by value category, doubled to
@@ -1576,8 +1586,8 @@ class optional<T&> {
      * deleted to prevent binding a temporary to a reference.
      */
     template <class U>
-        requires(std::is_constructible_v<T&, U&> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
-                 !std::is_same_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, U&>)
+        requires (std::is_constructible_v<T&, U&> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
+                  !std::is_same_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, U&>)
     constexpr explicit(!std::is_convertible_v<U&, T&>)
         optional(optional<U>& rhs) noexcept(std::is_nothrow_constructible_v<T&, U&>);
 
@@ -1592,8 +1602,8 @@ class optional<T&> {
      * deleted to prevent binding a temporary to a reference.
      */
     template <class U>
-        requires(std::is_constructible_v<T&, const U&> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
-                 !std::is_same_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, const U&>)
+        requires (std::is_constructible_v<T&, const U&> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
+                  !std::is_same_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, const U&>)
     constexpr explicit(!std::is_convertible_v<const U&, T&>)
         optional(const optional<U>& rhs) noexcept(std::is_nothrow_constructible_v<T&, const U&>);
 
@@ -1608,8 +1618,8 @@ class optional<T&> {
      * deleted to prevent binding a temporary to a reference.
      */
     template <class U>
-        requires(std::is_constructible_v<T&, U> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
-                 !std::is_same_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, U>)
+        requires (std::is_constructible_v<T&, U> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
+                  !std::is_same_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, U>)
     constexpr explicit(!std::is_convertible_v<U, T&>)
         optional(optional<U>&& rhs) noexcept(noexcept(std::is_nothrow_constructible_v<T&, U>));
 
@@ -1625,8 +1635,8 @@ class optional<T&> {
      * deleted to prevent binding a temporary to a reference.
      */
     template <class U>
-        requires(std::is_constructible_v<T&, const U> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
-                 !std::is_same_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, const U>)
+        requires (std::is_constructible_v<T&, const U> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
+                  !std::is_same_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, const U>)
     constexpr explicit(!std::is_convertible_v<const U, T&>)
         optional(const optional<U>&& rhs) noexcept(noexcept(std::is_nothrow_constructible_v<T&, const U>));
 
@@ -1642,8 +1652,8 @@ class optional<T&> {
      * deleted to prevent binding a temporary to a reference.
      */
     template <class U>
-        requires(std::is_constructible_v<T&, U&> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
-                 !std::is_same_v<T&, U> && detail::reference_constructs_from_temporary_v<T&, U&>)
+        requires (std::is_constructible_v<T&, U&> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
+                  !std::is_same_v<T&, U> && detail::reference_constructs_from_temporary_v<T&, U&>)
     constexpr optional(optional<U>& rhs) = delete;
 
     /**
@@ -1658,8 +1668,8 @@ class optional<T&> {
      * deleted to prevent binding a temporary to a reference.
      */
     template <class U>
-        requires(std::is_constructible_v<T&, const U&> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
-                 !std::is_same_v<T&, U> && detail::reference_constructs_from_temporary_v<T&, const U&>)
+        requires (std::is_constructible_v<T&, const U&> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
+                  !std::is_same_v<T&, U> && detail::reference_constructs_from_temporary_v<T&, const U&>)
     constexpr optional(const optional<U>& rhs) = delete;
 
     /**
@@ -1674,8 +1684,8 @@ class optional<T&> {
      * deleted to prevent binding a temporary to a reference.
      */
     template <class U>
-        requires(std::is_constructible_v<T&, U> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
-                 !std::is_same_v<T&, U> && detail::reference_constructs_from_temporary_v<T&, U>)
+        requires (std::is_constructible_v<T&, U> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
+                  !std::is_same_v<T&, U> && detail::reference_constructs_from_temporary_v<T&, U>)
     constexpr optional(optional<U>&& rhs) = delete;
 
     /**
@@ -1690,8 +1700,8 @@ class optional<T&> {
      * deleted to prevent binding a temporary to a reference.
      */
     template <class U>
-        requires(std::is_constructible_v<T&, const U> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
-                 !std::is_same_v<T&, U> && detail::reference_constructs_from_temporary_v<T&, const U>)
+        requires (std::is_constructible_v<T&, const U> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
+                  !std::is_same_v<T&, U> && detail::reference_constructs_from_temporary_v<T&, const U>)
     constexpr optional(const optional<U>&& rhs) = delete;
 
     // \ref{optionalref.dtor}, destructor
@@ -1737,7 +1747,7 @@ class optional<T&> {
      * Constructs the contained value from `u` if it is convertible to `T&`.
      */
     template <class U>
-        requires(std::is_constructible_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, U>)
+        requires (std::is_constructible_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, U>)
     constexpr T& emplace(U&& u) noexcept(std::is_nothrow_constructible_v<T&, U>);
 
     // \ref{optionalref.swap}, swap
@@ -1799,6 +1809,16 @@ class optional<T&> {
      */
     constexpr T& value() const;
 
+    // LWG4304. std::optional<NonReturnable&> is ill-formed due to value_o
+    // Resolution:
+    // -?- Constraints: T is a non-array object type.
+    // -?- Remarks: The return type is unspecified if T is an array type or a
+    //     non-object type. [Note ?: This is to avoid the declaration being
+    //     ill-formed. — end note]
+    //
+    // Implementer Note: Using decay_t as a detail as it is remove_cv_t for
+    // non-array objects, and produces a valid type for arrays and functions,
+    // which are otherwise `required` out.
     /**
      * @brief Returns the contained value if there is one, otherwise returns `u`.
      *
@@ -1807,7 +1827,8 @@ class optional<T&> {
      * @return std::remove_cv_t<T>
      */
     template <class U = std::remove_cv_t<T>>
-    constexpr std::remove_cv_t<T> value_or(U&& u) const;
+        requires (std::is_object_v<T> && !std::is_array_v<T>)
+    constexpr std::decay_t<T> value_or(U&& u) const;
 
     // \ref{optionalref.monadic}, monadic operations
     /**
@@ -1883,7 +1904,7 @@ class optional<T&> {
 //  \rSec3[optionalref.ctor]{Constructors}
 template <class T>
 template <class Arg>
-    requires(std::is_constructible_v<T&, Arg> && !detail::reference_constructs_from_temporary_v<T&, Arg>)
+    requires (std::is_constructible_v<T&, Arg> && !detail::reference_constructs_from_temporary_v<T&, Arg>)
 constexpr optional<T&>::optional(in_place_t, Arg&& arg) {
     convert_ref_init_val(std::forward<Arg>(arg));
 }
@@ -1899,8 +1920,8 @@ constexpr optional<T&>::optional(in_place_t, Arg&& arg) {
 
 template <class T>
 template <class U>
-    requires(std::is_constructible_v<T&, U&> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
-             !std::is_same_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, U&>)
+    requires (std::is_constructible_v<T&, U&> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
+              !std::is_same_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, U&>)
 constexpr optional<T&>::optional(optional<U>& rhs) noexcept(std::is_nothrow_constructible_v<T&, U&>) {
     if (rhs.has_value()) {
         convert_ref_init_val(*rhs);
@@ -1909,8 +1930,8 @@ constexpr optional<T&>::optional(optional<U>& rhs) noexcept(std::is_nothrow_cons
 
 template <class T>
 template <class U>
-    requires(std::is_constructible_v<T&, const U&> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
-             !std::is_same_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, const U&>)
+    requires (std::is_constructible_v<T&, const U&> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
+              !std::is_same_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, const U&>)
 constexpr optional<T&>::optional(const optional<U>& rhs) noexcept(std::is_nothrow_constructible_v<T&, const U&>) {
     if (rhs.has_value()) {
         convert_ref_init_val(*rhs);
@@ -1919,8 +1940,8 @@ constexpr optional<T&>::optional(const optional<U>& rhs) noexcept(std::is_nothro
 
 template <class T>
 template <class U>
-    requires(std::is_constructible_v<T&, U> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
-             !std::is_same_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, U>)
+    requires (std::is_constructible_v<T&, U> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
+              !std::is_same_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, U>)
 constexpr optional<T&>::optional(optional<U>&& rhs) noexcept(noexcept(std::is_nothrow_constructible_v<T&, U>)) {
     if (rhs.has_value()) {
         convert_ref_init_val(*std::move(rhs));
@@ -1929,8 +1950,8 @@ constexpr optional<T&>::optional(optional<U>&& rhs) noexcept(noexcept(std::is_no
 
 template <class T>
 template <class U>
-    requires(std::is_constructible_v<T&, const U> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
-             !std::is_same_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, const U>)
+    requires (std::is_constructible_v<T&, const U> && !std::is_same_v<std::remove_cv_t<T>, optional<U>> &&
+              !std::is_same_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, const U>)
 constexpr optional<T&>::optional(const optional<U>&& rhs) noexcept(
     noexcept(std::is_nothrow_constructible_v<T&, const U>)) {
     if (rhs.has_value()) {
@@ -1947,7 +1968,7 @@ constexpr optional<T&>& optional<T&>::operator=(nullopt_t) noexcept {
 
 template <class T>
 template <class U>
-    requires(std::is_constructible_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, U>)
+    requires (std::is_constructible_v<T&, U> && !detail::reference_constructs_from_temporary_v<T&, U>)
 constexpr T& optional<T&>::emplace(U&& u) noexcept(std::is_nothrow_constructible_v<T&, U>) {
     convert_ref_init_val(std::forward<U>(u));
     return *value_;
@@ -2002,7 +2023,8 @@ constexpr T& optional<T&>::value() const {
 
 template <class T>
 template <class U>
-constexpr std::remove_cv_t<T> optional<T&>::value_or(U&& u) const {
+    requires (std::is_object_v<T> && !std::is_array_v<T>)
+constexpr std::decay_t<T> optional<T&>::value_or(U&& u) const {
     using X = std::remove_cv_t<T>;
     static_assert(std::is_convertible_v<T&, X>, "remove_cv_t<T> must be constructible from a T&");
     static_assert(std::is_convertible_v<U, X>, "Must be able to convert u to remove_cv_t<T>");

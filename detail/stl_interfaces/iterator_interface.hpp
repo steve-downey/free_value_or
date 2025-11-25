@@ -435,7 +435,7 @@ BEMAN_OPTIONAL_DETAIL_STL_INTERFACES_NAMESPACE_V2 {
     };
 
     template <typename Iterator>
-        requires(
+        requires (
             !requires { typename std::iterator_traits<Iterator>::iterator_concept; } &&
             requires { typename std::iterator_traits<Iterator>::iterator_category; })
     struct iter_concept<Iterator> {
@@ -443,7 +443,7 @@ BEMAN_OPTIONAL_DETAIL_STL_INTERFACES_NAMESPACE_V2 {
     };
 
     template <typename Iterator>
-        requires(
+        requires (
             !requires { typename std::iterator_traits<Iterator>::iterator_concept; } &&
             !requires { typename std::iterator_traits<Iterator>::iterator_category; })
     struct iter_concept<Iterator> {
