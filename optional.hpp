@@ -727,7 +727,8 @@ class optional {
      * @return optional
      */
     template <class F>
-    constexpr optional or_else(F&& f) const&;
+    constexpr optional or_else(F&& f) const&
+        requires (std::invocable<F> && std::copy_constructible<T>);
 
     /**
      * @brief Returns an optional containing the contained value if it has one, or
@@ -738,7 +739,8 @@ class optional {
      * @return auto
      */
     template <class F>
-    constexpr optional or_else(F&& f) &&;
+    constexpr optional or_else(F&& f) &&
+        requires (std::invocable<F> && std::move_constructible<T>);
 
     // \ref{optional.mod}, modifiers
     /**
@@ -1231,7 +1233,9 @@ constexpr auto optional<T>::transform(F&& f) const&& {
  */
 template <class T>
 template <class F>
-constexpr optional<T> optional<T>::or_else(F&& f) const& {
+constexpr optional<T> optional<T>::or_else(F&& f) const&
+    requires (std::invocable<F> && std::copy_constructible<T>)
+{
     static_assert(std::is_same_v<std::remove_cvref_t<std::invoke_result_t<F>>, optional>);
     if (has_value())
         return value_;
@@ -1250,7 +1254,9 @@ constexpr optional<T> optional<T>::or_else(F&& f) const& {
  */
 template <class T>
 template <class F>
-constexpr optional<T> optional<T>::or_else(F&& f) && {
+constexpr optional<T> optional<T>::or_else(F&& f) &&
+    requires (std::invocable<F> && std::move_constructible<T>)
+{
     static_assert(std::is_same_v<std::remove_cvref_t<std::invoke_result_t<F>>, optional>);
     if (has_value())
         return std::move(value_);
@@ -1870,7 +1876,8 @@ class optional<T&> {
      * return an optional type.
      */
     template <class F>
-    constexpr optional or_else(F&& f) const;
+    constexpr optional or_else(F&& f) const
+        requires (std::invocable<F>);
 
     // \ref{optional.mod}, modifiers
     /**
@@ -2078,7 +2085,10 @@ constexpr optional<std::invoke_result_t<F, T&>> optional<T&>::transform(F&& f) c
  */
 template <class T>
 template <class F>
-constexpr optional<T&> optional<T&>::or_else(F&& f) const {
+constexpr optional<T&> optional<T&>::or_else(F&& f) const
+
+    requires (std::invocable<F>)
+{
     using U = std::invoke_result_t<F>;
     static_assert(std::is_same_v<std::remove_cvref_t<U>, optional>, "Result must be an optional");
     if (has_value()) {
