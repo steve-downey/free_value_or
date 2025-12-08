@@ -4,7 +4,7 @@
 # cmake-format: on
 
 target_sources(
-    beman_optional_test
+    beman.optional.test
     PRIVATE
         optional.test.cpp
         optional_constexpr.test.cpp
@@ -15,7 +15,7 @@ target_sources(
 )
 
 target_sources(
-    beman_optional_test
+    beman.optional.test
     PRIVATE
         FILE_SET beman_optional_test_headers
             TYPE HEADERS
@@ -23,8 +23,8 @@ target_sources(
 )
 
 target_link_libraries(
-    beman_optional_test
-    PRIVATE beman_optional GTest::gtest GTest::gtest_main
+    beman.optional.test
+    PRIVATE beman.optional GTest::gtest GTest::gtest_main
 )
 # Issue #32: Re-enable ASAN run CI/clang-19.
 #
@@ -32,11 +32,11 @@ target_link_libraries(
 # platforms. Temporary switch to gtest_add_tests and skip some Asan checks.
 # Change also applied for CI flows.
 include(GoogleTest)
-gtest_add_tests(TARGET beman_optional_test "" AUTO)
+gtest_add_tests(TARGET beman.optional.test "" AUTO)
 
 add_library(constructor_fails test_constructor_fail.cpp)
 
-target_link_libraries(constructor_fails PRIVATE beman_optional)
+target_link_libraries(constructor_fails PRIVATE beman.optional)
 
 set_target_properties(
     constructor_fails
