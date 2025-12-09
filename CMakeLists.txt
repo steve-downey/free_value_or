@@ -1,7 +1,5 @@
-# cmake-format: off
-# src/beman/optional/tests/CMakeLists.txt -*-makefile-*-
+# tests/beman/optional/CMakeLists.txt                               -*-cmake-*-
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-# cmake-format: on
 
 target_sources(
     beman.optional.test
@@ -26,13 +24,6 @@ target_link_libraries(
     beman.optional.test
     PRIVATE beman.optional GTest::gtest GTest::gtest_main
 )
-# Issue #32: Re-enable ASAN run CI/clang-19.
-#
-# Note: clang-19 + gtest_discover_tests + Asan setup causes errors on some
-# platforms. Temporary switch to gtest_add_tests and skip some Asan checks.
-# Change also applied for CI flows.
-include(GoogleTest)
-gtest_add_tests(TARGET beman.optional.test "" AUTO)
 
 add_library(constructor_fails test_constructor_fail.cpp)
 
