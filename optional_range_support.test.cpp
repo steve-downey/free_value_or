@@ -334,7 +334,9 @@ TEST(RangeSupportTest, LoopOptionalAssignment) {
         constexpr_expect_eq(opt_int.value(), expected_value);
         return true;
     };
+#if !defined(_MSC_VER) // MSVC:call to immediate function is not a constant expression
     EXPECT_TRUE(constify(lambda()));
+#endif
     EXPECT_TRUE(lambda());
 }
 
@@ -381,6 +383,7 @@ TEST(RangeSupportTest, PythagoreanTriples) {
             // Generate first 10 Pythagorean triples.
             // https://mathworld.wolfram.com/PythagoreanTriple.html
             auto&& r = triples | std::views::take(10);
+#if !defined(_MSC_VER) // MSVC:call to immediate function is not a constant expression
             CONSTEXPR_EXPECT_TRUE(std::ranges::equal(r,
                                                      std::vector{
                                                          std::tuple{3, 4, 5},
@@ -394,6 +397,7 @@ TEST(RangeSupportTest, PythagoreanTriples) {
                                                          std::tuple{10, 24, 26},
                                                          std::tuple{20, 21, 29},
                                                      }));
+#endif
         }
 
         if (!std::is_constant_evaluated()) { // too many steps for the default constant evaluation limit
