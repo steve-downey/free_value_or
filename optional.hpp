@@ -1431,10 +1431,10 @@ constexpr std::compare_three_way_result_t<T, U> operator<=>(const optional<T>& x
 // 22.5.9 Specialized algorithms[optional.specalg]
 
 template <class T>
-constexpr void swap(optional<T>& lhs, optional<T>& rhs) noexcept(noexcept(lhs.swap(rhs)))
+constexpr void swap(optional<T>& x, optional<T>& y) noexcept(noexcept(x.swap(y)))
     requires std::is_move_constructible_v<T> && std::is_swappable_v<T>
 {
-    return lhs.swap(rhs);
+    return x.swap(y);
 }
 
 template <int, class T>
