@@ -55,9 +55,9 @@ TEST(OptionalRefTest, Constructors) {
     beman::optional::optional<base&>    b3 = d2;
     beman::optional::optional<base&>    b4{d2};
 
-    beman::optional::optional<derived&> empty;
-    beman::optional::optional<base&>    fromEmpty(empty);
-    beman::optional::optional<base&>    fromEmpty2 = empty;
+    beman::optional::optional<derived&> emptyDerived;
+    beman::optional::optional<base&>    fromEmpty(emptyDerived);
+    beman::optional::optional<base&>    fromEmpty2 = emptyDerived;
 
     /*
      * template <class U>
@@ -132,14 +132,14 @@ TEST(OptionalRefTest, Assignment) {
     EXPECT_TRUE(i2);
     EXPECT_TRUE(*i2 = 7);
 
-    beman::optional::optional<int&> empty;
-    EXPECT_FALSE(empty);
-    i2 = empty;
+    beman::optional::optional<int&> emptyInt;
+    EXPECT_FALSE(emptyInt);
+    i2 = emptyInt;
     EXPECT_FALSE(i2);
     int  eight  = 8;
-    int& result = empty.emplace(eight);
-    EXPECT_TRUE(empty);
-    EXPECT_EQ(empty, 8);
+    int& result = emptyInt.emplace(eight);
+    EXPECT_TRUE(emptyInt);
+    EXPECT_EQ(emptyInt, 8);
     EXPECT_EQ(&result, &eight);
 
     beman::optional::optional<const Thing&> o;
@@ -182,8 +182,8 @@ TEST(OptionalRefTest, ConstRefAssignment) {
 
     i = 5;
     EXPECT_EQ(*c1, 5);
-    const beman::optional::optional<int&> empty(beman::optional::nullopt);
-    c1 = empty;
+    const beman::optional::optional<int&> emptyInt(beman::optional::nullopt);
+    c1 = emptyInt;
     EXPECT_FALSE(c1);
 }
 
@@ -199,8 +199,8 @@ TEST(OptionalRefTest, ConvertingConstRvalRef) {
 
     i = 5;
     EXPECT_EQ(*c1, 5);
-    const beman::optional::optional<int&> empty(beman::optional::nullopt);
-    c1 = std::move(empty);
+    const beman::optional::optional<int&> emptyInt(beman::optional::nullopt);
+    c1 = std::move(emptyInt);
     EXPECT_FALSE(c1);
 }
 
