@@ -1066,6 +1066,7 @@ TEST(OptionalTest, OptionalFromOptionalRef) {
     ASSERT_TRUE(o2);
 }
 
+#if !defined(_MSC_VER) // MSVC errors, GCC & Clang do not
 TEST(OptionalTest, OptionalFromOptionalRefExplicit) {
     using beman::optional::tests::copyable_from_non_const_lvalue_only;
     using beman::optional::tests::explicitly_convertible_from_non_const_lvalue_only;
@@ -1079,6 +1080,7 @@ TEST(OptionalTest, OptionalFromOptionalRefExplicit) {
     beman::optional::optional<copyable_from_non_const_lvalue_only> o5(std::move(o3));
     ASSERT_TRUE(o5);
 }
+#endif
 
 TEST(OptionalTest, OptionalFromOptionalConstRef) {
     using beman::optional::tests::copyable_from_const_lvalue_only;
@@ -1111,6 +1113,7 @@ TEST(OptionalTest, OptionalFromOptionalConstRef) {
     ASSERT_TRUE(o2);
 }
 
+#if !defined(_MSC_VER) // MSVC errors, GCC & Clang do not
 TEST(OptionalTest, OptionalFromOptionalConstRefExplicit) {
     using beman::optional::tests::copyable_from_const_lvalue_only;
     using beman::optional::tests::explicitly_convertible_from_const_lvalue_only;
@@ -1124,6 +1127,7 @@ TEST(OptionalTest, OptionalFromOptionalConstRefExplicit) {
     beman::optional::optional<copyable_from_const_lvalue_only> o5(std::move(o3));
     ASSERT_TRUE(o5);
 }
+#endif
 
 TEST(OptionalTest, OptionalOfAnyWorks) {
     beman::optional::optional<std::any> o1 = 42;
