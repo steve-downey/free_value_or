@@ -1101,7 +1101,14 @@ inline constexpr const T& optional<T>::value() const& {
 }
 template <class T>
 inline constexpr T&& optional<T>::value() && {
+#if defined(_MSC_VER) // MSVC BUG -- ternary creates temporary
+    if (has_value()) {
+        return std::move(value_);
+    }
+    throw bad_optional_access();
+#else
     return has_value() ? std::move(value_) : throw bad_optional_access();
+#endif
 }
 
 /// Returns the contained value if there is one, otherwise returns `u`
