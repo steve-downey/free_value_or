@@ -1,4 +1,4 @@
-// tests/beman/optional/test_types.h -*-C++-*-
+// tests/beman/optional/test_types.hpp                                -*-C++-*-
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 #ifndef TESTS_BEMAN_OPTIONAL_TEST_TYPES_HPP

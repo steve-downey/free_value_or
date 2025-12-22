@@ -1,4 +1,4 @@
-// tests/beman/optional/optional_range_support.t.cpp -*-C++-*-
+// tests/beman/optional/optional_range_support.test.cpp               -*-C++-*-
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 /**

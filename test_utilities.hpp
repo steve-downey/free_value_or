@@ -1,4 +1,4 @@
-// tests/beman/optional/test_utilities.hpp                      -*-C++-*-
+// tests/beman/optional/test_utilities.hpp                            -*-C++-*-
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 #ifndef TESTS_BEMAN_OPTIONAL_TEST_UTILITIES_HPP
