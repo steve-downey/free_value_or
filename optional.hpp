@@ -1,4 +1,4 @@
-// include/beman/optional/optional.hpp -*-C++-*-
+// include/beman/optional/optional.hpp                                -*-C++-*-
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 #ifndef BEMAN_OPTIONAL_OPTIONAL_HPP

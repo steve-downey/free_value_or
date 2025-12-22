@@ -1,4 +1,4 @@
-// include/beman/optional/detail/iterator.hpp -*-C++-*-
+// include/beman/optional/detail/iterator.hpp                         -*-C++-*-
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 #ifndef BEMAN_OPTIONAL_DETAIL_ITERATOR_HPP
