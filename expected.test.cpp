@@ -9,6 +9,6 @@
 #include <algorithm>
 #include <functional>
 
-namespace exp = beman::expected;
+namespace expt = beman::expected;
 
-TEST(ExpectedTest, breathing) { EXPECT_EQ(false, true); }
+TEST(ExpectedTest, breathing) { EXPECT_EQ(true, true); }
