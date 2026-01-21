@@ -1,0 +1,16 @@
+// beman/expected/unexpected.test.cpp                                 -*-C++-*-
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+#include <beman/expected/unexpected.hpp>
+#include <beman/expected/unexpected.hpp>  // ensure idempotent header
+
+#include <gtest/gtest.h>
+
+#include <algorithm>
+#include <functional>
+
+namespace exp = beman::expected;
+
+TEST(UnexpectedTest, breathing) {
+  EXPECT_EQ(false, true);
+}
