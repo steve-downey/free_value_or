@@ -4,7 +4,7 @@
 add_executable(beman.expected.tests.expected)
 target_sources(
     beman.expected.tests.expected
-    PRIVATE unexpected.test.cpp expected.test.cpp
+    PRIVATE bad_expected_access.test.cpp unexpected.test.cpp expected.test.cpp
 )
 target_link_libraries(
     beman.expected.tests.expected
