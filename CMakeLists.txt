@@ -3,5 +3,7 @@
 
 target_sources(
     beman.expected
-    PUBLIC FILE_SET HEADERS FILES expected.hpp unexpected.hpp
+    PUBLIC
+        FILE_SET HEADERS
+            FILES expected.hpp unexpected.hpp bad_expected_access.hpp
 )
