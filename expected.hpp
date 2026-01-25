@@ -4,9 +4,7 @@
 #define BEMAN_EXPECTED_EXPECTED_HPP
 
 namespace beman {
-namespace expected {
-
-}
+namespace expected {}
 } // namespace beman
 
 #endif
