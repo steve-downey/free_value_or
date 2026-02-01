@@ -42,10 +42,7 @@ namespace std {
 }
 pcc*/
 namespace beman {
-namespace expected {
-
-
-}
-}
+namespace expected {}
+} // namespace beman
 
 #endif
