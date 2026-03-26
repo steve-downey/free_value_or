@@ -542,3 +542,5 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+/.deps/
+/wg21.bib
