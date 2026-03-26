@@ -76,7 +76,7 @@ $(DEPS_DIR):
 	mkdir -p $(DEPS_DIR)
 
 .PHONY: papers
-papers: optional_ref_wording.pdf ## Compile papers
+papers: example-paper.pdf ## Compile papers
 
 %.pdf : %.tex $(DEPS_DIR) | $(VENV)
 	$(SOURCE_VENV) latexmk -f -shell-escape -pdflua -use-make -deps -deps-out=$(DEPS_DIR)/$@.d -MP $<
