@@ -25,7 +25,9 @@
 \end{flushright}
 
 \begin{abstract}
-  We propose to fix
+  We propose to fix a hole intentionally left in \tcode{std::optional} ---
+
+  An optional over a reference such that the post condition on assignment is independent of the engaged state, always producing a rebound reference, and assigning a \tcode{U} to a \tcode{T} is disallowed by \tcode{static_assert} if a \tcode{U} can not be bound to a \tcode{T\&}.
 \end{abstract}
 
 \tableofcontents*
@@ -33,11 +35,11 @@
 \chapter*{Changes Since Last Version}
 
 \begin{itemize}
-\item \textbf{Changes since R$_{n-1}$}
+\item \textbf{Changes since R_{n-1}}
   \begin{itemize}
   \item One.
   \end{itemize}
-\item \textbf{Changes since R$_{n-2}$}
+\item \textbf{Changes since R_{n-2}}
   \begin{itemize}
   \item Tw
   \end{itemize}
@@ -47,6 +49,7 @@
 \section{Compare Some Things}
 
 This is the convention the ...
+
 \begin{tabular}{ lr }
   \begin{minipage}[t]{0.45\columnwidth}
     \begin{minted}[fontsize=\small]{c++}
@@ -72,20 +75,25 @@ Other than the standard library's implementation of ...
 
 \chapter{Design}
 
-The design is straightforward. The \tcode{new_thing<T>}
+The design is straightforward. The \tcode{new_thing<T>} ...
 
 \section{Relational Operations}
 
 The definitions of the relational operators ...
 
+\section{Trivial construction}
+Construction of \tcode{optional<T\&>} should be trivial, because it is straightforward to implement, and \tcode{optional<T>} is trivial.
+Boost is not.
 
-\chapter{Principles of Design}
+\chapter{Rendering Design In C++}
+
+While we value performance, we value safety more.
+
+Errors that can be detected at compile time must be detected at compile time.
 
 New Thing must never construct a temporary, or knowingly take the address of an temporary or part of an temporary.
 
-It is always presumed safe to copy the pointer value from an optional, since by induction, it is not dangling.
-
-
+It is always presumed safe to copy the pointer value from New Thing, since by induction, it is not intrinsically dangling.
 
 \chapter{Proposal}
 
@@ -112,25 +120,6 @@ Many thanks to all of the reviewers and authors
 \chapter*{Document history}
 
 \begin{itemize}
-\item \textbf{Changes since R8}
-  \begin{itemize}
-  \item Fix
-  \end{itemize}
-\item \textbf{Changes since R7}
-  \begin{itemize}
-  \item Wording mandates/constraint fixes
-  \item Hash removed
-  \item Notes on wording rendering
-  \end{itemize}
-\item \textbf{Changes since R6}
-  \begin{itemize}
-  \item add converting assignment operator
-  \item add converting in place constructor
-  \end{itemize}
-\item \textbf{Changes since R5}
-  \begin{itemize}
-  \item fix monadic constraints
-  \end{itemize}
 \item \textbf{Changes since R4}
   \begin{itemize}
   \item feature test macro
@@ -152,7 +141,6 @@ Many thanks to all of the reviewers and authors
 \renewcommand{\bibname}{References}
 \bibliographystyle{abstract}
 \bibliography{wg21,mybiblio}
-
 
 \backmatter
 \chapter*{Implementation}
