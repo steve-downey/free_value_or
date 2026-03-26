@@ -3,7 +3,6 @@
 
 %%--------------------------------------------------
 %% basics
-% \documentclass[a4paper,10pt,oneside,openany,final,article]{memoir}
 
 \usepackage[american]
            {babel}        % needed for iso dates
@@ -31,64 +30,62 @@
 \usepackage{lmodern}
 \usepackage{xcolor}
 \usepackage[T1]{fontenc}
-\usepackage{graphicx}
-\usepackage{hyperref}
-% \usepackage[pdftex,
-%             bookmarks=true,
-%             bookmarksnumbered=true,
-%             pdfpagelabels=true,
-%             pdfpagemode=UseOutlines,
-%             pdfstartview=FitH,
-%             linktocpage=true,
-%             colorlinks=true,
-%             plainpages=false,
-%             allcolors={blue},
-%             allbordercolors={white}
-%             ]{hyperref}
-
-% \usepackage[pdftex,
-%   pdfauthor={Steve Downey},
-%   pdftitle={dXXXpX},
-%   pdfkeywords={},
-%   pdfsubject={},
-%   pdfcreator={Emacs 28.1.50 (Org mode 9.5.2)},
-%   pdflang={English}]{hyperref}
-
+\usepackage[luatex, final]{graphicx}
+\usepackage[luatex]{hyperref}
+\hypersetup{pdftitle={C++ Working Draft},
+            pdfsubject={ISO/IEC JTC1 SC22 WG21, C++},
+            pdfcreator={Thomas K\"{o}ppe},
+            bookmarksnumbered=true,
+            pdfpagemode=UseOutlines,
+            pdfstartview=FitH,
+            linktocpage=true,
+            colorlinks=true,
+            linkcolor=blue,
+            citecolor=blue,
+            urlcolor=blue,    % ISO/IEC Directives, Part 2, section 6.5
+            plainpages=false}
 \usepackage{memhfixc}     % fix interactions between hyperref and memoir
 \usepackage{environ}
 \usepackage{expl3}
 \usepackage{xparse}
 \usepackage{xstring}
+\usepackage{xspace}
 
-\usepackage{url}  % urls in ref.bib
-\usepackage{tabularx}  % don't use the C++ standard's fancy tables, they come with captions!
-
-\special{pdf:minorversion 5} %set minorversion
-\special{pdf:compresslevel 9} %set minorversion
-\special{pdf:objcompresslevel 9} %set minorversion
-
+\pdfvariable majorversion 2
+\pdfvariable minorversion 0
 % \pdfminorversion=5
 % \pdfcompresslevel=9
 % \pdfobjcompresslevel=2
 
 \renewcommand\RSsmallest{5.5pt}  % smallest font size for relsize
 
+% Begin grammar extraction...
+\newwrite\gramout
+\immediate\openout\gramout=std-gram.ext
+
 \input{stdtex/layout}
 \input{stdtex/styles}
 \input{stdtex/macros}
 \input{stdtex/tables}
-\input{stdtex/paper_macros}
 
-% %%--------------------------------------------------
-% %% fix interaction between hyperref and other
-% %% commands
-% \pdfstringdefDisableCommands{\def\smaller#1{#1}}
-% \pdfstringdefDisableCommands{\def\textbf#1{#1}}
-% \pdfstringdefDisableCommands{\def\raisebox#1{}}
-% \pdfstringdefDisableCommands{\def\hspace#1{}}
-% \pdfstringdefDisableCommands{\def\frenchspacing{}}
+\makeindex[name=generalindex,options=-s generalindex.ist,title=Index]
+\makeindex[name=grammarindex,title=Index of grammar productions]
+\makeindex[name=headerindex,title=Index of library headers]
+\makeindex[name=libraryindex,options=-s libraryindex.ist,title=Index of library names]
+\makeindex[name=conceptindex,title=Index of library concepts]
+\makeindex[name=impldefindex,title=Index of implementation-defined behavior]
+\makeglossary[xrefindex]
+\makeglossary[xrefdelta]
 
-
+%%--------------------------------------------------
+%% fix interaction between hyperref and other
+%% commands
+\pdfstringdefDisableCommands{\def\smaller#1{#1}}
+\pdfstringdefDisableCommands{\def\textbf#1{#1}}
+\pdfstringdefDisableCommands{\def\raisebox#1{}}
+\pdfstringdefDisableCommands{\def\hspace#1{}}
+\pdfstringdefDisableCommands{\def\frenchspacing{}}
+\pdfstringdefDisableCommands{\def\@{}}
 
 %%--------------------------------------------------
 %% add special hyphenation rules
@@ -102,6 +99,7 @@
 %% select regular text font for \url
 \urlstyle{same}
 
-%% --------------------------------------------------
-%% configuration
-\input{stdtex/config}
+
+%%--------------------------------------------------
+%% Extra macros for writing papers, like Wording
+\input{stdtex/paper_macros}
