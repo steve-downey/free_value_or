@@ -544,3 +544,4 @@ __marimo__/
 .streamlit/secrets.toml
 /.deps/
 /wg21.bib
+/std-gram.ext
