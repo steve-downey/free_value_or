@@ -1,0 +1,161 @@
+\documentclass[a4paper,10pt,oneside,openany,final,article]{memoir}
+\input{common}
+\settocdepth{chapter}
+\usepackage{minted}
+\usepackage{fontspec}
+\setromanfont{Source Serif Pro}
+\setsansfont{Source Sans Pro}
+% \setmonofont{Source Code Pro}
+
+\begin{document}
+\title{std::optional<T\&>}
+\author{
+  Steve Downey \small<\href{mailto:sdowney@gmail.com}{sdowney@gmail.com}> \\
+}
+\date{} %unused. Type date explicitly below.
+\maketitle
+
+\begin{flushright}
+  \begin{tabular}{ll}
+    Document \#: & PnnnnRm \\
+    Date: & \today \\
+    Project: & Programming Language C++ \\
+    Audience: & LEWG
+  \end{tabular}
+\end{flushright}
+
+\begin{abstract}
+  We propose to fix
+\end{abstract}
+
+\tableofcontents*
+
+\chapter*{Changes Since Last Version}
+
+\begin{itemize}
+\item \textbf{Changes since R$_{n-1}$}
+  \begin{itemize}
+  \item One.
+  \end{itemize}
+\item \textbf{Changes since R$_{n-2}$}
+  \begin{itemize}
+  \item Tw
+  \end{itemize}
+\end{itemize}
+
+\chapter{Comparison table}
+\section{Compare Some Things}
+
+This is the convention the ...
+\begin{tabular}{ lr }
+  \begin{minipage}[t]{0.45\columnwidth}
+    \begin{minted}[fontsize=\small]{c++}
+      Cat* cat = find_cat("Fido");
+      if (cat!=nullptr) { return doit(*cat); }
+
+
+    \end{minted}
+  \end{minipage}
+  &
+    \begin{minipage}[t]{0.45\columnwidth}
+      \begin{minted}[fontsize=\small]{c++}
+        std::optional<Cat&> cat = find_cat("Fido");
+        return cat.and_then(doit);
+
+      \end{minted}
+    \end{minipage}
+\end{tabular}
+
+
+\chapter{Motivation}
+Other than the standard library's implementation of ...
+
+\chapter{Design}
+
+The design is straightforward. The \tcode{new_thing<T>}
+
+\section{Relational Operations}
+
+The definitions of the relational operators ...
+
+
+\chapter{Principles of Design}
+
+New Thing must never construct a temporary, or knowingly take the address of an temporary or part of an temporary.
+
+It is always presumed safe to copy the pointer value from an optional, since by induction, it is not dangling.
+
+
+
+\chapter{Proposal}
+
+Add a New Thing which solves all the problems.
+
+\chapter{Wording}
+
+The proposed changes are relative to the current working draft \cite{N5001}.
+
+
+\begin{wording}
+
+\include{new-wording}
+
+\end{wording}
+
+\chapter{Impact on the standard}
+
+A pure library extension, affecting no other parts of the library or language.
+
+\chapter{Acknowledgments}
+Many thanks to all of the reviewers and authors
+
+\chapter*{Document history}
+
+\begin{itemize}
+\item \textbf{Changes since R8}
+  \begin{itemize}
+  \item Fix
+  \end{itemize}
+\item \textbf{Changes since R7}
+  \begin{itemize}
+  \item Wording mandates/constraint fixes
+  \item Hash removed
+  \item Notes on wording rendering
+  \end{itemize}
+\item \textbf{Changes since R6}
+  \begin{itemize}
+  \item add converting assignment operator
+  \item add converting in place constructor
+  \end{itemize}
+\item \textbf{Changes since R5}
+  \begin{itemize}
+  \item fix monadic constraints
+  \end{itemize}
+\item \textbf{Changes since R4}
+  \begin{itemize}
+  \item feature test macro
+  \end{itemize}
+\item \textbf{Changes since R3}
+  \begin{itemize}
+  \item discussion
+  \end{itemize}
+\item \textbf{Changes since R1}
+  \begin{itemize}
+  \item Design points called out
+  \end{itemize}
+\item \textbf{Changes since R0}
+  \begin{itemize}
+  \item Wording Updates
+  \end{itemize}
+\end{itemize}
+
+\renewcommand{\bibname}{References}
+\bibliographystyle{abstract}
+\bibliography{wg21,mybiblio}
+
+
+\backmatter
+\chapter*{Implementation}
+
+\inputminted{c++}{implementation.hpp}
+\end{document}
