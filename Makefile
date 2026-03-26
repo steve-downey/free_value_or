@@ -79,7 +79,7 @@ $(DEPS_DIR):
 papers: example-paper.pdf ## Compile papers
 
 %.pdf : %.tex $(DEPS_DIR) | $(VENV)
-	$(SOURCE_VENV) latexmk -f -shell-escape -pdf -use-make -deps -deps-out=$(DEPS_DIR)/$@.d -MP $<
+	$(SOURCE_VENV) latexmk -f -shell-escape -pdflua -use-make -deps -deps-out=$(DEPS_DIR)/$@.d -MP $<
 
 define curl_cmd =
 	curl https://wg21.link/index.bib > wg21.bib
