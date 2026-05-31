@@ -34,7 +34,8 @@ class unexpected {
     static_assert(std::is_object_v<E>, "unexpected<E>: E must be an object type (not void, reference, or function)");
     static_assert(!std::is_array_v<E>, "unexpected<E>: E must not be an array type");
     static_assert(std::is_same_v<E, std::remove_cv_t<E>>, "unexpected<E>: E must not be cv-qualified");
-    static_assert(!detail::is_unexpected_specialization<E>::value, "unexpected<E>: E must not be a specialization of unexpected");
+    static_assert(!detail::is_unexpected_specialization<E>::value,
+                  "unexpected<E>: E must not be a specialization of unexpected");
 
   public:
     constexpr unexpected(const unexpected&) = default;

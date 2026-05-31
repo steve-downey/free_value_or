@@ -758,6 +758,418 @@ constexpr E expected<T, E>::error_or(G&& def) && {
     return static_cast<E>(std::forward<G>(def));
 }
 
+// =============================================================================
+// [expected.void] Partial specialization for void value type
+// =============================================================================
+
+template <class T, class E>
+    requires std::is_void_v<T>
+class expected<T, E> {
+    static_assert(!std::is_reference_v<E>, "E must not be a reference");
+    static_assert(!std::is_void_v<E>, "E must not be void");
+    static_assert(!std::is_array_v<E>, "E must not be an array type");
+    static_assert(std::is_same_v<std::remove_cv_t<E>, E>, "E must not be cv-qualified");
+    static_assert(!detail::is_unexpected_specialization<E>::value, "E must not be an unexpected<X> specialization");
+
+  public:
+    using value_type      = T;
+    using error_type      = E;
+    using unexpected_type = unexpected<E>;
+
+    template <class U>
+    using rebind = expected<U, error_type>;
+
+    // -------------------------------------------------------------------------
+    // [expected.void.cons] Constructors
+    // -------------------------------------------------------------------------
+
+    constexpr expected() noexcept : has_val_(true) {}
+
+    constexpr expected(const expected&)
+        requires std::is_trivially_copy_constructible_v<E>
+    = default;
+
+    constexpr expected(const expected& rhs)
+        requires(std::is_copy_constructible_v<E> && !std::is_trivially_copy_constructible_v<E>);
+
+    constexpr expected(expected&&) noexcept
+        requires std::is_trivially_move_constructible_v<E>
+    = default;
+
+    constexpr expected(expected&& rhs) noexcept(std::is_nothrow_move_constructible_v<E>)
+        requires(std::is_move_constructible_v<E> && !std::is_trivially_move_constructible_v<E>);
+
+    // Converting constructor from expected<U, G> where is_void_v<U>
+    template <class U, class G>
+        requires(std::is_void_v<U> && std::is_constructible_v<E, const G&> &&
+                 !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
+                 !std::is_constructible_v<unexpected<E>, expected<U, G> &&> &&
+                 !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
+                 !std::is_constructible_v<unexpected<E>, const expected<U, G> &&>)
+    constexpr explicit(!std::is_convertible_v<const G&, E>) expected(const expected<U, G>& rhs);
+
+    template <class U, class G>
+        requires(std::is_void_v<U> && std::is_constructible_v<E, G> &&
+                 !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
+                 !std::is_constructible_v<unexpected<E>, expected<U, G> &&> &&
+                 !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
+                 !std::is_constructible_v<unexpected<E>, const expected<U, G> &&>)
+    constexpr explicit(!std::is_convertible_v<G, E>) expected(expected<U, G>&& rhs);
+
+    // Constructor from unexpected<G> const&
+    template <class G>
+        requires std::is_constructible_v<E, const G&>
+    constexpr explicit(!std::is_convertible_v<const G&, E>) expected(const unexpected<G>& e);
+
+    // Constructor from unexpected<G>&&
+    template <class G>
+        requires std::is_constructible_v<E, G>
+    constexpr explicit(!std::is_convertible_v<G, E>) expected(unexpected<G>&& e);
+
+    // In-place constructor for value (no args, just marks has-value)
+    constexpr explicit expected(std::in_place_t) noexcept : has_val_(true) {}
+
+    // In-place constructor for error
+    template <class... Args>
+        requires std::is_constructible_v<E, Args...>
+    constexpr explicit expected(unexpect_t, Args&&... args);
+
+    // In-place constructor for error with initializer_list
+    template <class U, class... Args>
+        requires std::is_constructible_v<E, std::initializer_list<U>&, Args...>
+    constexpr explicit expected(unexpect_t, std::initializer_list<U> il, Args&&... args);
+
+    // -------------------------------------------------------------------------
+    // [expected.void.dtor] Destructor
+    // -------------------------------------------------------------------------
+
+    constexpr ~expected()
+        requires std::is_trivially_destructible_v<E>
+    = default;
+
+    constexpr ~expected()
+        requires(!std::is_trivially_destructible_v<E>);
+
+    // -------------------------------------------------------------------------
+    // [expected.void.assign] Assignment
+    // -------------------------------------------------------------------------
+
+    constexpr expected& operator=(const expected& rhs)
+        requires(std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E>);
+
+    constexpr expected& operator=(expected&& rhs) noexcept(std::is_nothrow_move_constructible_v<E> &&
+                                                           std::is_nothrow_move_assignable_v<E>)
+        requires(std::is_move_constructible_v<E> && std::is_move_assignable_v<E>);
+
+    template <class G>
+        requires(std::is_constructible_v<E, const G&> && std::is_assignable_v<E&, const G&>)
+    constexpr expected& operator=(const unexpected<G>& e);
+
+    template <class G>
+        requires(std::is_constructible_v<E, G> && std::is_assignable_v<E&, G>)
+    constexpr expected& operator=(unexpected<G>&& e);
+
+    constexpr void emplace() noexcept;
+
+    // -------------------------------------------------------------------------
+    // [expected.void.swap] Swap
+    // -------------------------------------------------------------------------
+
+    constexpr void swap(expected& rhs) noexcept(std::is_nothrow_move_constructible_v<E> &&
+                                                std::is_nothrow_swappable_v<E>)
+        requires(std::is_swappable_v<E> && std::is_move_constructible_v<E>);
+
+    friend constexpr void swap(expected& x, expected& y) noexcept(noexcept(x.swap(y))) { x.swap(y); }
+
+    // -------------------------------------------------------------------------
+    // [expected.void.obs] Observers
+    // -------------------------------------------------------------------------
+
+    constexpr explicit operator bool() const noexcept { return has_val_; }
+    constexpr bool     has_value() const noexcept { return has_val_; }
+
+    constexpr void operator*() const noexcept {}
+
+    constexpr void value() const&;
+    constexpr void value() &&;
+
+    constexpr const E&  error() const& noexcept { return unex_; }
+    constexpr E&        error() & noexcept { return unex_; }
+    constexpr const E&& error() const&& noexcept { return std::move(unex_); }
+    constexpr E&&       error() && noexcept { return std::move(unex_); }
+
+    template <class G = E>
+    constexpr E error_or(G&& def) const&;
+
+    template <class G = E>
+    constexpr E error_or(G&& def) &&;
+
+    // -------------------------------------------------------------------------
+    // [expected.void.eq] Equality operators (hidden friends)
+    // -------------------------------------------------------------------------
+
+    template <class T2, class E2>
+        requires std::is_void_v<T2>
+    friend constexpr bool operator==(const expected& x, const expected<T2, E2>& y) {
+        if (x.has_value() != y.has_value())
+            return false;
+        if (x.has_value())
+            return true;
+        return x.error() == y.error();
+    }
+
+    template <class E2>
+    friend constexpr bool operator==(const expected& x, const unexpected<E2>& e) {
+        return !x.has_value() && static_cast<bool>(x.error() == e.error());
+    }
+
+  private:
+    bool has_val_;
+    union {
+        E unex_;
+    };
+};
+
+// =============================================================================
+// [expected.void.cons] Out-of-line constructor definitions
+// =============================================================================
+
+template <class T, class E>
+    requires std::is_void_v<T>
+constexpr expected<T, E>::expected(const expected& rhs)
+    requires(std::is_copy_constructible_v<E> && !std::is_trivially_copy_constructible_v<E>)
+    : has_val_(rhs.has_val_) {
+    if (!has_val_)
+        std::construct_at(std::addressof(unex_), rhs.unex_);
+}
+
+template <class T, class E>
+    requires std::is_void_v<T>
+constexpr expected<T, E>::expected(expected&& rhs) noexcept(std::is_nothrow_move_constructible_v<E>)
+    requires(std::is_move_constructible_v<E> && !std::is_trivially_move_constructible_v<E>)
+    : has_val_(rhs.has_val_) {
+    if (!has_val_)
+        std::construct_at(std::addressof(unex_), std::move(rhs.unex_));
+}
+
+template <class T, class E>
+    requires std::is_void_v<T>
+template <class U, class G>
+    requires(std::is_void_v<U> && std::is_constructible_v<E, const G&> &&
+             !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
+             !std::is_constructible_v<unexpected<E>, expected<U, G> &&> &&
+             !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
+             !std::is_constructible_v<unexpected<E>, const expected<U, G> &&>)
+constexpr expected<T, E>::expected(const expected<U, G>& rhs) : has_val_(rhs.has_value()) {
+    if (!has_val_)
+        std::construct_at(std::addressof(unex_), rhs.error());
+}
+
+template <class T, class E>
+    requires std::is_void_v<T>
+template <class U, class G>
+    requires(std::is_void_v<U> && std::is_constructible_v<E, G> &&
+             !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
+             !std::is_constructible_v<unexpected<E>, expected<U, G> &&> &&
+             !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
+             !std::is_constructible_v<unexpected<E>, const expected<U, G> &&>)
+constexpr expected<T, E>::expected(expected<U, G>&& rhs) : has_val_(rhs.has_value()) {
+    if (!has_val_)
+        std::construct_at(std::addressof(unex_), std::move(rhs.error()));
+}
+
+template <class T, class E>
+    requires std::is_void_v<T>
+template <class G>
+    requires std::is_constructible_v<E, const G&>
+constexpr expected<T, E>::expected(const unexpected<G>& e) : has_val_(false) {
+    std::construct_at(std::addressof(unex_), e.error());
+}
+
+template <class T, class E>
+    requires std::is_void_v<T>
+template <class G>
+    requires std::is_constructible_v<E, G>
+constexpr expected<T, E>::expected(unexpected<G>&& e) : has_val_(false) {
+    std::construct_at(std::addressof(unex_), std::move(e.error()));
+}
+
+template <class T, class E>
+    requires std::is_void_v<T>
+template <class... Args>
+    requires std::is_constructible_v<E, Args...>
+constexpr expected<T, E>::expected(unexpect_t, Args&&... args) : has_val_(false) {
+    std::construct_at(std::addressof(unex_), std::forward<Args>(args)...);
+}
+
+template <class T, class E>
+    requires std::is_void_v<T>
+template <class U, class... Args>
+    requires std::is_constructible_v<E, std::initializer_list<U>&, Args...>
+constexpr expected<T, E>::expected(unexpect_t, std::initializer_list<U> il, Args&&... args) : has_val_(false) {
+    std::construct_at(std::addressof(unex_), il, std::forward<Args>(args)...);
+}
+
+// =============================================================================
+// [expected.void.dtor] Out-of-line destructor
+// =============================================================================
+
+template <class T, class E>
+    requires std::is_void_v<T>
+constexpr expected<T, E>::~expected()
+    requires(!std::is_trivially_destructible_v<E>)
+{
+    if (!has_val_)
+        std::destroy_at(std::addressof(unex_));
+}
+
+// =============================================================================
+// [expected.void.assign] Out-of-line assignment definitions
+// =============================================================================
+
+template <class T, class E>
+    requires std::is_void_v<T>
+constexpr expected<T, E>& expected<T, E>::operator=(const expected& rhs)
+    requires(std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E>)
+{
+    if (has_val_ && rhs.has_val_) {
+        // both value: no-op
+    } else if (!has_val_ && !rhs.has_val_) {
+        unex_ = rhs.unex_;
+    } else if (has_val_) {
+        // was value, now error
+        std::construct_at(std::addressof(unex_), rhs.unex_);
+        has_val_ = false;
+    } else {
+        // was error, now value
+        std::destroy_at(std::addressof(unex_));
+        has_val_ = true;
+    }
+    return *this;
+}
+
+template <class T, class E>
+    requires std::is_void_v<T>
+constexpr expected<T, E>& expected<T, E>::operator=(expected&& rhs) noexcept(std::is_nothrow_move_constructible_v<E> &&
+                                                                             std::is_nothrow_move_assignable_v<E>)
+    requires(std::is_move_constructible_v<E> && std::is_move_assignable_v<E>)
+{
+    if (has_val_ && rhs.has_val_) {
+        // both value: no-op
+    } else if (!has_val_ && !rhs.has_val_) {
+        unex_ = std::move(rhs.unex_);
+    } else if (has_val_) {
+        // was value, now error
+        std::construct_at(std::addressof(unex_), std::move(rhs.unex_));
+        has_val_ = false;
+    } else {
+        // was error, now value
+        std::destroy_at(std::addressof(unex_));
+        has_val_ = true;
+    }
+    return *this;
+}
+
+template <class T, class E>
+    requires std::is_void_v<T>
+template <class G>
+    requires(std::is_constructible_v<E, const G&> && std::is_assignable_v<E&, const G&>)
+constexpr expected<T, E>& expected<T, E>::operator=(const unexpected<G>& e) {
+    if (!has_val_) {
+        unex_ = e.error();
+    } else {
+        std::construct_at(std::addressof(unex_), e.error());
+        has_val_ = false;
+    }
+    return *this;
+}
+
+template <class T, class E>
+    requires std::is_void_v<T>
+template <class G>
+    requires(std::is_constructible_v<E, G> && std::is_assignable_v<E&, G>)
+constexpr expected<T, E>& expected<T, E>::operator=(unexpected<G>&& e) {
+    if (!has_val_) {
+        unex_ = std::move(e.error());
+    } else {
+        std::construct_at(std::addressof(unex_), std::move(e.error()));
+        has_val_ = false;
+    }
+    return *this;
+}
+
+template <class T, class E>
+    requires std::is_void_v<T>
+constexpr void expected<T, E>::emplace() noexcept {
+    if (!has_val_) {
+        std::destroy_at(std::addressof(unex_));
+        has_val_ = true;
+    }
+}
+
+// =============================================================================
+// [expected.void.swap] Out-of-line swap definition
+// =============================================================================
+
+template <class T, class E>
+    requires std::is_void_v<T>
+constexpr void expected<T, E>::swap(expected& rhs) noexcept(std::is_nothrow_move_constructible_v<E> &&
+                                                            std::is_nothrow_swappable_v<E>)
+    requires(std::is_swappable_v<E> && std::is_move_constructible_v<E>)
+{
+    if (has_val_ && rhs.has_val_) {
+        // both value: no-op
+    } else if (!has_val_ && !rhs.has_val_) {
+        using std::swap;
+        swap(unex_, rhs.unex_);
+    } else if (has_val_) {
+        // this has value, rhs has error
+        std::construct_at(std::addressof(unex_), std::move(rhs.unex_));
+        std::destroy_at(std::addressof(rhs.unex_));
+        has_val_     = false;
+        rhs.has_val_ = true;
+    } else {
+        // this has error, rhs has value
+        rhs.swap(*this);
+    }
+}
+
+// =============================================================================
+// [expected.void.obs] Out-of-line observer definitions
+// =============================================================================
+
+template <class T, class E>
+    requires std::is_void_v<T>
+constexpr void expected<T, E>::value() const& {
+    if (!has_val_)
+        throw bad_expected_access<E>(unex_);
+}
+
+template <class T, class E>
+    requires std::is_void_v<T>
+constexpr void expected<T, E>::value() && {
+    if (!has_val_)
+        throw bad_expected_access<E>(std::move(unex_));
+}
+
+template <class T, class E>
+    requires std::is_void_v<T>
+template <class G>
+constexpr E expected<T, E>::error_or(G&& def) const& {
+    if (!has_val_)
+        return unex_;
+    return static_cast<E>(std::forward<G>(def));
+}
+
+template <class T, class E>
+    requires std::is_void_v<T>
+template <class G>
+constexpr E expected<T, E>::error_or(G&& def) && {
+    if (!has_val_)
+        return std::move(unex_);
+    return static_cast<E>(std::forward<G>(def));
+}
+
 } // namespace expected
 } // namespace beman
 
