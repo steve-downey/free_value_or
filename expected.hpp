@@ -80,6 +80,16 @@ class expected;
 namespace detail {
 template <class T, class E>
 struct is_expected_specialization<expected<T, E>> : std::true_type {};
+
+template <class T, class W>
+constexpr bool converts_from_any_cvref = std::disjunction_v<std::is_constructible<T, W&>,
+                                                            std::is_convertible<W&, T>,
+                                                            std::is_constructible<T, W>,
+                                                            std::is_convertible<W, T>,
+                                                            std::is_constructible<T, const W&>,
+                                                            std::is_convertible<const W&, T>,
+                                                            std::is_constructible<T, const W>,
+                                                            std::is_convertible<const W, T>>;
 } // namespace detail
 
 // [expected.expected], class template expected
@@ -121,11 +131,7 @@ class expected {
     // Converting copy constructor from expected<U, G>
     template <class U, class G>
         requires(std::is_constructible_v<T, const U&> && std::is_constructible_v<E, const G&> &&
-                 !std::is_constructible_v<T, expected<U, G>&> && !std::is_constructible_v<T, expected<U, G> &&> &&
-                 !std::is_constructible_v<T, const expected<U, G>&> &&
-                 !std::is_constructible_v<T, const expected<U, G> &&> && !std::is_convertible_v<expected<U, G>&, T> &&
-                 !std::is_convertible_v<expected<U, G> &&, T> && !std::is_convertible_v<const expected<U, G>&, T> &&
-                 !std::is_convertible_v<const expected<U, G> &&, T> &&
+                 (std::is_same_v<bool, std::remove_cv_t<T>> || !detail::converts_from_any_cvref<T, expected<U, G>>) &&
                  !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
                  !std::is_constructible_v<unexpected<E>, expected<U, G> &&> &&
                  !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
@@ -136,11 +142,7 @@ class expected {
     // Converting move constructor from expected<U, G>
     template <class U, class G>
         requires(std::is_constructible_v<T, U> && std::is_constructible_v<E, G> &&
-                 !std::is_constructible_v<T, expected<U, G>&> && !std::is_constructible_v<T, expected<U, G> &&> &&
-                 !std::is_constructible_v<T, const expected<U, G>&> &&
-                 !std::is_constructible_v<T, const expected<U, G> &&> && !std::is_convertible_v<expected<U, G>&, T> &&
-                 !std::is_convertible_v<expected<U, G> &&, T> && !std::is_convertible_v<const expected<U, G>&, T> &&
-                 !std::is_convertible_v<const expected<U, G> &&, T> &&
+                 (std::is_same_v<bool, std::remove_cv_t<T>> || !detail::converts_from_any_cvref<T, expected<U, G>>) &&
                  !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
                  !std::is_constructible_v<unexpected<E>, expected<U, G> &&> &&
                  !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
@@ -151,7 +153,10 @@ class expected {
     template <class U = std::remove_cv_t<T>>
         requires(!std::is_same_v<std::remove_cvref_t<U>, std::in_place_t> &&
                  !std::is_same_v<std::remove_cvref_t<U>, unexpect_t> &&
-                 !std::is_same_v<std::remove_cvref_t<U>, expected> && std::is_constructible_v<T, U>)
+                 !std::is_same_v<std::remove_cvref_t<U>, expected> && std::is_constructible_v<T, U> &&
+                 !detail::is_unexpected_specialization<std::remove_cvref_t<U>>::value &&
+                 (!std::is_same_v<bool, std::remove_cv_t<T>> ||
+                  !detail::is_expected_specialization<std::remove_cvref_t<U>>::value))
     constexpr explicit(!std::is_convertible_v<U, T>) expected(U&& v);
 
     // Constructor from unexpected<G> const&
@@ -211,13 +216,14 @@ class expected {
                                                            std::is_nothrow_move_constructible_v<E> &&
                                                            std::is_nothrow_move_assignable_v<E>)
         requires(std::is_move_constructible_v<T> && std::is_move_assignable_v<T> && std::is_move_constructible_v<E> &&
-                 std::is_move_assignable_v<E>);
+                 std::is_move_assignable_v<E> &&
+                 (std::is_nothrow_move_constructible_v<T> || std::is_nothrow_move_constructible_v<E>));
 
     // Assignment from value U&&
-    template <class U = T>
+    template <class U = std::remove_cv_t<T>>
         requires(!std::is_same_v<expected, std::remove_cvref_t<U>> &&
-                 !std::is_same_v<std::remove_cvref_t<U>, unexpect_t> && std::is_constructible_v<T, U> &&
-                 std::is_assignable_v<T&, U> &&
+                 !detail::is_unexpected_specialization<std::remove_cvref_t<U>>::value &&
+                 std::is_constructible_v<T, U> && std::is_assignable_v<T&, U> &&
                  (std::is_nothrow_constructible_v<T, U> || std::is_nothrow_move_constructible_v<T> ||
                   std::is_nothrow_move_constructible_v<E>))
     constexpr expected& operator=(U&& v);
@@ -350,6 +356,7 @@ class expected {
     }
 
     template <class T2>
+        requires(!detail::is_expected_specialization<T2>::value)
     friend constexpr bool operator==(const expected& x, const T2& val) {
         return x.has_value() && static_cast<bool>(*x == val);
     }
@@ -402,11 +409,7 @@ constexpr expected<T, E>::expected(expected&& rhs) noexcept(std::is_nothrow_move
 template <class T, class E>
 template <class U, class G>
     requires(std::is_constructible_v<T, const U&> && std::is_constructible_v<E, const G&> &&
-             !std::is_constructible_v<T, expected<U, G>&> && !std::is_constructible_v<T, expected<U, G> &&> &&
-             !std::is_constructible_v<T, const expected<U, G>&> &&
-             !std::is_constructible_v<T, const expected<U, G> &&> && !std::is_convertible_v<expected<U, G>&, T> &&
-             !std::is_convertible_v<expected<U, G> &&, T> && !std::is_convertible_v<const expected<U, G>&, T> &&
-             !std::is_convertible_v<const expected<U, G> &&, T> &&
+             (std::is_same_v<bool, std::remove_cv_t<T>> || !detail::converts_from_any_cvref<T, expected<U, G>>) &&
              !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
              !std::is_constructible_v<unexpected<E>, expected<U, G> &&> &&
              !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
@@ -421,11 +424,7 @@ constexpr expected<T, E>::expected(const expected<U, G>& rhs) : has_val_(rhs.has
 template <class T, class E>
 template <class U, class G>
     requires(std::is_constructible_v<T, U> && std::is_constructible_v<E, G> &&
-             !std::is_constructible_v<T, expected<U, G>&> && !std::is_constructible_v<T, expected<U, G> &&> &&
-             !std::is_constructible_v<T, const expected<U, G>&> &&
-             !std::is_constructible_v<T, const expected<U, G> &&> && !std::is_convertible_v<expected<U, G>&, T> &&
-             !std::is_convertible_v<expected<U, G> &&, T> && !std::is_convertible_v<const expected<U, G>&, T> &&
-             !std::is_convertible_v<const expected<U, G> &&, T> &&
+             (std::is_same_v<bool, std::remove_cv_t<T>> || !detail::converts_from_any_cvref<T, expected<U, G>>) &&
              !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
              !std::is_constructible_v<unexpected<E>, expected<U, G> &&> &&
              !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
@@ -441,7 +440,10 @@ template <class T, class E>
 template <class U>
     requires(!std::is_same_v<std::remove_cvref_t<U>, std::in_place_t> &&
              !std::is_same_v<std::remove_cvref_t<U>, unexpect_t> &&
-             !std::is_same_v<std::remove_cvref_t<U>, expected<T, E>> && std::is_constructible_v<T, U>)
+             !std::is_same_v<std::remove_cvref_t<U>, expected<T, E>> && std::is_constructible_v<T, U> &&
+             !detail::is_unexpected_specialization<std::remove_cvref_t<U>>::value &&
+             (!std::is_same_v<bool, std::remove_cv_t<T>> ||
+              !detail::is_expected_specialization<std::remove_cvref_t<U>>::value))
 constexpr expected<T, E>::expected(U&& v) : has_val_(true) {
     std::construct_at(std::addressof(val_), std::forward<U>(v));
 }
@@ -534,7 +536,8 @@ constexpr expected<T, E>& expected<T, E>::operator=(expected&& rhs) noexcept(std
                                                                              std::is_nothrow_move_constructible_v<E> &&
                                                                              std::is_nothrow_move_assignable_v<E>)
     requires(std::is_move_constructible_v<T> && std::is_move_assignable_v<T> && std::is_move_constructible_v<E> &&
-             std::is_move_assignable_v<E>)
+             std::is_move_assignable_v<E> &&
+             (std::is_nothrow_move_constructible_v<T> || std::is_nothrow_move_constructible_v<E>))
 {
     if (has_val_ && rhs.has_val_) {
         val_ = std::move(rhs.val_);
@@ -553,7 +556,7 @@ constexpr expected<T, E>& expected<T, E>::operator=(expected&& rhs) noexcept(std
 template <class T, class E>
 template <class U>
     requires(!std::is_same_v<expected<T, E>, std::remove_cvref_t<U>> &&
-             !std::is_same_v<std::remove_cvref_t<U>, unexpect_t> && std::is_constructible_v<T, U> &&
+             !detail::is_unexpected_specialization<std::remove_cvref_t<U>>::value && std::is_constructible_v<T, U> &&
              std::is_assignable_v<T&, U> &&
              (std::is_nothrow_constructible_v<T, U> || std::is_nothrow_move_constructible_v<T> ||
               std::is_nothrow_move_constructible_v<E>))
