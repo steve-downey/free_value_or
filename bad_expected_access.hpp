@@ -1,7 +1,10 @@
 // beman/expected/bad_expected_access.hpp                             -*-C++-*-
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-#ifndef BEMAN_EXPECTED_BAD_EXPECTED_ACCESS
-#define BEMAN_EXPECTED_BAD_EXPECTED_ACCESS
+#ifndef BEMAN_EXPECTED_BAD_EXPECTED_ACCESS_HPP
+#define BEMAN_EXPECTED_BAD_EXPECTED_ACCESS_HPP
+
+#include <exception>
+#include <utility>
 
 /***
 22.8.4 Class template bad_expected_access[expected.bad]
@@ -40,9 +43,77 @@ namespace std {
     constexpr const char* what() const noexcept override;
   };
 }
-pcc*/
+ */
+
 namespace beman {
-namespace expected {}
+namespace expected {
+
+template <class E>
+class bad_expected_access;
+
+template <>
+class bad_expected_access<void> : public std::exception {
+  protected:
+    constexpr bad_expected_access() noexcept                                      = default;
+    constexpr bad_expected_access(const bad_expected_access&) noexcept            = default;
+    constexpr bad_expected_access(bad_expected_access&&) noexcept                 = default;
+    constexpr bad_expected_access& operator=(const bad_expected_access&) noexcept = default;
+    constexpr bad_expected_access& operator=(bad_expected_access&&) noexcept      = default;
+    constexpr ~bad_expected_access()                                              = default;
+
+  public:
+    constexpr const char* what() const noexcept override;
+};
+
+template <class E>
+class bad_expected_access : public bad_expected_access<void> {
+  public:
+    constexpr explicit bad_expected_access(E e);
+    constexpr const char* what() const noexcept override;
+    constexpr E&          error() & noexcept;
+    constexpr const E&    error() const& noexcept;
+    constexpr E&&         error() && noexcept;
+    constexpr const E&&   error() const&& noexcept;
+
+  private:
+    E unex;
+};
+
+// bad_expected_access<void> out-of-line definitions
+
+constexpr const char* bad_expected_access<void>::what() const noexcept { return "bad expected access"; }
+
+// bad_expected_access<E> out-of-line definitions
+
+template <class E>
+constexpr bad_expected_access<E>::bad_expected_access(E e) : unex(std::move(e)) {}
+
+template <class E>
+constexpr const char* bad_expected_access<E>::what() const noexcept {
+    return "bad expected access";
+}
+
+template <class E>
+constexpr E& bad_expected_access<E>::error() & noexcept {
+    return unex;
+}
+
+template <class E>
+constexpr const E& bad_expected_access<E>::error() const& noexcept {
+    return unex;
+}
+
+template <class E>
+constexpr E&& bad_expected_access<E>::error() && noexcept {
+    return std::move(unex);
+}
+
+template <class E>
+constexpr const E&& bad_expected_access<E>::error() const&& noexcept {
+    return std::move(unex);
+}
+
+} // namespace expected
 } // namespace beman
 
 #endif
