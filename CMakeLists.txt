@@ -12,6 +12,7 @@ target_sources(
         expected_monadic.test.cpp
         expected_void_monadic.test.cpp
         expected_constraints.test.cpp
+        expected_trivial.test.cpp
         todo.test.cpp
 )
 target_link_libraries(
