@@ -15,6 +15,68 @@
 namespace expt = beman::expected;
 
 // =============================================================================
+// Helper types at namespace scope (needed for static_assert outside functions)
+// =============================================================================
+
+struct NoDefault {
+    explicit NoDefault(int) {}
+};
+
+struct NoCopy {
+    NoCopy()                 = default;
+    NoCopy(const NoCopy&)    = delete;
+    NoCopy(NoCopy&&)         = default;
+    NoCopy& operator=(const NoCopy&) = delete;
+    NoCopy& operator=(NoCopy&&)      = default;
+    int     v                = 0;
+};
+
+struct ThrowingMove {
+    ThrowingMove()                    = default;
+    ThrowingMove(ThrowingMove&&) noexcept(false) {}
+};
+
+struct MightThrow {
+    explicit MightThrow(int) noexcept(false) {}
+};
+
+// =============================================================================
+// [expected.object.general] para 2-3 — type-level static assertions
+// =============================================================================
+
+// Ill-formed T: reference type — tested via negative compile file expected_t_ref_fail.cpp
+// Ill-formed E: reference type — tested via negative compile file expected_e_ref_fail.cpp
+// Ill-formed T: array type   — tested via negative compile file expected_t_array_fail.cpp
+
+// Default constructor: requires is_default_constructible_v<T>
+static_assert(!std::is_default_constructible_v<expt::expected<NoDefault, int>>);
+
+// Copy constructor: not present when T is not copy-constructible
+static_assert(!std::is_copy_constructible_v<expt::expected<NoCopy, int>>);
+
+// Destructor: trivially destructible when T and E are
+static_assert(std::is_trivially_destructible_v<expt::expected<int, int>>);
+
+// Move constructor: noexcept when T and E are nothrow-move-constructible
+static_assert(std::is_nothrow_move_constructible_v<expt::expected<int, int>>);
+static_assert(!std::is_nothrow_move_constructible_v<expt::expected<ThrowingMove, int>>);
+
+// Move assignment: noexcept when all four noexcept conditions hold
+static_assert(std::is_nothrow_move_assignable_v<expt::expected<int, int>>);
+
+// operator* ref-qualification return types
+static_assert(std::is_same_v<decltype(*std::declval<expt::expected<int, int>&>()), int&>);
+static_assert(std::is_same_v<decltype(*std::declval<const expt::expected<int, int>&>()), const int&>);
+static_assert(std::is_same_v<decltype(*std::declval<expt::expected<int, int>&&>()), int&&>);
+static_assert(std::is_same_v<decltype(*std::declval<const expt::expected<int, int>&&>()), const int&&>);
+
+// error() ref-qualification return types
+static_assert(std::is_same_v<decltype(std::declval<expt::expected<int, int>&>().error()), int&>);
+static_assert(std::is_same_v<decltype(std::declval<const expt::expected<int, int>&>().error()), const int&>);
+static_assert(std::is_same_v<decltype(std::declval<expt::expected<int, int>&&>().error()), int&&>);
+static_assert(std::is_same_v<decltype(std::declval<const expt::expected<int, int>&&>().error()), const int&&>);
+
+// =============================================================================
 // Type aliases
 // =============================================================================
 
@@ -644,4 +706,97 @@ TEST_CASE("expected: constexpr equality", "[ExpectedTest]") {
     constexpr expt::expected<int, int> a(42);
     constexpr expt::expected<int, int> b(42);
     static_assert(a == b);
+}
+
+// =============================================================================
+// Destructor: calls destructor of the active member
+// =============================================================================
+
+TEST_CASE("expected: destructor runs for value", "[ExpectedTest]") {
+    int destroyed = 0;
+    struct Counted {
+        int* d;
+        explicit Counted(int* p) : d(p) {}
+        ~Counted() { ++*d; }
+    };
+    {
+        expt::expected<Counted, int> e(std::in_place, &destroyed);
+        (void)e;
+    }
+    CHECK(destroyed >= 1);
+}
+
+TEST_CASE("expected: destructor runs for error", "[ExpectedTest]") {
+    int destroyed = 0;
+    struct Counted {
+        int* d;
+        explicit Counted(int* p) : d(p) {}
+        ~Counted() { ++*d; }
+    };
+    {
+        expt::expected<int, Counted> e(expt::unexpect, &destroyed);
+        (void)e;
+    }
+    CHECK(destroyed >= 1);
+}
+
+// =============================================================================
+// emplace with initializer_list overload
+// =============================================================================
+
+namespace {
+// Custom type with noexcept initializer_list constructor for emplace testing
+struct IListInt {
+    int  sum  = 0;
+    int  count = 0;
+    IListInt(std::initializer_list<int> il) noexcept
+        : count(static_cast<int>(il.size())) {
+        for (int v : il)
+            sum += v;
+    }
+};
+} // namespace
+
+TEST_CASE("expected: emplace with initializer_list", "[ExpectedTest]") {
+    expt::expected<IListInt, int> e(expt::unexpect, 0);
+    auto& ref = e.emplace(std::initializer_list<int>{1, 2, 3});
+    REQUIRE(e.has_value());
+    CHECK(e->count == 3);
+    CHECK(e->sum == 6);
+    CHECK(&ref == &*e);
+}
+
+// =============================================================================
+// operator-> address equality
+// =============================================================================
+
+TEST_CASE("expected: operator-> returns address of value", "[ExpectedTest]") {
+    expt::expected<std::string, int> e("hello");
+    CHECK(e.operator->() == std::addressof(*e));
+}
+
+// =============================================================================
+// Emplace constraint: nothrow_constructible_v<T, Args...> required
+// (negative compile tested via expected_emplace_throwing_fail.cpp)
+// =============================================================================
+
+TEST_CASE("expected: emplace with nothrow-constructible type", "[ExpectedTest]") {
+    // int is nothrow constructible — emplace must be available
+    static_assert(std::is_nothrow_constructible_v<int, int>);
+    expt::expected<int, std::string> e(expt::unexpect, "err");
+    int&                             r = e.emplace(99);
+    CHECK(r == 99);
+    CHECK(e.has_value());
+}
+
+// =============================================================================
+// value() mandate: Mandates is_copy_constructible_v<E>
+// (negative compile tested via expected_value_mandate_fail.cpp when implemented)
+// =============================================================================
+
+TEST_CASE("expected: value() ref-qualification return types", "[ExpectedTest]") {
+    static_assert(std::is_same_v<decltype(std::declval<expt::expected<int, int>&>().value()), int&>);
+    static_assert(std::is_same_v<decltype(std::declval<const expt::expected<int, int>&>().value()), const int&>);
+    static_assert(std::is_same_v<decltype(std::declval<expt::expected<int, int>&&>().value()), int&&>);
+    static_assert(std::is_same_v<decltype(std::declval<const expt::expected<int, int>&&>().value()), const int&&>);
 }

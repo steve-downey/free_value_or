@@ -12,6 +12,21 @@
 
 namespace expt = beman::expected;
 
+// =============================================================================
+// [expected.bad.void] and [expected.bad] — type-level assertions
+// =============================================================================
+
+// Inheritance chain
+static_assert(std::is_base_of_v<std::exception, expt::bad_expected_access<void>>);
+static_assert(std::is_base_of_v<expt::bad_expected_access<void>, expt::bad_expected_access<int>>);
+static_assert(std::is_base_of_v<std::exception, expt::bad_expected_access<int>>);
+
+// error() ref-qualification return types
+static_assert(std::is_same_v<decltype(std::declval<expt::bad_expected_access<int>&>().error()), int&>);
+static_assert(std::is_same_v<decltype(std::declval<const expt::bad_expected_access<int>&>().error()), const int&>);
+static_assert(std::is_same_v<decltype(std::declval<expt::bad_expected_access<int>&&>().error()), int&&>);
+static_assert(std::is_same_v<decltype(std::declval<const expt::bad_expected_access<int>&&>().error()), const int&&>);
+
 TEST_CASE("bad_expected_access: breathing", "[BadExpectedAccessTest]") {}
 
 TEST_CASE("bad_expected_access: construct from int", "[BadExpectedAccessTest]") {
@@ -74,4 +89,22 @@ TEST_CASE("bad_expected_access: catchable as bad_expected_access<void>", "[BadEx
     } catch (const expt::bad_expected_access<void>& ex) {
         CHECK(std::string_view(ex.what()) == "bad expected access");
     }
+}
+
+TEST_CASE("bad_expected_access: move-only error type", "[BadExpectedAccessTest]") {
+    // The constructor takes E by value and uses std::move(e); works with move-only E
+    struct MoveOnly {
+        int v;
+        explicit MoveOnly(int x) : v(x) {}
+        MoveOnly(const MoveOnly&) = delete;
+        MoveOnly(MoveOnly&&)      = default;
+    };
+    expt::bad_expected_access<MoveOnly> ex(MoveOnly{42});
+    CHECK(ex.error().v == 42);
+}
+
+TEST_CASE("bad_expected_access<void>: accessible via base reference", "[BadExpectedAccessTest]") {
+    expt::bad_expected_access<int>        ex(0);
+    const expt::bad_expected_access<void>& base = ex;
+    CHECK(base.what() != nullptr);
 }

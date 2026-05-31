@@ -13,6 +13,33 @@
 
 namespace expt = beman::expected;
 
+// =============================================================================
+// [expected.un.general] para 2 — ill-formed instantiation constraints
+// (actual ill-formed cases tested via negative compile files)
+// =============================================================================
+
+// [expected.un.cons] Constraint 1.3: is_constructible_v<E, Err> must be true
+static_assert(std::is_constructible_v<expt::unexpected<int>, int>);
+static_assert(std::is_constructible_v<expt::unexpected<std::string>, const char*>);
+static_assert(!std::is_constructible_v<expt::unexpected<int>, std::string>);
+
+// [expected.un.cons] Constraint 1.2: the *converting* ctor excludes in_place_t as Err,
+// routing it to the in-place constructor instead. Both work:
+static_assert(std::is_constructible_v<expt::unexpected<int>, std::in_place_t>); // in-place ctor
+
+// Copy and move constructible
+static_assert(std::is_copy_constructible_v<expt::unexpected<int>>);
+static_assert(std::is_move_constructible_v<expt::unexpected<int>>);
+
+// [expected.un.swap] Constraint: is_swappable_v<E>
+static_assert(std::is_swappable_v<expt::unexpected<int>>);
+
+// [expected.un.obs] error() ref-qualification return types
+static_assert(std::is_same_v<decltype(std::declval<expt::unexpected<int>&>().error()), int&>);
+static_assert(std::is_same_v<decltype(std::declval<const expt::unexpected<int>&>().error()), const int&>);
+static_assert(std::is_same_v<decltype(std::declval<expt::unexpected<int>&&>().error()), int&&>);
+static_assert(std::is_same_v<decltype(std::declval<const expt::unexpected<int>&&>().error()), const int&&>);
+
 TEST_CASE("unexpected: construct from int", "[UnexpectedTest]") {
     expt::unexpected<int> u(42);
     CHECK(u.error() == 42);
@@ -137,4 +164,17 @@ TEST_CASE("unexpected: unexpect_t tag type", "[UnexpectedTest]") {
 TEST_CASE("unexpected: constexpr basic usage", "[UnexpectedTest]") {
     constexpr expt::unexpected<int> u(123);
     static_assert(u.error() == 123);
+}
+
+TEST_CASE("unexpected: inequality operator (synthesized)", "[UnexpectedTest]") {
+    expt::unexpected<int> a(1), b(2), c(1);
+    CHECK(a != b);
+    CHECK_FALSE(a != c);
+}
+
+TEST_CASE("unexpected: in-place ilist constraint: is_constructible from ilist", "[UnexpectedTest]") {
+    // is_constructible_v<E, initializer_list<U>&, Args...> must hold
+    static_assert(std::is_constructible_v<expt::unexpected<std::vector<int>>,
+                                          std::in_place_t,
+                                          std::initializer_list<int>>);
 }
