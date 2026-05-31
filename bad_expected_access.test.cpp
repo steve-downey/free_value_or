@@ -4,8 +4,8 @@
 #include <beman/expected/bad_expected_access.hpp>
 #include <beman/expected/bad_expected_access.hpp> // test 2nd include OK
 
-#include <gtest/gtest.h>
+#include <catch2/catch_test_macros.hpp>
 
 namespace expt = beman::expected;
 
-TEST(BadExpectedAccessTest, breathing) { SUCCEED(); }
+TEST_CASE("breathing", "[BadExpectedAccessTest]") {}

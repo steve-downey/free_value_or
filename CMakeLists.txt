@@ -5,11 +5,12 @@ add_executable(beman.expected.tests.expected)
 target_sources(
     beman.expected.tests.expected
     PRIVATE bad_expected_access.test.cpp unexpected.test.cpp expected.test.cpp
+            todo.test.cpp
 )
 target_link_libraries(
     beman.expected.tests.expected
-    PRIVATE beman::expected GTest::gtest GTest::gtest_main
+    PRIVATE beman::expected Catch2::Catch2WithMain
 )
 
-include(GoogleTest)
-gtest_discover_tests(beman.expected.tests.expected)
+include(Catch)
+catch_discover_tests(beman.expected.tests.expected)

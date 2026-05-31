@@ -4,11 +4,11 @@
 #include <beman/expected/unexpected.hpp>
 #include <beman/expected/unexpected.hpp> // ensure idempotent header
 
-#include <gtest/gtest.h>
+#include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
 #include <functional>
 
 namespace expt = beman::expected;
 
-TEST(UnexpectedTest, breathing) { EXPECT_EQ(true, true); }
+TEST_CASE("breathing", "[UnexpectedTest]") { CHECK(true == true); }
