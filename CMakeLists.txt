@@ -4,8 +4,11 @@
 add_executable(beman.expected.tests.expected)
 target_sources(
     beman.expected.tests.expected
-    PRIVATE bad_expected_access.test.cpp unexpected.test.cpp expected.test.cpp
-            todo.test.cpp
+    PRIVATE
+        bad_expected_access.test.cpp
+        unexpected.test.cpp
+        expected.test.cpp
+        todo.test.cpp
 )
 target_link_libraries(
     beman.expected.tests.expected
