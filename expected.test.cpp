@@ -23,16 +23,16 @@ struct NoDefault {
 };
 
 struct NoCopy {
-    NoCopy()                 = default;
-    NoCopy(const NoCopy&)    = delete;
-    NoCopy(NoCopy&&)         = default;
+    NoCopy()                         = default;
+    NoCopy(const NoCopy&)            = delete;
+    NoCopy(NoCopy&&)                 = default;
     NoCopy& operator=(const NoCopy&) = delete;
     NoCopy& operator=(NoCopy&&)      = default;
-    int     v                = 0;
+    int     v                        = 0;
 };
 
 struct ThrowingMove {
-    ThrowingMove()                    = default;
+    ThrowingMove() = default;
     ThrowingMove(ThrowingMove&&) noexcept(false) {}
 };
 
@@ -747,10 +747,9 @@ TEST_CASE("expected: destructor runs for error", "[ExpectedTest]") {
 namespace {
 // Custom type with noexcept initializer_list constructor for emplace testing
 struct IListInt {
-    int  sum  = 0;
-    int  count = 0;
-    IListInt(std::initializer_list<int> il) noexcept
-        : count(static_cast<int>(il.size())) {
+    int sum   = 0;
+    int count = 0;
+    IListInt(std::initializer_list<int> il) noexcept : count(static_cast<int>(il.size())) {
         for (int v : il)
             sum += v;
     }
@@ -759,7 +758,7 @@ struct IListInt {
 
 TEST_CASE("expected: emplace with initializer_list", "[ExpectedTest]") {
     expt::expected<IListInt, int> e(expt::unexpect, 0);
-    auto& ref = e.emplace(std::initializer_list<int>{1, 2, 3});
+    auto&                         ref = e.emplace(std::initializer_list<int>{1, 2, 3});
     REQUIRE(e.has_value());
     CHECK(e->count == 3);
     CHECK(e->sum == 6);

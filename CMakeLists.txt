@@ -8,6 +8,7 @@ target_sources(
         bad_expected_access.test.cpp
         unexpected.test.cpp
         expected.test.cpp
+        expected_void.test.cpp
         todo.test.cpp
 )
 target_link_libraries(
@@ -29,14 +30,13 @@ macro(add_fail_test name source)
     target_link_libraries(beman.expected.tests.${name} PRIVATE beman::expected)
     set_target_properties(
         beman.expected.tests.${name}
-        PROPERTIES
-            EXCLUDE_FROM_ALL true
-            EXCLUDE_FROM_DEFAULT_BUILD true
+        PROPERTIES EXCLUDE_FROM_ALL true EXCLUDE_FROM_DEFAULT_BUILD true
     )
     add_test(
         NAME ${name}
-        COMMAND ${CMAKE_COMMAND} --build "${CMAKE_BINARY_DIR}"
-                --target beman.expected.tests.${name} --config $<CONFIGURATION>
+        COMMAND
+            ${CMAKE_COMMAND} --build "${CMAKE_BINARY_DIR}" --target
+            beman.expected.tests.${name} --config $<CONFIGURATION>
     )
     set_tests_properties(${name} PROPERTIES WILL_FAIL TRUE)
 endmacro()
@@ -53,3 +53,7 @@ add_fail_test(expected_t_array_fail expected_t_array_fail.cpp)
 
 # Step 3 — expected<T,E> emplace Mandates: nothrow_constructible_v<T,Args...>
 add_fail_test(expected_emplace_throwing_fail expected_emplace_throwing_fail.cpp)
+
+# Step 4 — expected<void,E> ill-formed E [expected.void.general]
+add_fail_test(expected_void_ref_fail   expected_void_ref_fail.cpp)
+add_fail_test(expected_void_array_fail expected_void_array_fail.cpp)

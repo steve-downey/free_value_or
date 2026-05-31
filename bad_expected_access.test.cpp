@@ -104,7 +104,7 @@ TEST_CASE("bad_expected_access: move-only error type", "[BadExpectedAccessTest]"
 }
 
 TEST_CASE("bad_expected_access<void>: accessible via base reference", "[BadExpectedAccessTest]") {
-    expt::bad_expected_access<int>        ex(0);
+    expt::bad_expected_access<int>         ex(0);
     const expt::bad_expected_access<void>& base = ex;
     CHECK(base.what() != nullptr);
 }

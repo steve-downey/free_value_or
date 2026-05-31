@@ -174,7 +174,6 @@ TEST_CASE("unexpected: inequality operator (synthesized)", "[UnexpectedTest]") {
 
 TEST_CASE("unexpected: in-place ilist constraint: is_constructible from ilist", "[UnexpectedTest]") {
     // is_constructible_v<E, initializer_list<U>&, Args...> must hold
-    static_assert(std::is_constructible_v<expt::unexpected<std::vector<int>>,
-                                          std::in_place_t,
-                                          std::initializer_list<int>>);
+    static_assert(
+        std::is_constructible_v<expt::unexpected<std::vector<int>>, std::in_place_t, std::initializer_list<int>>);
 }
