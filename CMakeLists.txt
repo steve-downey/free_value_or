@@ -10,6 +10,7 @@ target_sources(
         expected.test.cpp
         expected_void.test.cpp
         expected_monadic.test.cpp
+        expected_void_monadic.test.cpp
         todo.test.cpp
 )
 target_link_libraries(
@@ -64,3 +65,7 @@ add_fail_test(and_then_wrong_error_type_fail    and_then_wrong_error_type_fail.c
 add_fail_test(and_then_not_expected_fail        and_then_not_expected_fail.cpp)
 add_fail_test(or_else_wrong_value_type_fail     or_else_wrong_value_type_fail.cpp)
 add_fail_test(transform_error_ref_result_fail   transform_error_ref_result_fail.cpp)
+
+# Step 6 — void monadic Mandates [expected.void.monadic]
+add_fail_test(void_and_then_wrong_error_type_fail void_and_then_wrong_error_type_fail.cpp)
+add_fail_test(void_or_else_wrong_value_type_fail  void_or_else_wrong_value_type_fail.cpp)

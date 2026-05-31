@@ -12,7 +12,7 @@
 #ifndef BEMAN_EXPECTED_TEST_STD
 using namespace beman::expected;
 #else
-#include <expected>
+    #include <expected>
 using namespace std;
 #endif
 
@@ -22,7 +22,7 @@ using namespace std;
 
 TEST_CASE("and_then: has value — calls F", "[expected_monadic]") {
     expected<int, std::string> e(42);
-    auto result = e.and_then([](int v) -> expected<int, std::string> { return v * 2; });
+    auto                       result = e.and_then([](int v) -> expected<int, std::string> { return v * 2; });
     REQUIRE(result.has_value());
     CHECK(*result == 84);
 }
@@ -30,7 +30,7 @@ TEST_CASE("and_then: has value — calls F", "[expected_monadic]") {
 TEST_CASE("and_then: has error — short-circuits", "[expected_monadic]") {
     expected<int, std::string> e(unexpect, "fail");
     bool                       called = false;
-    auto result = e.and_then([&](int) -> expected<int, std::string> {
+    auto                       result = e.and_then([&](int) -> expected<int, std::string> {
         called = true;
         return 0;
     });
@@ -41,8 +41,9 @@ TEST_CASE("and_then: has error — short-circuits", "[expected_monadic]") {
 
 TEST_CASE("and_then: chaining", "[expected_monadic]") {
     expected<int, std::string> e(1);
-    auto r = e.and_then([](int v) -> expected<int, std::string> { return v + 1; })
-               .and_then([](int v) -> expected<int, std::string> { return v * 10; });
+    auto                       r = e.and_then([](int v) -> expected<int, std::string> {
+                  return v + 1;
+                                    }).and_then([](int v) -> expected<int, std::string> { return v * 10; });
     REQUIRE(r.has_value());
     CHECK(*r == 20);
 }
@@ -50,7 +51,7 @@ TEST_CASE("and_then: chaining", "[expected_monadic]") {
 TEST_CASE("and_then: rvalue overload moves value", "[expected_monadic]") {
     expected<std::string, int> e("hello");
     std::string                moved_from;
-    auto r = std::move(e).and_then([&](std::string s) -> expected<std::string, int> {
+    auto                       r = std::move(e).and_then([&](std::string s) -> expected<std::string, int> {
         moved_from = std::move(s);
         return "done";
     });
@@ -61,22 +62,23 @@ TEST_CASE("and_then: rvalue overload moves value", "[expected_monadic]") {
 
 TEST_CASE("and_then: const lvalue overload", "[expected_monadic]") {
     const expected<int, int> e(5);
-    auto r = e.and_then([](int v) -> expected<long, int> { return static_cast<long>(v); });
+    auto                     r = e.and_then([](int v) -> expected<long, int> { return static_cast<long>(v); });
     REQUIRE(r.has_value());
     CHECK(*r == 5L);
 }
 
 TEST_CASE("and_then: const rvalue overload", "[expected_monadic]") {
     const expected<int, int> e(7);
-    auto r = std::move(e).and_then([](int v) -> expected<int, int> { return v + 1; });
+    auto                     r = std::move(e).and_then([](int v) -> expected<int, int> { return v + 1; });
     REQUIRE(r.has_value());
     CHECK(*r == 8);
 }
 
 TEST_CASE("and_then: error propagated through chain", "[expected_monadic]") {
     expected<int, std::string> e(unexpect, "stop");
-    auto r = e.and_then([](int v) -> expected<int, std::string> { return v + 1; })
-               .and_then([](int v) -> expected<int, std::string> { return v * 2; });
+    auto                       r = e.and_then([](int v) -> expected<int, std::string> {
+                  return v + 1;
+                                    }).and_then([](int v) -> expected<int, std::string> { return v * 2; });
     REQUIRE(!r.has_value());
     CHECK(r.error() == "stop");
 }
@@ -87,9 +89,7 @@ TEST_CASE("and_then: error propagated through chain", "[expected_monadic]") {
 
 TEST_CASE("or_else: has error — calls F", "[expected_monadic]") {
     expected<int, std::string> e(unexpect, "problem");
-    auto result = e.or_else([](std::string s) -> expected<int, std::string> {
-        return static_cast<int>(s.size());
-    });
+    auto result = e.or_else([](std::string s) -> expected<int, std::string> { return static_cast<int>(s.size()); });
     REQUIRE(result.has_value());
     CHECK(*result == 7);
 }
@@ -97,7 +97,7 @@ TEST_CASE("or_else: has error — calls F", "[expected_monadic]") {
 TEST_CASE("or_else: has value — short-circuits", "[expected_monadic]") {
     expected<int, std::string> e(42);
     bool                       called = false;
-    auto result = e.or_else([&](std::string) -> expected<int, std::string> {
+    auto                       result = e.or_else([&](std::string) -> expected<int, std::string> {
         called = true;
         return 0;
     });
@@ -109,7 +109,7 @@ TEST_CASE("or_else: has value — short-circuits", "[expected_monadic]") {
 TEST_CASE("or_else: rvalue overload moves error", "[expected_monadic]") {
     expected<int, std::string> e(unexpect, "err");
     std::string                got;
-    auto r = std::move(e).or_else([&](std::string s) -> expected<int, std::string> {
+    auto                       r = std::move(e).or_else([&](std::string s) -> expected<int, std::string> {
         got = std::move(s);
         return 0;
     });
@@ -119,22 +119,23 @@ TEST_CASE("or_else: rvalue overload moves error", "[expected_monadic]") {
 
 TEST_CASE("or_else: const lvalue overload", "[expected_monadic]") {
     const expected<int, int> e(unexpect, 3);
-    auto r = e.or_else([](int v) -> expected<int, int> { return v * 10; });
+    auto                     r = e.or_else([](int v) -> expected<int, int> { return v * 10; });
     REQUIRE(r.has_value());
     CHECK(*r == 30);
 }
 
 TEST_CASE("or_else: const rvalue overload", "[expected_monadic]") {
     const expected<int, int> e(unexpect, 5);
-    auto r = std::move(e).or_else([](int v) -> expected<int, int> { return v + 1; });
+    auto                     r = std::move(e).or_else([](int v) -> expected<int, int> { return v + 1; });
     REQUIRE(r.has_value());
     CHECK(*r == 6);
 }
 
 TEST_CASE("or_else: value passes through chain", "[expected_monadic]") {
     expected<int, std::string> e(99);
-    auto r = e.or_else([](std::string) -> expected<int, std::string> { return 0; })
-               .or_else([](std::string) -> expected<int, std::string> { return 1; });
+    auto                       r = e.or_else([](std::string) -> expected<int, std::string> {
+                  return 0;
+                                    }).or_else([](std::string) -> expected<int, std::string> { return 1; });
     REQUIRE(r.has_value());
     CHECK(*r == 99);
 }
@@ -145,7 +146,7 @@ TEST_CASE("or_else: value passes through chain", "[expected_monadic]") {
 
 TEST_CASE("transform: has value — transforms", "[expected_monadic]") {
     expected<int, std::string> e(6);
-    auto r = e.transform([](int v) { return v * 7; });
+    auto                       r = e.transform([](int v) { return v * 7; });
     static_assert(std::is_same_v<decltype(r), expected<int, std::string>>);
     REQUIRE(r.has_value());
     CHECK(*r == 42);
@@ -154,7 +155,7 @@ TEST_CASE("transform: has value — transforms", "[expected_monadic]") {
 TEST_CASE("transform: has error — propagates", "[expected_monadic]") {
     expected<int, std::string> e(unexpect, "oops");
     bool                       called = false;
-    auto r = e.transform([&](int) {
+    auto                       r      = e.transform([&](int) {
         called = true;
         return 0;
     });
@@ -166,7 +167,7 @@ TEST_CASE("transform: has error — propagates", "[expected_monadic]") {
 TEST_CASE("transform: void return type", "[expected_monadic]") {
     expected<int, std::string> e(1);
     int                        count = 0;
-    auto r = e.transform([&](int) { ++count; });
+    auto                       r     = e.transform([&](int) { ++count; });
     static_assert(std::is_same_v<decltype(r), expected<void, std::string>>);
     REQUIRE(r.has_value());
     CHECK(count == 1);
@@ -175,7 +176,7 @@ TEST_CASE("transform: void return type", "[expected_monadic]") {
 TEST_CASE("transform: void return — error state does not call F", "[expected_monadic]") {
     expected<int, std::string> e(unexpect, "no");
     int                        count = 0;
-    auto r = e.transform([&](int) { ++count; });
+    auto                       r     = e.transform([&](int) { ++count; });
     static_assert(std::is_same_v<decltype(r), expected<void, std::string>>);
     REQUIRE(!r.has_value());
     CHECK(count == 0);
@@ -184,7 +185,7 @@ TEST_CASE("transform: void return — error state does not call F", "[expected_m
 
 TEST_CASE("transform: type change", "[expected_monadic]") {
     expected<int, int> e(42);
-    auto r = e.transform([](int v) -> std::string { return std::to_string(v); });
+    auto               r = e.transform([](int v) -> std::string { return std::to_string(v); });
     static_assert(std::is_same_v<decltype(r), expected<std::string, int>>);
     REQUIRE(r.has_value());
     CHECK(*r == "42");
@@ -192,21 +193,21 @@ TEST_CASE("transform: type change", "[expected_monadic]") {
 
 TEST_CASE("transform: rvalue overload", "[expected_monadic]") {
     expected<std::string, int> e("hello");
-    auto r = std::move(e).transform([](std::string s) { return s.size(); });
+    auto                       r = std::move(e).transform([](std::string s) { return s.size(); });
     REQUIRE(r.has_value());
     CHECK(*r == 5u);
 }
 
 TEST_CASE("transform: const lvalue overload", "[expected_monadic]") {
     const expected<int, int> e(10);
-    auto r = e.transform([](int v) { return v + 1; });
+    auto                     r = e.transform([](int v) { return v + 1; });
     REQUIRE(r.has_value());
     CHECK(*r == 11);
 }
 
 TEST_CASE("transform: const rvalue overload", "[expected_monadic]") {
     const expected<int, int> e(3);
-    auto r = std::move(e).transform([](int v) { return v * v; });
+    auto                     r = std::move(e).transform([](int v) { return v * v; });
     REQUIRE(r.has_value());
     CHECK(*r == 9);
 }
@@ -217,7 +218,7 @@ TEST_CASE("transform: const rvalue overload", "[expected_monadic]") {
 
 TEST_CASE("transform_error: has error — transforms", "[expected_monadic]") {
     expected<int, int> e(unexpect, 3);
-    auto r = e.transform_error([](int v) -> std::string { return std::to_string(v); });
+    auto               r = e.transform_error([](int v) -> std::string { return std::to_string(v); });
     static_assert(std::is_same_v<decltype(r), expected<int, std::string>>);
     REQUIRE(!r.has_value());
     CHECK(r.error() == "3");
@@ -226,7 +227,7 @@ TEST_CASE("transform_error: has error — transforms", "[expected_monadic]") {
 TEST_CASE("transform_error: has value — preserves", "[expected_monadic]") {
     expected<int, int> e(42);
     bool               called = false;
-    auto r = e.transform_error([&](int) -> std::string {
+    auto               r      = e.transform_error([&](int) -> std::string {
         called = true;
         return "";
     });
@@ -238,7 +239,7 @@ TEST_CASE("transform_error: has value — preserves", "[expected_monadic]") {
 TEST_CASE("transform_error: rvalue overload moves error", "[expected_monadic]") {
     expected<int, std::string> e(unexpect, "err");
     std::string                got;
-    auto r = std::move(e).transform_error([&](std::string s) -> int {
+    auto                       r = std::move(e).transform_error([&](std::string s) -> int {
         got = std::move(s);
         return 99;
     });
@@ -249,14 +250,14 @@ TEST_CASE("transform_error: rvalue overload moves error", "[expected_monadic]") 
 
 TEST_CASE("transform_error: const lvalue overload", "[expected_monadic]") {
     const expected<int, int> e(unexpect, 4);
-    auto r = e.transform_error([](int v) { return v * 2; });
+    auto                     r = e.transform_error([](int v) { return v * 2; });
     REQUIRE(!r.has_value());
     CHECK(r.error() == 8);
 }
 
 TEST_CASE("transform_error: const rvalue overload", "[expected_monadic]") {
     const expected<int, int> e(unexpect, 5);
-    auto r = std::move(e).transform_error([](int v) -> std::string { return std::to_string(v); });
+    auto                     r = std::move(e).transform_error([](int v) -> std::string { return std::to_string(v); });
     REQUIRE(!r.has_value());
     CHECK(r.error() == "5");
 }
@@ -293,8 +294,9 @@ TEST_CASE("monadic chaining: or_else recovery", "[expected_monadic]") {
 
 TEST_CASE("monadic chaining: transform_error then or_else", "[expected_monadic]") {
     expected<int, int> e(unexpect, 42);
-    auto r = e.transform_error([](int v) -> std::string { return std::to_string(v); })
-               .or_else([](std::string s) -> expected<int, std::string> { return static_cast<int>(s.size()); });
+    auto               r = e.transform_error([](int v) -> std::string {
+                  return std::to_string(v);
+                            }).or_else([](std::string s) -> expected<int, std::string> { return static_cast<int>(s.size()); });
     REQUIRE(r.has_value());
     CHECK(*r == 2);
 }
@@ -327,7 +329,7 @@ TEST_CASE("or_else: all 4 ref qualifications compile", "[expected_monadic]") {
 
 TEST_CASE("transform: all 4 ref qualifications compile", "[expected_monadic]") {
     expected<int, int> e(1);
-    auto f = [](int v) { return v; };
+    auto               f = [](int v) { return v; };
     (void)(e.transform(f));
     (void)(std::as_const(e).transform(f));
     (void)(std::move(e).transform(f));
@@ -336,7 +338,7 @@ TEST_CASE("transform: all 4 ref qualifications compile", "[expected_monadic]") {
 
 TEST_CASE("transform_error: all 4 ref qualifications compile", "[expected_monadic]") {
     expected<int, int> e(unexpect, 1);
-    auto f = [](int v) { return v; };
+    auto               f = [](int v) { return v; };
     (void)(e.transform_error(f));
     (void)(std::as_const(e).transform_error(f));
     (void)(std::move(e).transform_error(f));
