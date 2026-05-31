@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 #include <beman/expected/expected.hpp>
-#include <beman/expected/expected.hpp>  // idempotence check
+#include <beman/expected/expected.hpp> // idempotence check
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -13,8 +13,8 @@
 
 using beman::expected::bad_expected_access;
 using beman::expected::expected;
-using beman::expected::unexpected;
 using beman::expected::unexpect;
+using beman::expected::unexpected;
 
 // =============================================================================
 // [expected.void.general] Ill-formed instantiation constraints
@@ -76,13 +76,13 @@ TEST_CASE("expected<void>: move construct with error", "[expected_void]") {
 static_assert(!std::is_constructible_v<expected<void, int>, expected<int, int>>);
 
 TEST_CASE("expected<void>: convert from expected<void, G> with value", "[expected_void]") {
-    expected<void, int> src;
+    expected<void, int>  src;
     expected<void, long> dst = src;
     CHECK(dst.has_value());
 }
 
 TEST_CASE("expected<void>: convert from expected<void, G> with error", "[expected_void]") {
-    expected<void, int> src(unexpect, 7);
+    expected<void, int>  src(unexpect, 7);
     expected<void, long> dst = src;
     REQUIRE(!dst.has_value());
     CHECK(dst.error() == 7L);
@@ -269,7 +269,7 @@ TEST_CASE("expected<void>: has_value and bool", "[expected_void]") {
 TEST_CASE("expected<void>: operator* is void", "[expected_void]") {
     expected<void, int> e;
     static_assert(std::is_same_v<decltype(*e), void>);
-    *e;  // compiles and does nothing
+    *e; // compiles and does nothing
 }
 
 // No operator-> or value_or for void (verified by negative compile tests)
@@ -278,7 +278,7 @@ TEST_CASE("expected<void>: operator* is void", "[expected_void]") {
 
 TEST_CASE("expected<void>: value() on success is no-op", "[expected_void]") {
     expected<void, int> e;
-    e.value();  // should not throw
+    e.value(); // should not throw
 }
 
 TEST_CASE("expected<void>: value() throws on error (const&)", "[expected_void]") {

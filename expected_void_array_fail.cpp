@@ -2,4 +2,4 @@
 // Negative compile test: expected<void, E[]> where E is an array is ill-formed.
 #include <beman/expected/expected.hpp>
 
-beman::expected::expected<void, int[]> x;  // should fail
+beman::expected::expected<void, int[]> x; // should fail

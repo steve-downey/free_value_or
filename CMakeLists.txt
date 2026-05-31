@@ -9,6 +9,7 @@ target_sources(
         unexpected.test.cpp
         expected.test.cpp
         expected_void.test.cpp
+        expected_monadic.test.cpp
         todo.test.cpp
 )
 target_link_libraries(
@@ -57,3 +58,9 @@ add_fail_test(expected_emplace_throwing_fail expected_emplace_throwing_fail.cpp)
 # Step 4 — expected<void,E> ill-formed E [expected.void.general]
 add_fail_test(expected_void_ref_fail   expected_void_ref_fail.cpp)
 add_fail_test(expected_void_array_fail expected_void_array_fail.cpp)
+
+# Step 5 — monadic Mandates [expected.object.monadic]
+add_fail_test(and_then_wrong_error_type_fail    and_then_wrong_error_type_fail.cpp)
+add_fail_test(and_then_not_expected_fail        and_then_not_expected_fail.cpp)
+add_fail_test(or_else_wrong_value_type_fail     or_else_wrong_value_type_fail.cpp)
+add_fail_test(transform_error_ref_result_fail   transform_error_ref_result_fail.cpp)
