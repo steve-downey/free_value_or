@@ -6,6 +6,7 @@
 #include <beman/expected/unexpected.hpp>
 #include <beman/expected/bad_expected_access.hpp>
 
+#include <functional>
 #include <initializer_list>
 #include <memory>
 #include <type_traits>
@@ -44,6 +45,11 @@ namespace expected {
 
 namespace detail {
 
+template <class T>
+struct is_expected_specialization : std::false_type {};
+
+// forward-declared in primary template below; specializations added after class definition
+
 // [expected.object.assign] reinit_expected helper
 template <class NewVal, class CurVal, class... Args>
 constexpr void reinit_expected(NewVal& newval, CurVal& oldval, Args&&... args) {
@@ -70,6 +76,11 @@ constexpr void reinit_expected(NewVal& newval, CurVal& oldval, Args&&... args) {
 
 template <class T, class E>
 class expected;
+
+namespace detail {
+template <class T, class E>
+struct is_expected_specialization<expected<T, E>> : std::true_type {};
+} // namespace detail
 
 // [expected.expected], class template expected
 template <class T, class E>
@@ -283,6 +294,46 @@ class expected {
 
     template <class G = E>
     constexpr E error_or(G&& def) &&;
+
+    // -------------------------------------------------------------------------
+    // [expected.object.monadic] Monadic operations
+    // -------------------------------------------------------------------------
+
+    template <class F>
+    constexpr auto and_then(F&& f) &;
+    template <class F>
+    constexpr auto and_then(F&& f) &&;
+    template <class F>
+    constexpr auto and_then(F&& f) const&;
+    template <class F>
+    constexpr auto and_then(F&& f) const&&;
+
+    template <class F>
+    constexpr auto or_else(F&& f) &;
+    template <class F>
+    constexpr auto or_else(F&& f) &&;
+    template <class F>
+    constexpr auto or_else(F&& f) const&;
+    template <class F>
+    constexpr auto or_else(F&& f) const&&;
+
+    template <class F>
+    constexpr auto transform(F&& f) &;
+    template <class F>
+    constexpr auto transform(F&& f) &&;
+    template <class F>
+    constexpr auto transform(F&& f) const&;
+    template <class F>
+    constexpr auto transform(F&& f) const&&;
+
+    template <class F>
+    constexpr auto transform_error(F&& f) &;
+    template <class F>
+    constexpr auto transform_error(F&& f) &&;
+    template <class F>
+    constexpr auto transform_error(F&& f) const&;
+    template <class F>
+    constexpr auto transform_error(F&& f) const&&;
 
     // -------------------------------------------------------------------------
     // [expected.object.eq] Equality operators (hidden friends)
@@ -756,6 +807,214 @@ constexpr E expected<T, E>::error_or(G&& def) && {
     if (!has_val_)
         return std::move(unex_);
     return static_cast<E>(std::forward<G>(def));
+}
+
+// =============================================================================
+// [expected.object.monadic] Out-of-line monadic operation definitions
+// =============================================================================
+
+template <class T, class E>
+template <class F>
+constexpr auto expected<T, E>::and_then(F&& f) & {
+    using U = std::remove_cvref_t<std::invoke_result_t<F, T&>>;
+    static_assert(detail::is_expected_specialization<U>::value,
+                  "and_then: F must return a specialization of expected");
+    static_assert(std::is_same_v<typename U::error_type, E>,
+                  "and_then: F must return expected with the same error_type");
+    if (has_val_)
+        return std::invoke(std::forward<F>(f), val_);
+    return U(unexpect, unex_);
+}
+
+template <class T, class E>
+template <class F>
+constexpr auto expected<T, E>::and_then(F&& f) && {
+    using U = std::remove_cvref_t<std::invoke_result_t<F, T&&>>;
+    static_assert(detail::is_expected_specialization<U>::value,
+                  "and_then: F must return a specialization of expected");
+    static_assert(std::is_same_v<typename U::error_type, E>,
+                  "and_then: F must return expected with the same error_type");
+    if (has_val_)
+        return std::invoke(std::forward<F>(f), std::move(val_));
+    return U(unexpect, std::move(unex_));
+}
+
+template <class T, class E>
+template <class F>
+constexpr auto expected<T, E>::and_then(F&& f) const& {
+    using U = std::remove_cvref_t<std::invoke_result_t<F, const T&>>;
+    static_assert(detail::is_expected_specialization<U>::value,
+                  "and_then: F must return a specialization of expected");
+    static_assert(std::is_same_v<typename U::error_type, E>,
+                  "and_then: F must return expected with the same error_type");
+    if (has_val_)
+        return std::invoke(std::forward<F>(f), val_);
+    return U(unexpect, unex_);
+}
+
+template <class T, class E>
+template <class F>
+constexpr auto expected<T, E>::and_then(F&& f) const&& {
+    using U = std::remove_cvref_t<std::invoke_result_t<F, const T&&>>;
+    static_assert(detail::is_expected_specialization<U>::value,
+                  "and_then: F must return a specialization of expected");
+    static_assert(std::is_same_v<typename U::error_type, E>,
+                  "and_then: F must return expected with the same error_type");
+    if (has_val_)
+        return std::invoke(std::forward<F>(f), std::move(val_));
+    return U(unexpect, std::move(unex_));
+}
+
+template <class T, class E>
+template <class F>
+constexpr auto expected<T, E>::or_else(F&& f) & {
+    using G = std::remove_cvref_t<std::invoke_result_t<F, E&>>;
+    static_assert(detail::is_expected_specialization<G>::value, "or_else: F must return a specialization of expected");
+    static_assert(std::is_same_v<typename G::value_type, T>,
+                  "or_else: F must return expected with the same value_type");
+    if (has_val_)
+        return G(std::in_place, val_);
+    return std::invoke(std::forward<F>(f), unex_);
+}
+
+template <class T, class E>
+template <class F>
+constexpr auto expected<T, E>::or_else(F&& f) && {
+    using G = std::remove_cvref_t<std::invoke_result_t<F, E&&>>;
+    static_assert(detail::is_expected_specialization<G>::value, "or_else: F must return a specialization of expected");
+    static_assert(std::is_same_v<typename G::value_type, T>,
+                  "or_else: F must return expected with the same value_type");
+    if (has_val_)
+        return G(std::in_place, std::move(val_));
+    return std::invoke(std::forward<F>(f), std::move(unex_));
+}
+
+template <class T, class E>
+template <class F>
+constexpr auto expected<T, E>::or_else(F&& f) const& {
+    using G = std::remove_cvref_t<std::invoke_result_t<F, const E&>>;
+    static_assert(detail::is_expected_specialization<G>::value, "or_else: F must return a specialization of expected");
+    static_assert(std::is_same_v<typename G::value_type, T>,
+                  "or_else: F must return expected with the same value_type");
+    if (has_val_)
+        return G(std::in_place, val_);
+    return std::invoke(std::forward<F>(f), unex_);
+}
+
+template <class T, class E>
+template <class F>
+constexpr auto expected<T, E>::or_else(F&& f) const&& {
+    using G = std::remove_cvref_t<std::invoke_result_t<F, const E&&>>;
+    static_assert(detail::is_expected_specialization<G>::value, "or_else: F must return a specialization of expected");
+    static_assert(std::is_same_v<typename G::value_type, T>,
+                  "or_else: F must return expected with the same value_type");
+    if (has_val_)
+        return G(std::in_place, std::move(val_));
+    return std::invoke(std::forward<F>(f), std::move(unex_));
+}
+
+template <class T, class E>
+template <class F>
+constexpr auto expected<T, E>::transform(F&& f) & {
+    using U = std::remove_cv_t<std::invoke_result_t<F, T&>>;
+    if constexpr (std::is_void_v<U>) {
+        if (has_val_)
+            std::invoke(std::forward<F>(f), val_);
+        if (has_val_)
+            return expected<U, E>();
+        return expected<U, E>(unexpect, unex_);
+    } else {
+        if (has_val_)
+            return expected<U, E>(std::invoke(std::forward<F>(f), val_));
+        return expected<U, E>(unexpect, unex_);
+    }
+}
+
+template <class T, class E>
+template <class F>
+constexpr auto expected<T, E>::transform(F&& f) && {
+    using U = std::remove_cv_t<std::invoke_result_t<F, T&&>>;
+    if constexpr (std::is_void_v<U>) {
+        if (has_val_)
+            std::invoke(std::forward<F>(f), std::move(val_));
+        if (has_val_)
+            return expected<U, E>();
+        return expected<U, E>(unexpect, std::move(unex_));
+    } else {
+        if (has_val_)
+            return expected<U, E>(std::invoke(std::forward<F>(f), std::move(val_)));
+        return expected<U, E>(unexpect, std::move(unex_));
+    }
+}
+
+template <class T, class E>
+template <class F>
+constexpr auto expected<T, E>::transform(F&& f) const& {
+    using U = std::remove_cv_t<std::invoke_result_t<F, const T&>>;
+    if constexpr (std::is_void_v<U>) {
+        if (has_val_)
+            std::invoke(std::forward<F>(f), val_);
+        if (has_val_)
+            return expected<U, E>();
+        return expected<U, E>(unexpect, unex_);
+    } else {
+        if (has_val_)
+            return expected<U, E>(std::invoke(std::forward<F>(f), val_));
+        return expected<U, E>(unexpect, unex_);
+    }
+}
+
+template <class T, class E>
+template <class F>
+constexpr auto expected<T, E>::transform(F&& f) const&& {
+    using U = std::remove_cv_t<std::invoke_result_t<F, const T&&>>;
+    if constexpr (std::is_void_v<U>) {
+        if (has_val_)
+            std::invoke(std::forward<F>(f), std::move(val_));
+        if (has_val_)
+            return expected<U, E>();
+        return expected<U, E>(unexpect, std::move(unex_));
+    } else {
+        if (has_val_)
+            return expected<U, E>(std::invoke(std::forward<F>(f), std::move(val_)));
+        return expected<U, E>(unexpect, std::move(unex_));
+    }
+}
+
+template <class T, class E>
+template <class F>
+constexpr auto expected<T, E>::transform_error(F&& f) & {
+    using G = std::remove_cv_t<std::invoke_result_t<F, E&>>;
+    if (has_val_)
+        return expected<T, G>(std::in_place, val_);
+    return expected<T, G>(unexpect, std::invoke(std::forward<F>(f), unex_));
+}
+
+template <class T, class E>
+template <class F>
+constexpr auto expected<T, E>::transform_error(F&& f) && {
+    using G = std::remove_cv_t<std::invoke_result_t<F, E&&>>;
+    if (has_val_)
+        return expected<T, G>(std::in_place, std::move(val_));
+    return expected<T, G>(unexpect, std::invoke(std::forward<F>(f), std::move(unex_)));
+}
+
+template <class T, class E>
+template <class F>
+constexpr auto expected<T, E>::transform_error(F&& f) const& {
+    using G = std::remove_cv_t<std::invoke_result_t<F, const E&>>;
+    if (has_val_)
+        return expected<T, G>(std::in_place, val_);
+    return expected<T, G>(unexpect, std::invoke(std::forward<F>(f), unex_));
+}
+
+template <class T, class E>
+template <class F>
+constexpr auto expected<T, E>::transform_error(F&& f) const&& {
+    using G = std::remove_cv_t<std::invoke_result_t<F, const E&&>>;
+    if (has_val_)
+        return expected<T, G>(std::in_place, std::move(val_));
+    return expected<T, G>(unexpect, std::invoke(std::forward<F>(f), std::move(unex_)));
 }
 
 // =============================================================================
