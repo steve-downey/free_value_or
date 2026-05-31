@@ -338,39 +338,55 @@ class expected {
     // -------------------------------------------------------------------------
 
     template <class F>
+        requires std::is_constructible_v<E, E&>
     constexpr auto and_then(F&& f) &;
     template <class F>
+        requires std::is_constructible_v<E, E&&>
     constexpr auto and_then(F&& f) &&;
     template <class F>
+        requires std::is_constructible_v<E, const E&>
     constexpr auto and_then(F&& f) const&;
     template <class F>
+        requires std::is_constructible_v<E, const E&&>
     constexpr auto and_then(F&& f) const&&;
 
     template <class F>
+        requires std::is_constructible_v<T, T&>
     constexpr auto or_else(F&& f) &;
     template <class F>
+        requires std::is_constructible_v<T, T&&>
     constexpr auto or_else(F&& f) &&;
     template <class F>
+        requires std::is_constructible_v<T, const T&>
     constexpr auto or_else(F&& f) const&;
     template <class F>
+        requires std::is_constructible_v<T, const T&&>
     constexpr auto or_else(F&& f) const&&;
 
     template <class F>
+        requires std::is_constructible_v<E, E&>
     constexpr auto transform(F&& f) &;
     template <class F>
+        requires std::is_constructible_v<E, E&&>
     constexpr auto transform(F&& f) &&;
     template <class F>
+        requires std::is_constructible_v<E, const E&>
     constexpr auto transform(F&& f) const&;
     template <class F>
+        requires std::is_constructible_v<E, const E&&>
     constexpr auto transform(F&& f) const&&;
 
     template <class F>
+        requires std::is_constructible_v<T, T&>
     constexpr auto transform_error(F&& f) &;
     template <class F>
+        requires std::is_constructible_v<T, T&&>
     constexpr auto transform_error(F&& f) &&;
     template <class F>
+        requires std::is_constructible_v<T, const T&>
     constexpr auto transform_error(F&& f) const&;
     template <class F>
+        requires std::is_constructible_v<T, const T&&>
     constexpr auto transform_error(F&& f) const&&;
 
     // -------------------------------------------------------------------------
@@ -858,6 +874,7 @@ constexpr E expected<T, E>::error_or(G&& def) && {
 
 template <class T, class E>
 template <class F>
+    requires std::is_constructible_v<E, E&>
 constexpr auto expected<T, E>::and_then(F&& f) & {
     using U = std::remove_cvref_t<std::invoke_result_t<F, T&>>;
     static_assert(detail::is_expected_specialization<U>::value,
@@ -871,6 +888,7 @@ constexpr auto expected<T, E>::and_then(F&& f) & {
 
 template <class T, class E>
 template <class F>
+    requires std::is_constructible_v<E, E&&>
 constexpr auto expected<T, E>::and_then(F&& f) && {
     using U = std::remove_cvref_t<std::invoke_result_t<F, T&&>>;
     static_assert(detail::is_expected_specialization<U>::value,
@@ -884,6 +902,7 @@ constexpr auto expected<T, E>::and_then(F&& f) && {
 
 template <class T, class E>
 template <class F>
+    requires std::is_constructible_v<E, const E&>
 constexpr auto expected<T, E>::and_then(F&& f) const& {
     using U = std::remove_cvref_t<std::invoke_result_t<F, const T&>>;
     static_assert(detail::is_expected_specialization<U>::value,
@@ -897,6 +916,7 @@ constexpr auto expected<T, E>::and_then(F&& f) const& {
 
 template <class T, class E>
 template <class F>
+    requires std::is_constructible_v<E, const E&&>
 constexpr auto expected<T, E>::and_then(F&& f) const&& {
     using U = std::remove_cvref_t<std::invoke_result_t<F, const T&&>>;
     static_assert(detail::is_expected_specialization<U>::value,
@@ -910,6 +930,7 @@ constexpr auto expected<T, E>::and_then(F&& f) const&& {
 
 template <class T, class E>
 template <class F>
+    requires std::is_constructible_v<T, T&>
 constexpr auto expected<T, E>::or_else(F&& f) & {
     using G = std::remove_cvref_t<std::invoke_result_t<F, E&>>;
     static_assert(detail::is_expected_specialization<G>::value, "or_else: F must return a specialization of expected");
@@ -922,6 +943,7 @@ constexpr auto expected<T, E>::or_else(F&& f) & {
 
 template <class T, class E>
 template <class F>
+    requires std::is_constructible_v<T, T&&>
 constexpr auto expected<T, E>::or_else(F&& f) && {
     using G = std::remove_cvref_t<std::invoke_result_t<F, E&&>>;
     static_assert(detail::is_expected_specialization<G>::value, "or_else: F must return a specialization of expected");
@@ -934,6 +956,7 @@ constexpr auto expected<T, E>::or_else(F&& f) && {
 
 template <class T, class E>
 template <class F>
+    requires std::is_constructible_v<T, const T&>
 constexpr auto expected<T, E>::or_else(F&& f) const& {
     using G = std::remove_cvref_t<std::invoke_result_t<F, const E&>>;
     static_assert(detail::is_expected_specialization<G>::value, "or_else: F must return a specialization of expected");
@@ -946,6 +969,7 @@ constexpr auto expected<T, E>::or_else(F&& f) const& {
 
 template <class T, class E>
 template <class F>
+    requires std::is_constructible_v<T, const T&&>
 constexpr auto expected<T, E>::or_else(F&& f) const&& {
     using G = std::remove_cvref_t<std::invoke_result_t<F, const E&&>>;
     static_assert(detail::is_expected_specialization<G>::value, "or_else: F must return a specialization of expected");
@@ -958,6 +982,7 @@ constexpr auto expected<T, E>::or_else(F&& f) const&& {
 
 template <class T, class E>
 template <class F>
+    requires std::is_constructible_v<E, E&>
 constexpr auto expected<T, E>::transform(F&& f) & {
     using U = std::remove_cv_t<std::invoke_result_t<F, T&>>;
     if constexpr (std::is_void_v<U>) {
@@ -975,6 +1000,7 @@ constexpr auto expected<T, E>::transform(F&& f) & {
 
 template <class T, class E>
 template <class F>
+    requires std::is_constructible_v<E, E&&>
 constexpr auto expected<T, E>::transform(F&& f) && {
     using U = std::remove_cv_t<std::invoke_result_t<F, T&&>>;
     if constexpr (std::is_void_v<U>) {
@@ -992,6 +1018,7 @@ constexpr auto expected<T, E>::transform(F&& f) && {
 
 template <class T, class E>
 template <class F>
+    requires std::is_constructible_v<E, const E&>
 constexpr auto expected<T, E>::transform(F&& f) const& {
     using U = std::remove_cv_t<std::invoke_result_t<F, const T&>>;
     if constexpr (std::is_void_v<U>) {
@@ -1009,6 +1036,7 @@ constexpr auto expected<T, E>::transform(F&& f) const& {
 
 template <class T, class E>
 template <class F>
+    requires std::is_constructible_v<E, const E&&>
 constexpr auto expected<T, E>::transform(F&& f) const&& {
     using U = std::remove_cv_t<std::invoke_result_t<F, const T&&>>;
     if constexpr (std::is_void_v<U>) {
@@ -1026,6 +1054,7 @@ constexpr auto expected<T, E>::transform(F&& f) const&& {
 
 template <class T, class E>
 template <class F>
+    requires std::is_constructible_v<T, T&>
 constexpr auto expected<T, E>::transform_error(F&& f) & {
     using G = std::remove_cv_t<std::invoke_result_t<F, E&>>;
     if (has_val_)
@@ -1035,6 +1064,7 @@ constexpr auto expected<T, E>::transform_error(F&& f) & {
 
 template <class T, class E>
 template <class F>
+    requires std::is_constructible_v<T, T&&>
 constexpr auto expected<T, E>::transform_error(F&& f) && {
     using G = std::remove_cv_t<std::invoke_result_t<F, E&&>>;
     if (has_val_)
@@ -1044,6 +1074,7 @@ constexpr auto expected<T, E>::transform_error(F&& f) && {
 
 template <class T, class E>
 template <class F>
+    requires std::is_constructible_v<T, const T&>
 constexpr auto expected<T, E>::transform_error(F&& f) const& {
     using G = std::remove_cv_t<std::invoke_result_t<F, const E&>>;
     if (has_val_)
@@ -1053,6 +1084,7 @@ constexpr auto expected<T, E>::transform_error(F&& f) const& {
 
 template <class T, class E>
 template <class F>
+    requires std::is_constructible_v<T, const T&&>
 constexpr auto expected<T, E>::transform_error(F&& f) const&& {
     using G = std::remove_cv_t<std::invoke_result_t<F, const E&&>>;
     if (has_val_)
@@ -1229,12 +1261,16 @@ class expected<T, E> {
     // -------------------------------------------------------------------------
 
     template <class F>
+        requires std::is_constructible_v<E, E&>
     constexpr auto and_then(F&& f) &;
     template <class F>
+        requires std::is_constructible_v<E, E&&>
     constexpr auto and_then(F&& f) &&;
     template <class F>
+        requires std::is_constructible_v<E, const E&>
     constexpr auto and_then(F&& f) const&;
     template <class F>
+        requires std::is_constructible_v<E, const E&&>
     constexpr auto and_then(F&& f) const&&;
 
     template <class F>
@@ -1247,12 +1283,16 @@ class expected<T, E> {
     constexpr auto or_else(F&& f) const&&;
 
     template <class F>
+        requires std::is_constructible_v<E, E&>
     constexpr auto transform(F&& f) &;
     template <class F>
+        requires std::is_constructible_v<E, E&&>
     constexpr auto transform(F&& f) &&;
     template <class F>
+        requires std::is_constructible_v<E, const E&>
     constexpr auto transform(F&& f) const&;
     template <class F>
+        requires std::is_constructible_v<E, const E&&>
     constexpr auto transform(F&& f) const&&;
 
     template <class F>
@@ -1541,6 +1581,7 @@ constexpr E expected<T, E>::error_or(G&& def) && {
 template <class T, class E>
     requires std::is_void_v<T>
 template <class F>
+    requires std::is_constructible_v<E, E&>
 constexpr auto expected<T, E>::and_then(F&& f) & {
     using U = std::remove_cvref_t<std::invoke_result_t<F>>;
     static_assert(detail::is_expected_specialization<U>::value,
@@ -1555,6 +1596,7 @@ constexpr auto expected<T, E>::and_then(F&& f) & {
 template <class T, class E>
     requires std::is_void_v<T>
 template <class F>
+    requires std::is_constructible_v<E, E&&>
 constexpr auto expected<T, E>::and_then(F&& f) && {
     using U = std::remove_cvref_t<std::invoke_result_t<F>>;
     static_assert(detail::is_expected_specialization<U>::value,
@@ -1569,6 +1611,7 @@ constexpr auto expected<T, E>::and_then(F&& f) && {
 template <class T, class E>
     requires std::is_void_v<T>
 template <class F>
+    requires std::is_constructible_v<E, const E&>
 constexpr auto expected<T, E>::and_then(F&& f) const& {
     using U = std::remove_cvref_t<std::invoke_result_t<F>>;
     static_assert(detail::is_expected_specialization<U>::value,
@@ -1583,6 +1626,7 @@ constexpr auto expected<T, E>::and_then(F&& f) const& {
 template <class T, class E>
     requires std::is_void_v<T>
 template <class F>
+    requires std::is_constructible_v<E, const E&&>
 constexpr auto expected<T, E>::and_then(F&& f) const&& {
     using U = std::remove_cvref_t<std::invoke_result_t<F>>;
     static_assert(detail::is_expected_specialization<U>::value,
@@ -1645,6 +1689,7 @@ constexpr auto expected<T, E>::or_else(F&& f) const&& {
 template <class T, class E>
     requires std::is_void_v<T>
 template <class F>
+    requires std::is_constructible_v<E, E&>
 constexpr auto expected<T, E>::transform(F&& f) & {
     using U = std::remove_cv_t<std::invoke_result_t<F>>;
     if constexpr (std::is_void_v<U>) {
@@ -1663,6 +1708,7 @@ constexpr auto expected<T, E>::transform(F&& f) & {
 template <class T, class E>
     requires std::is_void_v<T>
 template <class F>
+    requires std::is_constructible_v<E, E&&>
 constexpr auto expected<T, E>::transform(F&& f) && {
     using U = std::remove_cv_t<std::invoke_result_t<F>>;
     if constexpr (std::is_void_v<U>) {
@@ -1681,6 +1727,7 @@ constexpr auto expected<T, E>::transform(F&& f) && {
 template <class T, class E>
     requires std::is_void_v<T>
 template <class F>
+    requires std::is_constructible_v<E, const E&>
 constexpr auto expected<T, E>::transform(F&& f) const& {
     using U = std::remove_cv_t<std::invoke_result_t<F>>;
     if constexpr (std::is_void_v<U>) {
@@ -1699,6 +1746,7 @@ constexpr auto expected<T, E>::transform(F&& f) const& {
 template <class T, class E>
     requires std::is_void_v<T>
 template <class F>
+    requires std::is_constructible_v<E, const E&&>
 constexpr auto expected<T, E>::transform(F&& f) const&& {
     using U = std::remove_cv_t<std::invoke_result_t<F>>;
     if constexpr (std::is_void_v<U>) {
