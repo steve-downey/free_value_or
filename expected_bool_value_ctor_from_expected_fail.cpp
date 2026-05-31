@@ -20,6 +20,6 @@
 using namespace beman::expected;
 
 int main() {
-    expected<int, int>      src(42);
+    expected<int, int>          src(42);
     expected<bool, std::string> dst(src); // constraint 23.6 blocks value ctor; converting ctor not viable
 }

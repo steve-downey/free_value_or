@@ -54,13 +54,12 @@ TEST_CASE("value ctor: unexpected<int> routes to unexpected ctor, not value ctor
 // A type constructible from unexpected<int> should still use the unexpected ctor,
 // not the value ctor, when passed to expected<T, int>.
 struct AcceptsUnexpected {
-    int val = 0;
+    int val             = 0;
     AcceptsUnexpected() = default;
     AcceptsUnexpected(unexpected<int> u) : val(u.error()) {}
 };
 
-TEST_CASE("value ctor: unexpected<int> blocked as value even when T is constructible from it",
-          "[constraints]") {
+TEST_CASE("value ctor: unexpected<int> blocked as value even when T is constructible from it", "[constraints]") {
     // Without constraint 23.4, expected<AcceptsUnexpected, int>(unexpected<int>{5})
     // could be ambiguous. With it, the unexpected<G> ctor is the only candidate.
     expected<AcceptsUnexpected, int> e(unexpected<int>(5));
@@ -119,13 +118,13 @@ TEST_CASE("operator==: expected compared to expected uses expected-expected over
     expected<int, int> b(42);
     expected<int, int> c(unexpect, 1);
 
-    CHECK(a == b);     // same value
-    CHECK(!(a == c));  // value vs error: false
+    CHECK(a == b);    // same value
+    CHECK(!(a == c)); // value vs error: false
 }
 
 TEST_CASE("operator==: expected compared to int uses value overload", "[constraints]") {
     expected<int, int> e(42);
-    CHECK(e == 42);      // value overload: *e == 42
+    CHECK(e == 42); // value overload: *e == 42
     CHECK(!(e == 99));
 }
 
@@ -133,8 +132,7 @@ TEST_CASE("operator==: expected compared to int uses value overload", "[constrai
 // is_constructible check: operator==(expected<int,int>, expected<int,int>) must
 // resolve via the expected<T2,E2> friend, not the T2 value friend.
 // (Behavioral coverage above; static check: ensure T2=expected doesn't pick value overload.)
-static_assert(!std::is_invocable_r_v<bool,
-                                     decltype([](int x, int y) { return x == y; }),
-                                     expected<int, int>,
-                                     expected<int, int>>,
-              "sanity: plain int equality lambda cannot be called with expected args");
+static_assert(
+    !std::
+        is_invocable_r_v<bool, decltype([](int x, int y) { return x == y; }), expected<int, int>, expected<int, int>>,
+    "sanity: plain int equality lambda cannot be called with expected args");

@@ -75,3 +75,6 @@ add_fail_test(void_or_else_wrong_value_type_fail  void_or_else_wrong_value_type_
 
 # Fix 1 — constraint 23.6: value ctor blocked for T=bool, U=expected specialization
 add_fail_test(expected_bool_value_ctor_from_expected_fail expected_bool_value_ctor_from_expected_fail.cpp)
+
+# Fix 4 — Mandates: T must not be a specialization of unexpected
+add_fail_test(expected_unexpected_value_type_fail expected_unexpected_value_type_fail.cpp)

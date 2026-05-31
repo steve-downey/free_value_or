@@ -41,7 +41,7 @@ concept has_transform_error = requires(F f) { std::declval<X>().transform_error(
 
 // MoveOnly as E: lvalue overloads (&, const&) are constrained out because
 // E is not copy-constructible, so is_constructible_v<E, E&> is false.
-using MoveOnlyErr = expected<int, MoveOnly>;
+using MoveOnlyErr   = expected<int, MoveOnly>;
 auto dummy_and_then = [](int) { return expected<int, MoveOnly>(); };
 
 static_assert(!has_and_then<MoveOnlyErr&, decltype(dummy_and_then)>);
@@ -58,7 +58,7 @@ static_assert(!has_transform<const MoveOnlyErr&, decltype(dummy_transform)>);
 // Primary template: or_else / transform_error need T constructible from *this
 // ---------------------------------------------------------------------------
 
-using MoveOnlyVal = expected<MoveOnly, int>;
+using MoveOnlyVal  = expected<MoveOnly, int>;
 auto dummy_or_else = [](int) { return expected<MoveOnly, int>(); };
 
 static_assert(!has_or_else<MoveOnlyVal&, decltype(dummy_or_else)>);
@@ -75,7 +75,7 @@ static_assert(!has_transform_error<const MoveOnlyVal&, decltype(dummy_transform_
 // Void specialization: and_then / transform need E constructible from error()
 // ---------------------------------------------------------------------------
 
-using VoidMoveOnlyErr = expected<void, MoveOnly>;
+using VoidMoveOnlyErr    = expected<void, MoveOnly>;
 auto void_dummy_and_then = []() { return expected<void, MoveOnly>(); };
 
 static_assert(!has_and_then<VoidMoveOnlyErr&, decltype(void_dummy_and_then)>);
@@ -105,11 +105,11 @@ static_assert(has_transform_error<VoidMoveOnlyErr&&, decltype(void_dummy_transfo
 // Normal types: all operations remain available
 // ---------------------------------------------------------------------------
 
-using NormalExpected = expected<int, int>;
-auto normal_and_then       = [](int) { return expected<int, int>(42); };
-auto normal_or_else        = [](int) { return expected<int, int>(42); };
-auto normal_transform      = [](int) { return 42; };
-auto normal_transform_err  = [](int) { return 42; };
+using NormalExpected      = expected<int, int>;
+auto normal_and_then      = [](int) { return expected<int, int>(42); };
+auto normal_or_else       = [](int) { return expected<int, int>(42); };
+auto normal_transform     = [](int) { return 42; };
+auto normal_transform_err = [](int) { return 42; };
 
 static_assert(has_and_then<NormalExpected&, decltype(normal_and_then)>);
 static_assert(has_and_then<NormalExpected&&, decltype(normal_and_then)>);
@@ -122,40 +122,40 @@ static_assert(has_transform_error<NormalExpected&, decltype(normal_transform_err
 
 TEST_CASE("monadic constraints: rvalue and_then works with move-only error", "[monadic][constraints]") {
     expected<int, MoveOnly> e(42);
-    auto result = std::move(e).and_then([](int v) { return expected<int, MoveOnly>(v + 1); });
+    auto                    result = std::move(e).and_then([](int v) { return expected<int, MoveOnly>(v + 1); });
     REQUIRE(result.has_value());
     CHECK(*result == 43);
 }
 
 TEST_CASE("monadic constraints: rvalue or_else works with move-only value", "[monadic][constraints]") {
     expected<MoveOnly, int> e(unexpect, 7);
-    auto result = std::move(e).or_else([](int) { return expected<MoveOnly, int>(); });
+    auto                    result = std::move(e).or_else([](int) { return expected<MoveOnly, int>(); });
     REQUIRE(result.has_value());
 }
 
 TEST_CASE("monadic constraints: rvalue transform works with move-only error", "[monadic][constraints]") {
     expected<int, MoveOnly> e(42);
-    auto result = std::move(e).transform([](int v) { return v * 2; });
+    auto                    result = std::move(e).transform([](int v) { return v * 2; });
     REQUIRE(result.has_value());
     CHECK(*result == 84);
 }
 
 TEST_CASE("monadic constraints: rvalue transform_error works with move-only value", "[monadic][constraints]") {
     expected<MoveOnly, int> e(unexpect, 7);
-    auto result = std::move(e).transform_error([](int v) { return v + 1; });
+    auto                    result = std::move(e).transform_error([](int v) { return v + 1; });
     REQUIRE(!result.has_value());
     CHECK(result.error() == 8);
 }
 
 TEST_CASE("monadic constraints: void and_then rvalue with move-only error", "[monadic][constraints]") {
     expected<void, MoveOnly> e;
-    auto result = std::move(e).and_then([]() { return expected<void, MoveOnly>(); });
+    auto                     result = std::move(e).and_then([]() { return expected<void, MoveOnly>(); });
     REQUIRE(result.has_value());
 }
 
 TEST_CASE("monadic constraints: void transform rvalue with move-only error", "[monadic][constraints]") {
     expected<void, MoveOnly> e;
-    auto result = std::move(e).transform([]() { return 42; });
+    auto                     result = std::move(e).transform([]() { return 42; });
     REQUIRE(result.has_value());
     CHECK(*result == 42);
 }
