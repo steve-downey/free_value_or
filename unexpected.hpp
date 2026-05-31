@@ -16,9 +16,26 @@ struct unexpect_t {
 };
 inline constexpr unexpect_t unexpect{};
 
+// Forward declaration for is_unexpected_specialization trait
+template <class E>
+class unexpected;
+
+namespace detail {
+template <class T>
+struct is_unexpected_specialization : std::false_type {};
+template <class E>
+struct is_unexpected_specialization<unexpected<E>> : std::true_type {};
+} // namespace detail
+
 // [expected.unexpected]
 template <class E>
 class unexpected {
+    // [expected.un.general] para 2: ill-formed instantiations
+    static_assert(std::is_object_v<E>, "unexpected<E>: E must be an object type (not void, reference, or function)");
+    static_assert(!std::is_array_v<E>, "unexpected<E>: E must not be an array type");
+    static_assert(std::is_same_v<E, std::remove_cv_t<E>>, "unexpected<E>: E must not be cv-qualified");
+    static_assert(!detail::is_unexpected_specialization<E>::value, "unexpected<E>: E must not be a specialization of unexpected");
+
   public:
     constexpr unexpected(const unexpected&) = default;
     constexpr unexpected(unexpected&&)      = default;
