@@ -5,6 +5,13 @@
 
 #include <exception>
 #include <utility>
+#include <version>
+
+#ifdef __cpp_lib_constexpr_exceptions
+    #define BEMAN_EXPECTED_CONSTEXPR_EXCEPTION constexpr
+#else
+    #define BEMAN_EXPECTED_CONSTEXPR_EXCEPTION
+#endif
 
 /***
 22.8.4 Class template bad_expected_access[expected.bad]
@@ -54,26 +61,26 @@ class bad_expected_access;
 template <>
 class bad_expected_access<void> : public std::exception {
   protected:
-    constexpr bad_expected_access() noexcept                                      = default;
-    constexpr bad_expected_access(const bad_expected_access&) noexcept            = default;
-    constexpr bad_expected_access(bad_expected_access&&) noexcept                 = default;
-    constexpr bad_expected_access& operator=(const bad_expected_access&) noexcept = default;
-    constexpr bad_expected_access& operator=(bad_expected_access&&) noexcept      = default;
-    constexpr ~bad_expected_access()                                              = default;
+    BEMAN_EXPECTED_CONSTEXPR_EXCEPTION bad_expected_access() noexcept                                      = default;
+    BEMAN_EXPECTED_CONSTEXPR_EXCEPTION bad_expected_access(const bad_expected_access&) noexcept            = default;
+    BEMAN_EXPECTED_CONSTEXPR_EXCEPTION bad_expected_access(bad_expected_access&&) noexcept                 = default;
+    BEMAN_EXPECTED_CONSTEXPR_EXCEPTION bad_expected_access& operator=(const bad_expected_access&) noexcept = default;
+    BEMAN_EXPECTED_CONSTEXPR_EXCEPTION bad_expected_access& operator=(bad_expected_access&&) noexcept      = default;
+    BEMAN_EXPECTED_CONSTEXPR_EXCEPTION ~bad_expected_access()                                              = default;
 
   public:
-    constexpr const char* what() const noexcept override;
+    BEMAN_EXPECTED_CONSTEXPR_EXCEPTION const char* what() const noexcept override;
 };
 
 template <class E>
 class bad_expected_access : public bad_expected_access<void> {
   public:
-    constexpr explicit bad_expected_access(E e);
-    constexpr const char* what() const noexcept override;
-    constexpr E&          error() & noexcept;
-    constexpr const E&    error() const& noexcept;
-    constexpr E&&         error() && noexcept;
-    constexpr const E&&   error() const&& noexcept;
+    BEMAN_EXPECTED_CONSTEXPR_EXCEPTION explicit bad_expected_access(E e);
+    BEMAN_EXPECTED_CONSTEXPR_EXCEPTION const char* what() const noexcept override;
+    constexpr E&                                   error() & noexcept;
+    constexpr const E&                             error() const& noexcept;
+    constexpr E&&                                  error() && noexcept;
+    constexpr const E&&                            error() const&& noexcept;
 
   private:
     E unex;
@@ -81,15 +88,17 @@ class bad_expected_access : public bad_expected_access<void> {
 
 // bad_expected_access<void> out-of-line definitions
 
-constexpr const char* bad_expected_access<void>::what() const noexcept { return "bad expected access"; }
+BEMAN_EXPECTED_CONSTEXPR_EXCEPTION const char* bad_expected_access<void>::what() const noexcept {
+    return "bad expected access";
+}
 
 // bad_expected_access<E> out-of-line definitions
 
 template <class E>
-constexpr bad_expected_access<E>::bad_expected_access(E e) : unex(std::move(e)) {}
+BEMAN_EXPECTED_CONSTEXPR_EXCEPTION bad_expected_access<E>::bad_expected_access(E e) : unex(std::move(e)) {}
 
 template <class E>
-constexpr const char* bad_expected_access<E>::what() const noexcept {
+BEMAN_EXPECTED_CONSTEXPR_EXCEPTION const char* bad_expected_access<E>::what() const noexcept {
     return "bad expected access";
 }
 
@@ -115,5 +124,7 @@ constexpr const E&& bad_expected_access<E>::error() const&& noexcept {
 
 } // namespace expected
 } // namespace beman
+
+#undef BEMAN_EXPECTED_CONSTEXPR_EXCEPTION
 
 #endif

@@ -44,27 +44,33 @@ class unexpected {
     template <class Err = E>
         requires(!std::is_same_v<std::remove_cvref_t<Err>, unexpected> &&
                  !std::is_same_v<std::remove_cvref_t<Err>, std::in_place_t> && std::is_constructible_v<E, Err>)
-    constexpr explicit unexpected(Err&& e) noexcept(std::is_nothrow_constructible_v<E, Err>);
+    constexpr explicit unexpected(Err&& e) noexcept(std::is_nothrow_constructible_v<E, Err>)
+        : unex_(std::forward<Err>(e)) {}
 
     template <class... Args>
         requires std::is_constructible_v<E, Args...>
     constexpr explicit unexpected(std::in_place_t,
-                                  Args&&... args) noexcept(std::is_nothrow_constructible_v<E, Args...>);
+                                  Args&&... args) noexcept(std::is_nothrow_constructible_v<E, Args...>)
+        : unex_(std::forward<Args>(args)...) {}
 
     template <class U, class... Args>
         requires std::is_constructible_v<E, std::initializer_list<U>&, Args...>
     constexpr explicit unexpected(std::in_place_t, std::initializer_list<U> il, Args&&... args) noexcept(
-        std::is_nothrow_constructible_v<E, std::initializer_list<U>&, Args...>);
+        std::is_nothrow_constructible_v<E, std::initializer_list<U>&, Args...>)
+        : unex_(il, std::forward<Args>(args)...) {}
 
     constexpr unexpected& operator=(const unexpected&) = default;
     constexpr unexpected& operator=(unexpected&&)      = default;
 
-    constexpr const E&  error() const& noexcept;
-    constexpr E&        error() & noexcept;
-    constexpr const E&& error() const&& noexcept;
-    constexpr E&&       error() && noexcept;
+    constexpr const E&  error() const& noexcept { return unex_; }
+    constexpr E&        error() & noexcept { return unex_; }
+    constexpr const E&& error() const&& noexcept { return std::move(unex_); }
+    constexpr E&&       error() && noexcept { return std::move(unex_); }
 
-    constexpr void swap(unexpected& other) noexcept(std::is_nothrow_swappable_v<E>);
+    constexpr void swap(unexpected& other) noexcept(std::is_nothrow_swappable_v<E>) {
+        using std::swap;
+        swap(unex_, other.unex_);
+    }
 
     template <class E2>
     friend constexpr bool operator==(const unexpected& x, const unexpected<E2>& y) {
@@ -83,55 +89,6 @@ class unexpected {
 
 template <class E>
 unexpected(E) -> unexpected<E>;
-
-// --- out-of-line definitions ---
-
-template <class E>
-template <class Err>
-    requires(!std::is_same_v<std::remove_cvref_t<Err>, unexpected<E>> &&
-             !std::is_same_v<std::remove_cvref_t<Err>, std::in_place_t> && std::is_constructible_v<E, Err>)
-constexpr unexpected<E>::unexpected(Err&& e) noexcept(std::is_nothrow_constructible_v<E, Err>)
-    : unex_(std::forward<Err>(e)) {}
-
-template <class E>
-template <class... Args>
-    requires std::is_constructible_v<E, Args...>
-constexpr unexpected<E>::unexpected(std::in_place_t,
-                                    Args&&... args) noexcept(std::is_nothrow_constructible_v<E, Args...>)
-    : unex_(std::forward<Args>(args)...) {}
-
-template <class E>
-template <class U, class... Args>
-    requires std::is_constructible_v<E, std::initializer_list<U>&, Args...>
-constexpr unexpected<E>::unexpected(std::in_place_t, std::initializer_list<U> il, Args&&... args) noexcept(
-    std::is_nothrow_constructible_v<E, std::initializer_list<U>&, Args...>)
-    : unex_(il, std::forward<Args>(args)...) {}
-
-template <class E>
-constexpr const E& unexpected<E>::error() const& noexcept {
-    return unex_;
-}
-
-template <class E>
-constexpr E& unexpected<E>::error() & noexcept {
-    return unex_;
-}
-
-template <class E>
-constexpr const E&& unexpected<E>::error() const&& noexcept {
-    return std::move(unex_);
-}
-
-template <class E>
-constexpr E&& unexpected<E>::error() && noexcept {
-    return std::move(unex_);
-}
-
-template <class E>
-constexpr void unexpected<E>::swap(unexpected& other) noexcept(std::is_nothrow_swappable_v<E>) {
-    using std::swap;
-    swap(unex_, other.unex_);
-}
 
 } // namespace expected
 } // namespace beman
