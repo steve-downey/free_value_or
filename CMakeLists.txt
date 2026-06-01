@@ -78,3 +78,19 @@ add_fail_test(expected_bool_value_ctor_from_expected_fail expected_bool_value_ct
 
 # Fix 4 — Mandates: T must not be a specialization of unexpected
 add_fail_test(expected_unexpected_value_type_fail expected_unexpected_value_type_fail.cpp)
+
+# =============================================================================
+# Hardened precondition tests (compiled with -DBEMAN_EXPECTED_HARDENED)
+# =============================================================================
+
+add_executable(beman.expected.tests.hardened)
+target_sources(beman.expected.tests.hardened PRIVATE expected_hardened.test.cpp)
+target_link_libraries(
+    beman.expected.tests.hardened
+    PRIVATE beman::expected Catch2::Catch2WithMain
+)
+target_compile_definitions(
+    beman.expected.tests.hardened
+    PRIVATE BEMAN_EXPECTED_HARDENED
+)
+catch_discover_tests(beman.expected.tests.hardened)
