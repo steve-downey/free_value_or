@@ -41,14 +41,14 @@ concept has_transform_error = requires(F f) { std::declval<X>().transform_error(
 
 // MoveOnly as E: lvalue overloads (&, const&) are constrained out because
 // E is not copy-constructible, so is_constructible_v<E, E&> is false.
-using MoveOnlyErr   = expected<int, MoveOnly>;
-auto dummy_and_then = [](int) { return expected<int, MoveOnly>(); };
+using MoveOnlyErr                    = expected<int, MoveOnly>;
+[[maybe_unused]] auto dummy_and_then = [](int) { return expected<int, MoveOnly>(); };
 
 static_assert(!has_and_then<MoveOnlyErr&, decltype(dummy_and_then)>);
 static_assert(has_and_then<MoveOnlyErr&&, decltype(dummy_and_then)>);
 static_assert(!has_and_then<const MoveOnlyErr&, decltype(dummy_and_then)>);
 
-auto dummy_transform = [](int) { return 0; };
+[[maybe_unused]] auto dummy_transform = [](int) { return 0; };
 
 static_assert(!has_transform<MoveOnlyErr&, decltype(dummy_transform)>);
 static_assert(has_transform<MoveOnlyErr&&, decltype(dummy_transform)>);
@@ -58,14 +58,14 @@ static_assert(!has_transform<const MoveOnlyErr&, decltype(dummy_transform)>);
 // Primary template: or_else / transform_error need T constructible from *this
 // ---------------------------------------------------------------------------
 
-using MoveOnlyVal  = expected<MoveOnly, int>;
-auto dummy_or_else = [](int) { return expected<MoveOnly, int>(); };
+using MoveOnlyVal                   = expected<MoveOnly, int>;
+[[maybe_unused]] auto dummy_or_else = [](int) { return expected<MoveOnly, int>(); };
 
 static_assert(!has_or_else<MoveOnlyVal&, decltype(dummy_or_else)>);
 static_assert(has_or_else<MoveOnlyVal&&, decltype(dummy_or_else)>);
 static_assert(!has_or_else<const MoveOnlyVal&, decltype(dummy_or_else)>);
 
-auto dummy_transform_error = [](int) { return 0; };
+[[maybe_unused]] auto dummy_transform_error = [](int) { return 0; };
 
 static_assert(!has_transform_error<MoveOnlyVal&, decltype(dummy_transform_error)>);
 static_assert(has_transform_error<MoveOnlyVal&&, decltype(dummy_transform_error)>);
@@ -75,14 +75,14 @@ static_assert(!has_transform_error<const MoveOnlyVal&, decltype(dummy_transform_
 // Void specialization: and_then / transform need E constructible from error()
 // ---------------------------------------------------------------------------
 
-using VoidMoveOnlyErr    = expected<void, MoveOnly>;
-auto void_dummy_and_then = []() { return expected<void, MoveOnly>(); };
+using VoidMoveOnlyErr                     = expected<void, MoveOnly>;
+[[maybe_unused]] auto void_dummy_and_then = []() { return expected<void, MoveOnly>(); };
 
 static_assert(!has_and_then<VoidMoveOnlyErr&, decltype(void_dummy_and_then)>);
 static_assert(has_and_then<VoidMoveOnlyErr&&, decltype(void_dummy_and_then)>);
 static_assert(!has_and_then<const VoidMoveOnlyErr&, decltype(void_dummy_and_then)>);
 
-auto void_dummy_transform = []() { return 0; };
+[[maybe_unused]] auto void_dummy_transform = []() { return 0; };
 
 static_assert(!has_transform<VoidMoveOnlyErr&, decltype(void_dummy_transform)>);
 static_assert(has_transform<VoidMoveOnlyErr&&, decltype(void_dummy_transform)>);
@@ -93,11 +93,11 @@ static_assert(!has_transform<const VoidMoveOnlyErr&, decltype(void_dummy_transfo
 // ---------------------------------------------------------------------------
 
 // or_else and transform_error on void specialization should always be available
-auto void_dummy_or_else = [](MoveOnly&&) { return expected<void, int>(); };
+[[maybe_unused]] auto void_dummy_or_else = [](MoveOnly&&) { return expected<void, int>(); };
 
 static_assert(has_or_else<VoidMoveOnlyErr&&, decltype(void_dummy_or_else)>);
 
-auto void_dummy_transform_error = [](MoveOnly&&) { return 0; };
+[[maybe_unused]] auto void_dummy_transform_error = [](MoveOnly&&) { return 0; };
 
 static_assert(has_transform_error<VoidMoveOnlyErr&&, decltype(void_dummy_transform_error)>);
 
@@ -105,11 +105,11 @@ static_assert(has_transform_error<VoidMoveOnlyErr&&, decltype(void_dummy_transfo
 // Normal types: all operations remain available
 // ---------------------------------------------------------------------------
 
-using NormalExpected      = expected<int, int>;
-auto normal_and_then      = [](int) { return expected<int, int>(42); };
-auto normal_or_else       = [](int) { return expected<int, int>(42); };
-auto normal_transform     = [](int) { return 42; };
-auto normal_transform_err = [](int) { return 42; };
+using NormalExpected                       = expected<int, int>;
+[[maybe_unused]] auto normal_and_then      = [](int) { return expected<int, int>(42); };
+[[maybe_unused]] auto normal_or_else       = [](int) { return expected<int, int>(42); };
+[[maybe_unused]] auto normal_transform     = [](int) { return 42; };
+[[maybe_unused]] auto normal_transform_err = [](int) { return 42; };
 
 static_assert(has_and_then<NormalExpected&, decltype(normal_and_then)>);
 static_assert(has_and_then<NormalExpected&&, decltype(normal_and_then)>);
