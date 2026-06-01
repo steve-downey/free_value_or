@@ -94,9 +94,9 @@ TEST_CASE("hardened: error() on error-state expected<void,int>", "[hardened]") {
 // ---------------------------------------------------------------------------
 
 struct NonSwappable {
-    NonSwappable()                       = default;
-    NonSwappable(const NonSwappable&)    = delete;
-    NonSwappable(NonSwappable&&)         = delete;
+    NonSwappable()                               = default;
+    NonSwappable(const NonSwappable&)            = delete;
+    NonSwappable(NonSwappable&&)                 = delete;
     NonSwappable& operator=(const NonSwappable&) = delete;
     NonSwappable& operator=(NonSwappable&&)      = delete;
 };
