@@ -88,7 +88,7 @@ class bad_expected_access : public bad_expected_access<void> {
 
 // bad_expected_access<void> out-of-line definitions
 
-BEMAN_EXPECTED_CONSTEXPR_EXCEPTION const char* bad_expected_access<void>::what() const noexcept {
+inline BEMAN_EXPECTED_CONSTEXPR_EXCEPTION const char* bad_expected_access<void>::what() const noexcept {
     return "bad expected access";
 }
 
