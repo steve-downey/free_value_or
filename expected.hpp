@@ -7,20 +7,20 @@
 #include <beman/expected/bad_expected_access.hpp>
 
 #ifndef BEMAN_EXPECTED_INCLUDED_FROM_INTERFACE_UNIT
-#include <cstdlib>
-#include <functional>
-#include <initializer_list>
-#include <memory>
-#include <type_traits>
-#include <utility>
+    #include <cstdlib>
+    #include <functional>
+    #include <initializer_list>
+    #include <memory>
+    #include <type_traits>
+    #include <utility>
 #endif
 
 #if defined(_MSC_VER)
-#define BEMAN_EXPECTED_TRAP() __debugbreak()
+    #define BEMAN_EXPECTED_TRAP() __debugbreak()
 #elif defined(__has_builtin) && __has_builtin(__builtin_trap)
-#define BEMAN_EXPECTED_TRAP() __builtin_trap()
+    #define BEMAN_EXPECTED_TRAP() __builtin_trap()
 #else
-#define BEMAN_EXPECTED_TRAP() std::abort()
+    #define BEMAN_EXPECTED_TRAP() std::abort()
 #endif
 
 /***
