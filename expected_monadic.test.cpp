@@ -20,14 +20,14 @@ using namespace std;
 // and_then
 // ---------------------------------------------------------------------------
 
-TEST_CASE("and_then: has value — calls F", "[expected_monadic]") {
+TEST_CASE("and_then: has value - calls F", "[expected_monadic]") {
     expected<int, std::string> e(42);
     auto                       result = e.and_then([](int v) -> expected<int, std::string> { return v * 2; });
     REQUIRE(result.has_value());
     CHECK(*result == 84);
 }
 
-TEST_CASE("and_then: has error — short-circuits", "[expected_monadic]") {
+TEST_CASE("and_then: has error - short-circuits", "[expected_monadic]") {
     expected<int, std::string> e(unexpect, "fail");
     bool                       called = false;
     auto                       result = e.and_then([&](int) -> expected<int, std::string> {
@@ -87,14 +87,14 @@ TEST_CASE("and_then: error propagated through chain", "[expected_monadic]") {
 // or_else
 // ---------------------------------------------------------------------------
 
-TEST_CASE("or_else: has error — calls F", "[expected_monadic]") {
+TEST_CASE("or_else: has error - calls F", "[expected_monadic]") {
     expected<int, std::string> e(unexpect, "problem");
     auto result = e.or_else([](std::string s) -> expected<int, std::string> { return static_cast<int>(s.size()); });
     REQUIRE(result.has_value());
     CHECK(*result == 7);
 }
 
-TEST_CASE("or_else: has value — short-circuits", "[expected_monadic]") {
+TEST_CASE("or_else: has value - short-circuits", "[expected_monadic]") {
     expected<int, std::string> e(42);
     bool                       called = false;
     auto                       result = e.or_else([&](std::string) -> expected<int, std::string> {
@@ -144,7 +144,7 @@ TEST_CASE("or_else: value passes through chain", "[expected_monadic]") {
 // transform
 // ---------------------------------------------------------------------------
 
-TEST_CASE("transform: has value — transforms", "[expected_monadic]") {
+TEST_CASE("transform: has value - transforms", "[expected_monadic]") {
     expected<int, std::string> e(6);
     auto                       r = e.transform([](int v) { return v * 7; });
     static_assert(std::is_same_v<decltype(r), expected<int, std::string>>);
@@ -152,7 +152,7 @@ TEST_CASE("transform: has value — transforms", "[expected_monadic]") {
     CHECK(*r == 42);
 }
 
-TEST_CASE("transform: has error — propagates", "[expected_monadic]") {
+TEST_CASE("transform: has error - propagates", "[expected_monadic]") {
     expected<int, std::string> e(unexpect, "oops");
     bool                       called = false;
     auto                       r      = e.transform([&](int) {
@@ -173,7 +173,7 @@ TEST_CASE("transform: void return type", "[expected_monadic]") {
     CHECK(count == 1);
 }
 
-TEST_CASE("transform: void return — error state does not call F", "[expected_monadic]") {
+TEST_CASE("transform: void return - error state does not call F", "[expected_monadic]") {
     expected<int, std::string> e(unexpect, "no");
     int                        count = 0;
     auto                       r     = e.transform([&](int) { ++count; });
@@ -216,7 +216,7 @@ TEST_CASE("transform: const rvalue overload", "[expected_monadic]") {
 // transform_error
 // ---------------------------------------------------------------------------
 
-TEST_CASE("transform_error: has error — transforms", "[expected_monadic]") {
+TEST_CASE("transform_error: has error - transforms", "[expected_monadic]") {
     expected<int, int> e(unexpect, 3);
     auto               r = e.transform_error([](int v) -> std::string { return std::to_string(v); });
     static_assert(std::is_same_v<decltype(r), expected<int, std::string>>);
@@ -224,7 +224,7 @@ TEST_CASE("transform_error: has error — transforms", "[expected_monadic]") {
     CHECK(r.error() == "3");
 }
 
-TEST_CASE("transform_error: has value — preserves", "[expected_monadic]") {
+TEST_CASE("transform_error: has value - preserves", "[expected_monadic]") {
     expected<int, int> e(42);
     bool               called = false;
     auto               r      = e.transform_error([&](int) -> std::string {
