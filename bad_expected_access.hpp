@@ -3,9 +3,11 @@
 #ifndef BEMAN_EXPECTED_BAD_EXPECTED_ACCESS_HPP
 #define BEMAN_EXPECTED_BAD_EXPECTED_ACCESS_HPP
 
+#ifndef BEMAN_EXPECTED_INCLUDED_FROM_INTERFACE_UNIT
 #include <exception>
 #include <utility>
 #include <version>
+#endif
 
 #ifdef __cpp_lib_constexpr_exceptions
     #define BEMAN_EXPECTED_CONSTEXPR_EXCEPTION constexpr

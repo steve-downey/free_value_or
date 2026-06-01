@@ -3,9 +3,11 @@
 #ifndef BEMAN_EXPECTED_UNEXPECTED_HPP
 #define BEMAN_EXPECTED_UNEXPECTED_HPP
 
+#ifndef BEMAN_EXPECTED_INCLUDED_FROM_INTERFACE_UNIT
 #include <initializer_list>
 #include <type_traits>
 #include <utility>
+#endif
 
 namespace beman {
 namespace expected {
