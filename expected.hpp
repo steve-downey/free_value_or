@@ -752,31 +752,55 @@ constexpr void expected<T, E>::swap(expected& rhs) noexcept(std::is_nothrow_move
 
 template <class T, class E>
 constexpr const T* expected<T, E>::operator->() const noexcept {
+#if defined(BEMAN_EXPECTED_HARDENED)
+    if (!has_val_)
+        __builtin_trap();
+#endif
     return std::addressof(val_);
 }
 
 template <class T, class E>
 constexpr T* expected<T, E>::operator->() noexcept {
+#if defined(BEMAN_EXPECTED_HARDENED)
+    if (!has_val_)
+        __builtin_trap();
+#endif
     return std::addressof(val_);
 }
 
 template <class T, class E>
 constexpr const T& expected<T, E>::operator*() const& noexcept {
+#if defined(BEMAN_EXPECTED_HARDENED)
+    if (!has_val_)
+        __builtin_trap();
+#endif
     return val_;
 }
 
 template <class T, class E>
 constexpr T& expected<T, E>::operator*() & noexcept {
+#if defined(BEMAN_EXPECTED_HARDENED)
+    if (!has_val_)
+        __builtin_trap();
+#endif
     return val_;
 }
 
 template <class T, class E>
 constexpr const T&& expected<T, E>::operator*() const&& noexcept {
+#if defined(BEMAN_EXPECTED_HARDENED)
+    if (!has_val_)
+        __builtin_trap();
+#endif
     return std::move(val_);
 }
 
 template <class T, class E>
 constexpr T&& expected<T, E>::operator*() && noexcept {
+#if defined(BEMAN_EXPECTED_HARDENED)
+    if (!has_val_)
+        __builtin_trap();
+#endif
     return std::move(val_);
 }
 
@@ -826,21 +850,37 @@ constexpr T&& expected<T, E>::value() && {
 
 template <class T, class E>
 constexpr const E& expected<T, E>::error() const& noexcept {
+#if defined(BEMAN_EXPECTED_HARDENED)
+    if (has_val_)
+        __builtin_trap();
+#endif
     return unex_;
 }
 
 template <class T, class E>
 constexpr E& expected<T, E>::error() & noexcept {
+#if defined(BEMAN_EXPECTED_HARDENED)
+    if (has_val_)
+        __builtin_trap();
+#endif
     return unex_;
 }
 
 template <class T, class E>
 constexpr const E&& expected<T, E>::error() const&& noexcept {
+#if defined(BEMAN_EXPECTED_HARDENED)
+    if (has_val_)
+        __builtin_trap();
+#endif
     return std::move(unex_);
 }
 
 template <class T, class E>
 constexpr E&& expected<T, E>::error() && noexcept {
+#if defined(BEMAN_EXPECTED_HARDENED)
+    if (has_val_)
+        __builtin_trap();
+#endif
     return std::move(unex_);
 }
 
@@ -1304,15 +1344,44 @@ class expected<T, E> {
     constexpr explicit operator bool() const noexcept { return has_val_; }
     constexpr bool     has_value() const noexcept { return has_val_; }
 
-    constexpr void operator*() const noexcept {}
+    constexpr void operator*() const noexcept {
+#if defined(BEMAN_EXPECTED_HARDENED)
+        if (!has_val_)
+            __builtin_trap();
+#endif
+    }
 
     constexpr void value() const&;
     constexpr void value() &&;
 
-    constexpr const E&  error() const& noexcept { return unex_; }
-    constexpr E&        error() & noexcept { return unex_; }
-    constexpr const E&& error() const&& noexcept { return std::move(unex_); }
-    constexpr E&&       error() && noexcept { return std::move(unex_); }
+    constexpr const E& error() const& noexcept {
+#if defined(BEMAN_EXPECTED_HARDENED)
+        if (has_val_)
+            __builtin_trap();
+#endif
+        return unex_;
+    }
+    constexpr E& error() & noexcept {
+#if defined(BEMAN_EXPECTED_HARDENED)
+        if (has_val_)
+            __builtin_trap();
+#endif
+        return unex_;
+    }
+    constexpr const E&& error() const&& noexcept {
+#if defined(BEMAN_EXPECTED_HARDENED)
+        if (has_val_)
+            __builtin_trap();
+#endif
+        return std::move(unex_);
+    }
+    constexpr E&& error() && noexcept {
+#if defined(BEMAN_EXPECTED_HARDENED)
+        if (has_val_)
+            __builtin_trap();
+#endif
+        return std::move(unex_);
+    }
 
     template <class G = E>
     constexpr E error_or(G&& def) const&;
@@ -1715,7 +1784,8 @@ template <class F>
 constexpr auto expected<T, E>::or_else(F&& f) & {
     using G = std::remove_cvref_t<std::invoke_result_t<F, E&>>;
     static_assert(detail::is_expected_specialization<G>::value, "or_else: F must return a specialization of expected");
-    static_assert(std::is_void_v<typename G::value_type>, "or_else: F must return expected with void value_type");
+    static_assert(std::is_same_v<typename G::value_type, T>,
+                  "or_else: F must return expected with the same value_type");
     if (has_val_)
         return G();
     return std::invoke(std::forward<F>(f), unex_);
@@ -1727,7 +1797,8 @@ template <class F>
 constexpr auto expected<T, E>::or_else(F&& f) && {
     using G = std::remove_cvref_t<std::invoke_result_t<F, E&&>>;
     static_assert(detail::is_expected_specialization<G>::value, "or_else: F must return a specialization of expected");
-    static_assert(std::is_void_v<typename G::value_type>, "or_else: F must return expected with void value_type");
+    static_assert(std::is_same_v<typename G::value_type, T>,
+                  "or_else: F must return expected with the same value_type");
     if (has_val_)
         return G();
     return std::invoke(std::forward<F>(f), std::move(unex_));
@@ -1739,7 +1810,8 @@ template <class F>
 constexpr auto expected<T, E>::or_else(F&& f) const& {
     using G = std::remove_cvref_t<std::invoke_result_t<F, const E&>>;
     static_assert(detail::is_expected_specialization<G>::value, "or_else: F must return a specialization of expected");
-    static_assert(std::is_void_v<typename G::value_type>, "or_else: F must return expected with void value_type");
+    static_assert(std::is_same_v<typename G::value_type, T>,
+                  "or_else: F must return expected with the same value_type");
     if (has_val_)
         return G();
     return std::invoke(std::forward<F>(f), unex_);
@@ -1751,7 +1823,8 @@ template <class F>
 constexpr auto expected<T, E>::or_else(F&& f) const&& {
     using G = std::remove_cvref_t<std::invoke_result_t<F, const E&&>>;
     static_assert(detail::is_expected_specialization<G>::value, "or_else: F must return a specialization of expected");
-    static_assert(std::is_void_v<typename G::value_type>, "or_else: F must return expected with void value_type");
+    static_assert(std::is_same_v<typename G::value_type, T>,
+                  "or_else: F must return expected with the same value_type");
     if (has_val_)
         return G();
     return std::invoke(std::forward<F>(f), std::move(unex_));
@@ -1872,8 +1945,8 @@ constexpr auto expected<T, E>::transform_error(F&& f) & {
     static_assert(!detail::is_unexpected_specialization<G>::value,
                   "transform_error: G must not be a specialization of unexpected");
     if (has_val_)
-        return expected<void, G>();
-    return expected<void, G>(unexpect, std::invoke(std::forward<F>(f), unex_));
+        return expected<T, G>();
+    return expected<T, G>(unexpect, std::invoke(std::forward<F>(f), unex_));
 }
 
 template <class T, class E>
@@ -1887,8 +1960,8 @@ constexpr auto expected<T, E>::transform_error(F&& f) && {
     static_assert(!detail::is_unexpected_specialization<G>::value,
                   "transform_error: G must not be a specialization of unexpected");
     if (has_val_)
-        return expected<void, G>();
-    return expected<void, G>(unexpect, std::invoke(std::forward<F>(f), std::move(unex_)));
+        return expected<T, G>();
+    return expected<T, G>(unexpect, std::invoke(std::forward<F>(f), std::move(unex_)));
 }
 
 template <class T, class E>
@@ -1902,8 +1975,8 @@ constexpr auto expected<T, E>::transform_error(F&& f) const& {
     static_assert(!detail::is_unexpected_specialization<G>::value,
                   "transform_error: G must not be a specialization of unexpected");
     if (has_val_)
-        return expected<void, G>();
-    return expected<void, G>(unexpect, std::invoke(std::forward<F>(f), unex_));
+        return expected<T, G>();
+    return expected<T, G>(unexpect, std::invoke(std::forward<F>(f), unex_));
 }
 
 template <class T, class E>
@@ -1917,8 +1990,8 @@ constexpr auto expected<T, E>::transform_error(F&& f) const&& {
     static_assert(!detail::is_unexpected_specialization<G>::value,
                   "transform_error: G must not be a specialization of unexpected");
     if (has_val_)
-        return expected<void, G>();
-    return expected<void, G>(unexpect, std::invoke(std::forward<F>(f), std::move(unex_)));
+        return expected<T, G>();
+    return expected<T, G>(unexpect, std::invoke(std::forward<F>(f), std::move(unex_)));
 }
 
 } // namespace expected

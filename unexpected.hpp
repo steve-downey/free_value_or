@@ -71,7 +71,11 @@ class unexpected {
         return x.unex_ == y.error();
     }
 
-    friend constexpr void swap(unexpected& x, unexpected& y) noexcept(noexcept(x.swap(y))) { x.swap(y); }
+    friend constexpr void swap(unexpected& x, unexpected& y) noexcept(noexcept(x.swap(y)))
+        requires std::is_swappable_v<E>
+    {
+        x.swap(y);
+    }
 
   private:
     E unex_;
