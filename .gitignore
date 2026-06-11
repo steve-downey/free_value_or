@@ -16,3 +16,6 @@
 
 # ignore merge/patch backup files
 .orig
+/uv.lock
+/.update-submodules
+/.build/
