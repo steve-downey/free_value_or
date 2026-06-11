@@ -5,7 +5,10 @@ message("Examples to be built: ${ALL_EXAMPLES}")
 
 foreach(example ${ALL_EXAMPLES})
     add_executable(beman.free_value_or.examples.${example})
-    target_sources(beman.free_value_or.examples.${example} PRIVATE ${example}.cpp)
+    target_sources(
+        beman.free_value_or.examples.${example}
+        PRIVATE ${example}.cpp
+    )
     target_link_libraries(
         beman.free_value_or.examples.${example}
         PRIVATE beman::free_value_or

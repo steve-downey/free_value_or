@@ -25,7 +25,11 @@ option(
     ${PROJECT_IS_TOP_LEVEL}
 )
 
-option(BEMAN_FREE_VALUE_OR_USE_MODULES "Provide beman.free_value_or as a C++ module" OFF)
+option(
+    BEMAN_FREE_VALUE_OR_USE_MODULES
+    "Provide beman.free_value_or as a C++ module"
+    OFF
+)
 
 if(BEMAN_FREE_VALUE_OR_USE_MODULES)
     set(CMAKE_CXX_SCAN_FOR_MODULES ON)
