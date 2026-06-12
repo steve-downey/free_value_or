@@ -184,7 +184,7 @@ to learn and one place to get the corner cases right.
 
 \chapter{Design}
 
-The proposal is three free function templates over a \tcode{nullable}
+The proposal is four free function templates over a \tcode{nullable}
 concept:
 
 \begin{minted}[fontsize=\small]{c++}
@@ -206,12 +206,23 @@ template <nullable T, class I,
           class R = std::common_type_t<std::iter_reference_t<T>,
                                        std::invoke_result_t<I>>>
 constexpr auto or_invoke(T&& m, I&& invocable) -> R;
+
+template <class Ret = void, nullable T, class... Args,
+          class R = std::conditional_t<std::is_void_v<Ret>,
+                        std::remove_cvref_t<std::iter_reference_t<T>>, Ret>>
+constexpr R or_construct(T&& m, Args&&... args);
+
+template <class Ret = void, nullable T, class E, class... Args,
+          class R = std::conditional_t<std::is_void_v<Ret>,
+                        std::remove_cvref_t<std::iter_reference_t<T>>, Ret>>
+constexpr R or_construct(T&& m, std::initializer_list<E> il, Args&&... args);
 \end{minted}
 
-All three have the same engaged-path behavior --- produce \tcode{*m},
+All four have the same engaged-path behavior --- produce \tcode{*m},
 converted to \tcode{R} --- and differ in how the alternative is supplied
-(a value, a value bound as a reference, a nullary invocable) and in how
-\tcode{R} is computed (\tcode{common_type} or \tcode{common_reference}).
+(a value, a value bound as a reference, a nullary invocable, constructor
+arguments) and in how \tcode{R} is computed (\tcode{common_type},
+\tcode{common_reference}, or the element type itself).
 
 \section{The \tcode{nullable} concept}
 
@@ -415,8 +426,9 @@ Because \tcode{or_invoke} uses \tcode{common_type}, an invocable returning
 a reference still produces a value: \tcode{common_type_t<int\&, int\&>} is
 \tcode{int}. The family therefore covers three of four quadrants --- eager
 value (\tcode{value_or}), eager reference (\tcode{reference_or}), lazy
-value (\tcode{or_invoke}) --- and deliberately omits the fourth. A lazy
-reference-returning form is specifiable (the dangling guard would apply to
+value (\tcode{or_invoke}, and \tcode{or_construct} below) --- and
+deliberately omits the fourth. A lazy reference-returning form is
+specifiable (the dangling guard would apply to
 \tcode{invoke_result_t<I>} just as it does to \tcode{U}), but the use case
 --- a reference alternative that is expensive to \emph{name}, rather than
 to construct --- is thin, and it is not proposed. If LEWG wants the
@@ -430,6 +442,44 @@ make \tcode{x.or_else(f)} and \tcode{or_else(x, f)} mean different things.
 \tcode{value_or_else}. For the free function this paper proposes
 \tcode{or_invoke}, and will poll the name alongside
 \tcode{value_or_else} and \tcode{or_eval}.
+
+\section{\tcode{or_construct}: the fallback as constructor arguments}
+
+\tcode{or_construct} is the free-function analogue of \cite{P3413R0}'s
+member \tcode{value_or_construct}: the alternative is supplied not as a
+value but as constructor \emph{arguments}, and the fallback object is
+constructed lazily, only on the disengaged path --- on the engaged path
+nothing is constructed from them at all. An \tcode{initializer_list}
+overload provides the same convenience the member form has.
+
+Its return-type rule is deliberately different from the other three.
+There is no fallback \emph{value} whose type could participate in a
+\tcode{common_type} computation --- only arguments waiting to become one
+--- so by default \tcode{R} is the decayed element type itself,
+\tcode{remove_cvref_t<iter_reference_t<T>>}, and the conversion runs
+\emph{inward}: the arguments construct an \tcode{R} directly, and the
+engaged payload converts to \tcode{R}. This is the member function's model,
+and here it is the right one; the outward common-type computation is
+meaningless without a second value.
+
+What the free function can offer that the member cannot is choice of the
+constructed type. The leading \tcode{Ret} template parameter (defaulted
+through a \tcode{void} sentinel) lets the caller name the result type
+explicitly:
+
+\begin{minted}[fontsize=\small]{c++}
+std::optional<std::pmr::string> m = lookup(key);
+auto s = std::or_construct<std::string>(m, "default");
+// std::string either way: converted from the payload, or
+// constructed from the arguments --- chosen by the caller
+\end{minted}
+
+The fallback is direct-initialized, so \tcode{explicit} constructors are
+usable --- the arguments were always explicitly a construction request.
+Like \tcode{value_or} and \tcode{or_invoke}, \tcode{or_construct} returns
+a prvalue and cannot dangle; with \tcode{optional<T\&>} the result is a
+value copy of the referent or a freshly constructed object, never a
+reference.
 
 \section{Why free functions}
 
@@ -507,14 +557,14 @@ This paper fixes the \emph{type} of the answer and the \emph{reach} of the
 idiom: results are computed via \tcode{common_type}/\tcode{common_reference}
 rather than funneled through \tcode{T}, reference results become possible
 and dangling-checked, and one set of free functions covers every nullable
-type. The lazy case overlaps --- \tcode{or_invoke} and member
+type. Both lazy cases now overlap. \tcode{or_invoke} and member
 \tcode{value_or_else} differ in form (free vs.\ member), reach (any
 nullable vs.\ \tcode{optional}/\tcode{expected}), and return type
-(\tcode{common_type} vs.\ \tcode{T}). P3413's \tcode{value_or_construct}
-has no direct analogue here; its in-place construction is expressible as
-\tcode{or_invoke(m, [\&]\{ return T(args...); \})}, though without the
-\tcode{initializer_list} convenience, and a free \tcode{or_construct} could
-be added later if wanted.
+(\tcode{common_type} vs.\ \tcode{T}). \tcode{or_construct} and member
+\tcode{value_or_construct} share the in-place, lazy construction model and
+the \tcode{initializer_list} overload; the free function additionally lets
+the caller name the constructed type
+(\tcode{or_construct<string>(m, args...)}) and works on every nullable.
 
 \begin{center}
 \begin{tabular}{ l l l }
@@ -529,7 +579,7 @@ truncation pitfall & unchanged & fixed \\
 reference results & no & \tcode{reference_or}, dangling-checked \\
 lazy alternative & \tcode{value_or_else} & \tcode{or_invoke} \\
 in-place fallback construction & \tcode{value_or_construct} &
-  via lambda; no direct analogue \\
+  \tcode{or_construct}, callable-chosen result type \\
 rvalue nullable moves payload & yes (\tcode{\&\&} overloads) &
   no (observes only; see Design) \\
 \tcode{optional<T\&>} & deferred to P2988 & covered by the concept \\
@@ -539,11 +589,12 @@ rvalue nullable moves payload & yes (\tcode{\&\&} overloads) &
 
 The proposals are not mutually exclusive: adopting P3413 makes the member
 interface more complete, and adopting this paper makes the corrected
-semantics available generically. But where they overlap --- the lazy
-alternative --- the committee should choose deliberately whether the
-long-term spelling is a per-class member returning \tcode{T} or a generic
-free function returning the common type, rather than adopting both names by
-accident.
+semantics available generically. But the overlap is now total --- every
+use P3413's members serve has a free-function spelling here that works on
+more types and, where a type is computed, computes a better one. If this
+paper is adopted, there is far less reason to grow the member surface of
+\tcode{optional} and \tcode{expected}; the committee should choose the
+long-term spelling deliberately rather than adopting both by accident.
 
 \chapter{Principles for Reification of Design}
 
@@ -587,8 +638,12 @@ C++26 toolchain, via the Beman \tcode{optional} reference implementation of
 P2988 \cite{The_Beman_Project_beman_optional}) \tcode{std::optional<T\&>};
 engaged and disengaged; the nullable as lvalue, const lvalue, and rvalue;
 the alternative as lvalue and rvalue; mixed-type combinations; constant
-evaluation of all three functions; laziness of \tcode{or_invoke} and
-eagerness of \tcode{value_or}; and negative-compilation cases for both
+evaluation of all four functions; laziness of \tcode{or_invoke} and
+\tcode{or_construct} and eagerness of \tcode{value_or}; for
+\tcode{or_construct}, construction arities from zero arguments through
+multi-argument emplacement and the \tcode{initializer_list} overload, with
+construction confirmed to occur only on the disengaged path; and
+negative-compilation cases for both
 concept violations and dangling rejection. Reference identity and mutation
 round-trips confirm that \tcode{reference_or} introduces no copies:
 writes through its result reach the contained object when engaged and the
@@ -597,7 +652,7 @@ rebinding semantics: after an \tcode{optional<T\&>} is rebound to a new
 referent, \tcode{value_or} produces and \tcode{reference_or} refers to the
 new referent, and disengaging falls through to the alternative.
 
-The suite --- 59 tests at this writing, all green --- found no defects in
+The suite --- 106 tests at this writing, all green --- found no defects in
 the implementation. It did surface two behaviors reported in Design: that
 \tcode{reference_or} degrades to a prvalue result when the common
 reference of unrelated types is not a reference type, with the dangling
@@ -656,12 +711,28 @@ template <nullable T, class I,
 constexpr auto or_invoke(T&& m, I&& invocable) -> R {
     return bool(m) ? static_cast<R>(*m) : static_cast<R>(invocable());
 }
+
+template <class Ret = void, nullable T, class... Args,
+          class R = std::conditional_t<std::is_void_v<Ret>,
+                        std::remove_cvref_t<std::iter_reference_t<T>>, Ret>>
+constexpr R or_construct(T&& m, Args&&... args) {
+    return bool(m) ? static_cast<R>(*m) : R(std::forward<Args>(args)...);
+}
+
+template <class Ret = void, nullable T, class E, class... Args,
+          class R = std::conditional_t<std::is_void_v<Ret>,
+                        std::remove_cvref_t<std::iter_reference_t<T>>, Ret>>
+constexpr R or_construct(T&& m, std::initializer_list<E> il,
+                         Args&&... args) {
+    return bool(m) ? static_cast<R>(*m) : R(il, std::forward<Args>(args)...);
+}
 \end{minted}
 
 \chapter{Proposal}
 
-Add to the standard library three constrained free function templates ---
-\tcode{value_or}, \tcode{reference_or}, and \tcode{or_invoke} --- and the
+Add to the standard library four constrained free function templates ---
+\tcode{value_or}, \tcode{reference_or}, \tcode{or_invoke}, and
+\tcode{or_construct} --- and the
 exposition-level concept that constrains them, with the semantics described
 above, targeting C++29. The functions should be usable on any type that is
 contextually convertible to \tcode{bool} and dereferenceable, including
@@ -677,8 +748,9 @@ Open questions on which LEWG guidance is sought before wording review:
 \item whether \tcode{reference_or} should mandate that the computed common
   reference is a reference type, rather than silently degrading to a
   prvalue result for unrelated types (see Design);
-\item the names \tcode{reference_or} (vs.\ \tcode{ref_or}) and
-  \tcode{or_invoke} (vs.\ \tcode{value_or_else}, \tcode{or_eval});
+\item the names \tcode{reference_or} (vs.\ \tcode{ref_or}),
+  \tcode{or_invoke} (vs.\ \tcode{value_or_else}, \tcode{or_eval}), and
+  \tcode{or_construct} (vs.\ P3413's \tcode{value_or_construct});
 \item whether the concept requires \tcode{is_object_v} of the referent,
   excluding function pointers at the constraint;
 \item whether rvalue nullables should move their payload
@@ -716,6 +788,16 @@ namespace std {
   template<@\exposid{nullable}@ T, class I>
     constexpr common_type_t<iter_reference_t<T>, invoke_result_t<I>>
       or_invoke(T&& m, I&& invocable);
+
+  template<class Ret = void, @\exposid{nullable}@ T, class... Args>
+    constexpr conditional_t<is_void_v<Ret>,
+                            remove_cvref_t<iter_reference_t<T>>, Ret>
+      or_construct(T&& m, Args&&... args);
+
+  template<class Ret = void, @\exposid{nullable}@ T, class E, class... Args>
+    constexpr conditional_t<is_void_v<Ret>,
+                            remove_cvref_t<iter_reference_t<T>>, Ret>
+      or_construct(T&& m, initializer_list<E> il, Args&&... args);
 }
 \end{codeblock}
 
@@ -771,6 +853,51 @@ Let \tcode{R} be
 \effects
 Equivalent to:
 \tcode{return bool(m) ? static_cast<R>(*m) : static_cast<R>(invocable());}
+\end{itemdescr}
+
+\begin{itemdescr}
+\begin{codeblock}
+template<class Ret = void, @\exposid{nullable}@ T, class... Args>
+  constexpr conditional_t<is_void_v<Ret>,
+                          remove_cvref_t<iter_reference_t<T>>, Ret>
+    or_construct(T&& m, Args&&... args);
+\end{codeblock}
+
+\pnum
+Let \tcode{R} be \tcode{conditional_t<is_void_v<Ret>,
+remove_cvref_t<iter_reference_t<T>>, Ret>}.
+
+\pnum
+\mandates
+\tcode{is_constructible_v<R, Args...>} is \tcode{true}.
+
+\pnum
+\effects
+Equivalent to:
+\tcode{return bool(m) ? static_cast<R>(*m) : R(std::forward<Args>(args)...);}
+\end{itemdescr}
+
+\begin{itemdescr}
+\begin{codeblock}
+template<class Ret = void, @\exposid{nullable}@ T, class E, class... Args>
+  constexpr conditional_t<is_void_v<Ret>,
+                          remove_cvref_t<iter_reference_t<T>>, Ret>
+    or_construct(T&& m, initializer_list<E> il, Args&&... args);
+\end{codeblock}
+
+\pnum
+Let \tcode{R} be \tcode{conditional_t<is_void_v<Ret>,
+remove_cvref_t<iter_reference_t<T>>, Ret>}.
+
+\pnum
+\mandates
+\tcode{is_constructible_v<R, initializer_list<E>\&, Args...>} is
+\tcode{true}.
+
+\pnum
+\effects
+Equivalent to:
+\tcode{return bool(m) ? static_cast<R>(*m) : R(il, std::forward<Args>(args)...);}
 \end{itemdescr}
 
 \section{Feature test macro}

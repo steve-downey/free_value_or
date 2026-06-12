@@ -1,5 +1,5 @@
 #+TITLE: Free Value Or Else
-#+SUBTITLE: D4270R0 — value_or, reference_or, or_invoke for everything nullable
+#+SUBTITLE: D4270R0 — value_or, reference_or, or_invoke, or_construct for everything nullable
 #+DATE: <2026-06-12 Fri>
 #+AUTHOR: Steve Downey
 #+EMAIL: sdowney@gmail.com
@@ -54,7 +54,7 @@ copies, no references. P2988 spent meetings on this and landed on
 functions as the real fix. This is that paper.
 #+end_notes
 
-* D4270R0: three free functions
+* D4270R0: four free functions
 
 #+begin_src cpp
 template <class T>
@@ -71,6 +71,11 @@ constexpr auto value_or(T&& m, U&& u) -> R;            // eager, value
 template <nullable T, class I,
     class R = common_type_t<iter_reference_t<T>, invoke_result_t<I>>>
 constexpr auto or_invoke(T&& m, I&& invocable) -> R;   // lazy, value
+
+template <class Ret = void, nullable T, class... Args, class R = /* Ret,
+    or the decayed element type */>
+constexpr R or_construct(T&& m, Args&&... args);       // lazy, in place
+// + initializer_list overload
 #+end_src
 
 the library spelling of ~m ? *m : u~ — *the type the conditional would compute*
@@ -81,8 +86,13 @@ Clock: now ~00:45~, next ~01:45~
 One concept: contextually bool, dereferenceable, through const.
 Return types computed outward — common_type for values,
 common_reference for references — not forced through T. The machinery
-(common_reference, reference_constructs_from_temporary_v) postdates
-optional; the conditional expression had it right all along.
+postdates optional; the conditional expression had it right all along.
+
+or_construct is the one inward exception, on purpose: the fallback is
+constructor arguments, not a value, so there is nothing to common
+with. Default result is the element type; the explicit Ret parameter
+lets the caller pick — or_construct<string>(m, ...) — which a member
+can never offer.
 #+end_notes
 
 * What you get
@@ -100,6 +110,11 @@ Logger& l = std::reference_or(opt, default_logger());   // no copy, no dangle
 #+begin_src cpp
 auto cfg = std::or_invoke(p, [] { return load_default_config(); });
 // invocable runs only when disengaged
+#+end_src
+
+#+begin_src cpp
+auto s = std::or_construct<std::string>(m, "default");
+// fallback constructed in place, lazily; result type chosen by caller
 #+end_src
 
 #+begin_notes
@@ -145,6 +160,7 @@ P3413R0 (Jabot, reviving P2218R0): member ~value_or_construct~ + ~value_or_else~
 | truncation pitfall     | unchanged                | fixed                          |
 | reference results      | no                       | ~reference_or~, checked        |
 | lazy alternative       | ~value_or_else~          | ~or_invoke~                    |
+| in-place construction  | ~value_or_construct~     | ~or_construct~ + chosen type   |
 | ~optional<T&>~         | deferred to P2988        | covered                        |
 
 we *could* have both — but with P4270, far less reason to grow ~optional~ and ~expected~
@@ -154,22 +170,26 @@ Clock: now ~03:15~, next ~04:15~
 
 Corentin knows this work is in flight and is happy for it to proceed.
 P3413 fixes the cost of the alternative; this fixes the type of the
-answer and where it applies. The overlap is the lazy case — if the
-generic free function exists, adding per-class members that still
-return T buys little. Choose one spelling deliberately.
+answer and where it applies. The overlap is now total — every use the
+members serve has a free spelling that reaches more types, and
+or_construct additionally lets the caller choose the constructed type.
+If the free functions exist, growing optional and expected buys
+little. Choose one spelling deliberately.
 #+end_notes
 
 * Status and asks
 
 - reference implementation: ~beman.free_value_or~
-- 59-test matrix: all six nullable types × value categories ×
-  engaged/disengaged × constexpr, negative-compile dangling suite
+- 106-test matrix: all six nullable types × value categories ×
+  engaged/disengaged × constexpr × construction arities,
+  negative-compile dangling suite
 - no implementation defects found; two design notes surfaced and in the paper
 
 for LEWG:
 1. dangling guards: /Mandates/ (proposed) or /Constraints/?
 2. should ~reference_or~ require its result type *be* a reference?
-3. names: ~reference_or~ / ~ref_or~; ~or_invoke~ / ~value_or_else~
+3. names: ~reference_or~ / ~ref_or~; ~or_invoke~ / ~value_or_else~;
+   ~or_construct~ / ~value_or_construct~
 4. concept: exposition-only (proposed) or public?
 
 #+begin_notes

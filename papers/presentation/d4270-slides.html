@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Generated on 2026-06-12 Fri 03:28 -->
+<!-- Generated on 2026-06-12 Fri 07:12 -->
 <meta charset="utf-8"/>
 <title>Free Value Or Else</title>
 <meta name="author" content="Steve Downey"/>
@@ -6252,11 +6252,11 @@ pre.example {
 <div class="reveal">
 <div class="slides">
 <section id="sec-title-slide">
-<h1 class="title">Free Value Or Else</h1><h2 class="author">Steve Downey</h2><h2 class="date">2026-06-12 Fri 00:00</h2><p class="date">Created: 2026-06-12 Fri 03:28</p>
+<h1 class="title">Free Value Or Else</h1><h2 class="author">Steve Downey</h2><h2 class="date">2026-06-12 Fri 00:00</h2><p class="date">Created: 2026-06-12 Fri 07:12</p>
 </section>
 <section>
-<section id="slide-org8efc1ef">
-<h2 id="org8efc1ef"><code>value_or</code> answers with the wrong type</h2>
+<section id="slide-org07d2754">
+<h2 id="org07d2754"><code>value_or</code> answers with the wrong type</h2>
 <div class="org-src-container">
 
 <pre class="src src-cpp"><span class="org-constant">std</span>::<span class="org-type">optional</span>&lt;<span class="org-constant">std</span>::uint16_t&gt; <span class="org-variable-name">o</span> = get();
@@ -6299,8 +6299,8 @@ functions as the real fix. This is that paper.
 </section>
 </section>
 <section>
-<section id="slide-orgd7d44a3">
-<h2 id="orgd7d44a3">D4270R0: three free functions</h2>
+<section id="slide-org020675d">
+<h2 id="org020675d">D4270R0: four free functions</h2>
 <div class="org-src-container">
 
 <pre class="src src-cpp"><span class="org-keyword">template</span> &lt;<span class="org-keyword">class</span> <span class="org-type">T</span>&gt;
@@ -6316,7 +6316,12 @@ functions as the real fix. This is that paper.
 </span>
 <span class="org-keyword">template</span> &lt;<span class="org-type">nullable</span> <span class="org-type">T</span>, <span class="org-keyword">class</span> <span class="org-type">I</span>,
     <span class="org-keyword">class</span> <span class="org-type">R</span> = <span class="org-type">common_type_t</span>&lt;<span class="org-type">iter_reference_t</span>&lt;<span class="org-type">T</span>&gt;, <span class="org-type">invoke_result_t</span>&lt;<span class="org-type">I</span>&gt;&gt;&gt;
-<span class="org-keyword">constexpr</span> <span class="org-keyword">auto</span> <span class="org-function-name">or_invoke</span>(<span class="org-type">T</span>&amp;&amp; <span class="org-variable-name">m</span>, <span class="org-type">I</span>&amp;&amp; <span class="org-variable-name">invocable</span>) -&gt; <span class="org-type">R</span>;   <span class="org-comment-delimiter">// </span><span class="org-comment">lazy, value</span>
+<span class="org-keyword">constexpr</span> <span class="org-keyword">auto</span> <span class="org-function-name">or_invoke</span>(<span class="org-type">T</span>&amp;&amp; <span class="org-variable-name">m</span>, <span class="org-type">I</span>&amp;&amp; <span class="org-variable-name">invocable</span>) -&gt; <span class="org-type">R</span>;   <span class="org-comment-delimiter">// </span><span class="org-comment">lazy, value
+</span>
+<span class="org-keyword">template</span> &lt;<span class="org-keyword">class</span> <span class="org-type">Ret</span> = <span class="org-type">void</span>, <span class="org-type">nullable</span> <span class="org-type">T</span>, <span class="org-keyword">class</span>... <span class="org-type">Args</span>, <span class="org-keyword">class</span> <span class="org-type">R</span> = <span class="org-comment-delimiter">/* </span><span class="org-comment">Ret,
+    or the decayed element type</span><span class="org-comment-delimiter"> */</span>&gt;
+<span class="org-keyword">constexpr</span> <span class="org-type">R</span> <span class="org-function-name">or_construct</span>(<span class="org-type">T</span>&amp;&amp; <span class="org-variable-name">m</span>, <span class="org-type">Args</span>&amp;&amp;... <span class="org-variable-name">args</span>);       <span class="org-comment-delimiter">// </span><span class="org-comment">lazy, in place
+</span><span class="org-comment-delimiter">// </span><span class="org-comment">+ initializer_list overload</span>
 </pre>
 </div>
 
@@ -6333,16 +6338,23 @@ Clock: now <code>00:45</code>, next <code>01:45</code>
 One concept: contextually bool, dereferenceable, through const.
 Return types computed outward — common_type for values,
 common_reference for references — not forced through T. The machinery
-(common_reference, reference_constructs_from_temporary_v) postdates
-optional; the conditional expression had it right all along.
+postdates optional; the conditional expression had it right all along.
+</p>
+
+<p>
+or_construct is the one inward exception, on purpose: the fallback is
+constructor arguments, not a value, so there is nothing to common
+with. Default result is the element type; the explicit Ret parameter
+lets the caller pick — or_construct&lt;string&gt;(m, &#x2026;) — which a member
+can never offer.
 </p>
 
 </aside>
 </section>
 </section>
 <section>
-<section id="slide-org8e4ac46">
-<h2 id="org8e4ac46">What you get</h2>
+<section id="slide-org150e325">
+<h2 id="org150e325">What you get</h2>
 <div class="org-src-container">
 
 <pre class="src src-cpp"><span class="org-constant">std</span>::<span class="org-type">optional</span>&lt;<span class="org-constant">std</span>::uint16_t&gt; <span class="org-variable-name">o</span> = get();
@@ -6364,6 +6376,13 @@ optional; the conditional expression had it right all along.
 </pre>
 </div>
 
+<div class="org-src-container">
+
+<pre class="src src-cpp"><span class="org-keyword">auto</span> <span class="org-variable-name">s</span> = <span class="org-constant">std</span>::or_construct&lt;<span class="org-constant">std</span>::string&gt;(m, <span class="org-string">"default"</span>);
+<span class="org-comment-delimiter">// </span><span class="org-comment">fallback constructed in place, lazily; result type chosen by caller</span>
+</pre>
+</div>
+
 <aside class="notes">
 <p>
 Clock: now <code>01:45</code>, next <code>02:30</code>
@@ -6380,8 +6399,8 @@ would bind a temporary. reference_or(opt, 0) does not compile.
 </section>
 </section>
 <section>
-<section id="slide-org5b8f0e1">
-<h2 id="org5b8f0e1">One protocol, every nullable type</h2>
+<section id="slide-orgde55b89">
+<h2 id="orgde55b89">One protocol, every nullable type</h2>
 <table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
@@ -6441,8 +6460,8 @@ member functions never can.
 </section>
 </section>
 <section>
-<section id="slide-orgbc681ef">
-<h2 id="orgbc681ef">P3413R0: not strictly competing</h2>
+<section id="slide-org130dc8a">
+<h2 id="org130dc8a">P3413R0: not strictly competing</h2>
 <p>
 P3413R0 (Jabot, reviving P2218R0): member <code>value_or_construct</code> + <code>value_or_else</code>
 </p>
@@ -6496,6 +6515,12 @@ P3413R0 (Jabot, reviving P2218R0): member <code>value_or_construct</code> + <cod
 </tr>
 
 <tr>
+<td class="org-left">in-place construction</td>
+<td class="org-left"><code>value_or_construct</code></td>
+<td class="org-left"><code>or_construct</code> + chosen type</td>
+</tr>
+
+<tr>
 <td class="org-left"><code>optional&lt;T&amp;&gt;</code></td>
 <td class="org-left">deferred to P2988</td>
 <td class="org-left">covered</td>
@@ -6515,21 +6540,24 @@ Clock: now <code>03:15</code>, next <code>04:15</code>
 <p>
 Corentin knows this work is in flight and is happy for it to proceed.
 P3413 fixes the cost of the alternative; this fixes the type of the
-answer and where it applies. The overlap is the lazy case — if the
-generic free function exists, adding per-class members that still
-return T buys little. Choose one spelling deliberately.
+answer and where it applies. The overlap is now total — every use the
+members serve has a free spelling that reaches more types, and
+or_construct additionally lets the caller choose the constructed type.
+If the free functions exist, growing optional and expected buys
+little. Choose one spelling deliberately.
 </p>
 
 </aside>
 </section>
 </section>
 <section>
-<section id="slide-orga16994a">
-<h2 id="orga16994a">Status and asks</h2>
+<section id="slide-org9665400">
+<h2 id="org9665400">Status and asks</h2>
 <ul>
 <li>reference implementation: <code>beman.free_value_or</code></li>
-<li>59-test matrix: all six nullable types × value categories ×
-engaged/disengaged × constexpr, negative-compile dangling suite</li>
+<li>106-test matrix: all six nullable types × value categories ×
+engaged/disengaged × constexpr × construction arities,
+negative-compile dangling suite</li>
 <li>no implementation defects found; two design notes surfaced and in the paper</li>
 
 </ul>
@@ -6540,7 +6568,8 @@ for LEWG:
 <ol>
 <li>dangling guards: <i>Mandates</i> (proposed) or <i>Constraints</i>?</li>
 <li>should <code>reference_or</code> require its result type <b>be</b> a reference?</li>
-<li>names: <code>reference_or</code> / <code>ref_or</code>; <code>or_invoke</code> / <code>value_or_else</code></li>
+<li>names: <code>reference_or</code> / <code>ref_or</code>; <code>or_invoke</code> / <code>value_or_else</code>;
+<code>or_construct</code> / <code>value_or_construct</code></li>
 <li>concept: exposition-only (proposed) or public?</li>
 
 </ol>

@@ -100,20 +100,28 @@ Final-suite findings (steps 04-07, 59/59 green, plan complete):
   value_or/reference_or; negative-compile harness self-validated by
   mutating the expected-diagnostic regex.
 
-* PENDING paper edit: or_construct
+* or_construct — LANDED, folded into the paper (2026-06-12)
 
-A sibling plan (tmp/test-plan-or_construct/) is adding a free
-~or_construct~ — the analogue of P3413's member value_or_construct that
-the paper currently calls "no direct analogue ... could be added later if
-wanted" — as a pair of overloads (args pack + initializer_list) with the
-same test matrix. WHEN IT LANDS, update the paper: the Relation-to-P3413R0
-prose and comparison-table row ("in-place fallback construction"), the
-Design family discussion (quadrants), the interface listings, Proposal,
-and draft wording. Do not edit the paper before the implementation and
-tests are merged, AND Steve gives the explicit go-ahead — there are open
-questions about the or_construct surface (as of 2026-06-12, being
-resolved) that may change the overload set, so the merged header is not
-by itself the signal.
+The sibling plan (tmp/test-plan-or_construct/) completed: both overloads
+in the header, 106/106 tests, no header bugs. Surface as resolved by
+Steve:
+- ~or_construct<Ret = void>(m, args...)~ + initializer_list overload.
+- Default R = remove_cvref_t<iter_reference_t<T>> — the decayed payload
+  type. INWARD conversion, deliberately unlike value_or's outward
+  common_type: there is no fallback value to common with, only
+  constructor arguments. The member function's model, correct here.
+- Leading explicit ~Ret~ (void sentinel via conditional_t) lets the
+  caller name the constructed type — or_construct<string>(m, ...) —
+  something P3413's member cannot offer.
+- Direct-initialization: explicit ctors usable. Always a prvalue;
+  cannot dangle. With optional<T&>, result is a value, never a
+  reference.
+Paper updated: Design intro listing (four functions), new Design section
+"or_construct: the fallback as constructor arguments", quadrant text,
+P3413 chapter prose + table row + closing ("overlap is now total"),
+Implementation Experience (106 tests, arities, laziness), Proposal
+(four functions; or_construct vs value_or_construct in the names poll),
+and draft wording (synopsis + two itemdescrs with Mandates).
 
 * Open questions (each needs a paper section, most need a poll)
 
