@@ -5,10 +5,10 @@ merged into `main` and the suite builds from the main checkout.
 
 - [x] **Step 00** — Test harness (CMake targets @ C++23 + C++26 variant, `test_types.hpp`,
       negative-compile CMake helper, smoke build) — `steps/step-00-harness.md`
-- [ ] **Step 01** — `nullable` concept static_assert coverage — `steps/step-01-concept.md`
-- [ ] **Step 02** — `value_or` runtime + return-type + value categories — `steps/step-02-value_or.md`
-- [ ] **Step 03** — `reference_or` reference semantics — `steps/step-03-reference_or.md`
-- [ ] **Step 04** — Negative-compile (dangling + non-nullable arg) — `steps/step-04-negative-compile.md`
+- [x] **Step 01** — `nullable` concept static_assert coverage — `steps/step-01-concept.md`
+- [x] **Step 02** — `value_or` runtime + return-type + value categories — `steps/step-02-value_or.md`
+- [x] **Step 03** — `reference_or` reference semantics — `steps/step-03-reference_or.md`
+- [x] **Step 04** — Negative-compile (dangling + non-nullable arg) — `steps/step-04-negative-compile.md`
 - [ ] **Step 05** — `or_invoke` results + laziness — `steps/step-05-or_invoke.md`
 - [ ] **Step 06** — `constexpr` constant-evaluation tests — `steps/step-06-constexpr.md`
 - [ ] **Step 07** — `optional<T&>` (C++26) + finalize/consolidate — `steps/step-07-optional-ref-and-finalize.md`
