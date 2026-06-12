@@ -9,9 +9,9 @@ merged into `main` and the suite builds from the main checkout.
 - [x] **Step 02** — `value_or` runtime + return-type + value categories — `steps/step-02-value_or.md`
 - [x] **Step 03** — `reference_or` reference semantics — `steps/step-03-reference_or.md`
 - [x] **Step 04** — Negative-compile (dangling + non-nullable arg) — `steps/step-04-negative-compile.md`
-- [ ] **Step 05** — `or_invoke` results + laziness — `steps/step-05-or_invoke.md`
-- [ ] **Step 06** — `constexpr` constant-evaluation tests — `steps/step-06-constexpr.md`
-- [ ] **Step 07** — `optional<T&>` (C++26) + finalize/consolidate — `steps/step-07-optional-ref-and-finalize.md`
+- [x] **Step 05** — `or_invoke` results + laziness — `steps/step-05-or_invoke.md`
+- [x] **Step 06** — `constexpr` constant-evaluation tests — `steps/step-06-constexpr.md`
+- [x] **Step 07** — `optional<T&>` (C++26) + finalize/consolidate — `steps/step-07-optional-ref-and-finalize.md`
 
 ## Toolchain facts (Step 00 fills this in, later steps amend)
 
@@ -25,7 +25,7 @@ merged into `main` and the suite builds from the main checkout.
 
 ## Issues / suspected header bugs (do NOT fix the header; record here)
 
-_(none yet)_
+_(none found across all 7 steps — header is correct for all tested cases)_
 
 ## Notes carried across steps
 
