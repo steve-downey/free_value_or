@@ -111,9 +111,15 @@ Feature test macro name.
 Models nullable; value_or discards the error. Acceptable, or does expected
 deserve an error-observing overload? Likely "out of scope, by design".
 
-** yield_if
-Promised in P2988R12's forward reference; produces a view, not a value.
-Position: stays with P1255 ranges work. Say so explicitly in R0.
+** yield_if / fate of P1255 — RESOLVED in R0
+P1255 is concluded; D4270 inherits its remaining deliverables (the concept
+and the free functions). Range optional (P3168, C++26) supplanted
+views::maybe and views::nullable — an optional IS the 0-or-1 view, and a
+pointer gets there via `p ? optional<T&>(*p) : nullopt` (P2988).
+yield_if(cond, value) is now spellable as `cond ? optional(value) :
+nullopt`, itself a range; residual demand is comprehension-pipeline sugar,
+a small separate paper if experience warrants. Stated in the paper's
+"What about yield_if, and the end of P1255" section.
 
 ** exposition-only vs named public concept (poll)
 For naming: it's vocabulary — P2988 forecast "concept std::maybe", P1255 is

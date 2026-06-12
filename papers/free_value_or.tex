@@ -273,16 +273,16 @@ while the concept is exposition-only, and cannot be once user code
 constrains against the name. The library has a directly analogous
 precedent: \tcode{\placeholder{boolean-testable}}, among the most-used
 constraints in the standard, is deliberately exposition-only for exactly
-this reason. There is also a coordination hazard: \cite{P1255R13} defines
-its own refinements of the same idea, and two papers should not
-independently name one concept.
+this reason. With \cite{P1255R13} concluded (see the discussion of
+\tcode{yield_if} below), this paper is the concept's sole remaining home;
+no cross-paper coordination is needed, but there is also only one chance
+to name it right.
 
 The asymmetry favors caution: an exposition-only concept can be promoted
 to a public name in a later standard without breaking anything, while a
 public name can never be demoted or meaningfully tightened. R0 therefore
 specifies \tcode{nullable} as exposition-only, with promotion --- under
-whatever name LEWG prefers, coordinated with P1255 --- as the poll
-alternative.
+whatever name LEWG prefers --- as the poll alternative.
 
 \section{Return type computation}
 
@@ -436,12 +436,25 @@ value, or this instead,'' the error has been decided to be uninteresting.
 Uses that need the error have \tcode{error_or} and the monadic interface on
 the member side; no error-observing overload is proposed here.
 
-\section{What about \tcode{yield_if}}
+\section{What about \tcode{yield_if}, and the end of P1255}
 
-\cite{P2988R12} forecast a fourth function, \tcode{yield_if}, alongside the
-three proposed here. \tcode{yield_if} produces a view, not a value; it
-belongs to the ranges layer and remains with the \cite{P1255R13} work. It is
-explicitly not part of this proposal.
+\cite{P2988R12} forecast a fourth function, \tcode{yield_if}, producing a
+view of zero or one elements, alongside the three proposed here. It was to
+remain with the \cite{P1255R13} ranges work --- but that work is concluded.
+Range support for \tcode{std::optional} \cite{P3168R2} supplanted
+\tcode{views::maybe}, and \tcode{views::nullable} with it: an optional now
+\emph{is} the view of zero or one elements, and a pointer-like nullable
+reaches the same place through \tcode{optional<T\&>} \cite{P2988R12}, as
+\tcode{p ? optional<T\&>(*p) : nullopt}. The author does not expect to
+revise P1255 further; this paper inherits its remaining deliverables, the
+concept and the free functions over it.
+
+That covers \tcode{yield_if} as well: \tcode{yield_if(cond, value)} is now
+spellable as \tcode{cond ? optional(value) : nullopt}, which is itself a
+range. What residual demand exists is for a named convenience in
+comprehension-style pipelines; if implementation experience shows it is
+wanted, it is a small separate paper. It is explicitly not part of this
+proposal.
 
 \chapter{Relation to P3413R0}
 
@@ -629,7 +642,7 @@ Open questions on which LEWG guidance is sought before wording review:
 \item whether rvalue nullables should move their payload
   (see Design);
 \item whether the concept is exposition-only (the proposed default) or
-  named and public, coordinated with P1255 (see Design);
+  named and public (see Design);
 \item header placement: \tcode{<optional>} is where users will look,
   \tcode{<utility>} matches the genericity, a new header is cleanest for
   freestanding; the functions should be freestanding in any case.
@@ -743,7 +756,8 @@ of this design space.
 
 \begin{itemize}
 \item \textbf{R0} \today\ --- Initial draft. The free-function follow-on
-  promised in \cite{P2988R12}, continuing \cite{P1255R13}.
+  promised in \cite{P2988R12}, concluding the line of work begun in
+  \cite{P1255R13}.
 \end{itemize}
 
 \renewcommand{\bibname}{References}
