@@ -168,6 +168,28 @@ fvo_add_test(beman.free_value_or.tests.or_construct_construct or_construct_const
 fvo_add_test(beman.free_value_or.tests.or_construct_laziness or_construct_laziness.test.cpp)
 
 # ---------------------------------------------------------------------------
+# or_construct Step 04: negative-compile — non-nullable arg rejected (both overloads)
+# and payload-not-convertible-to-Ret (body hard error).
+# ---------------------------------------------------------------------------
+fvo_add_compile_fail_test(
+    fvo.fail.or_construct_non_nullable
+    or_construct_non_nullable_fail.cpp
+    "no matching function for call to"
+)
+
+fvo_add_compile_fail_test(
+    fvo.fail.or_construct_initlist_non_nullable
+    or_construct_initlist_non_nullable_fail.cpp
+    "no matching function for call to"
+)
+
+fvo_add_compile_fail_test(
+    fvo.fail.or_construct_payload_not_convertible
+    or_construct_payload_not_convertible_fail.cpp
+    "invalid .*static_cast"
+)
+
+# ---------------------------------------------------------------------------
 # Step 07: optional<T&> tests using beman::optional (vendored).
 # FVO_HAS_OPTIONAL_REF=1 is injected by fvo_add_test, so the feature-gated
 # sections are active.  std::optional<T&> (P2988) is NOT available on this
