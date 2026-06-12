@@ -152,6 +152,12 @@ fvo_add_test(beman.free_value_or.tests.constexpr constexpr.test.cpp)
 fvo_add_test(beman.free_value_or.tests.or_construct or_construct.test.cpp)
 
 # ---------------------------------------------------------------------------
+# or_construct Step 01: behavior — return type, engaged/disengaged, value
+# categories, inward conversion, explicit Ret
+# ---------------------------------------------------------------------------
+fvo_add_test(beman.free_value_or.tests.or_construct_behavior or_construct_behavior.test.cpp)
+
+# ---------------------------------------------------------------------------
 # Step 07: optional<T&> tests using beman::optional (vendored).
 # FVO_HAS_OPTIONAL_REF=1 is injected by fvo_add_test, so the feature-gated
 # sections are active.  std::optional<T&> (P2988) is NOT available on this
