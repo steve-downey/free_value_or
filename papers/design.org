@@ -100,6 +100,18 @@ Final-suite findings (steps 04-07, 59/59 green, plan complete):
   value_or/reference_or; negative-compile harness self-validated by
   mutating the expected-diagnostic regex.
 
+* PENDING paper edit: or_construct
+
+A sibling plan (tmp/test-plan-or_construct/) is adding a free
+~or_construct~ — the analogue of P3413's member value_or_construct that
+the paper currently calls "no direct analogue ... could be added later if
+wanted" — as a pair of overloads (args pack + initializer_list) with the
+same test matrix. WHEN IT LANDS, update the paper: the Relation-to-P3413R0
+prose and comparison-table row ("in-place fallback construction"), the
+Design family discussion (quadrants), the interface listings, Proposal,
+and draft wording. Do not edit the paper before the implementation and
+tests are merged.
+
 * Open questions (each needs a paper section, most need a poll)
 
 ** static_assert vs constraint for the dangling guards
