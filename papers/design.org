@@ -110,7 +110,10 @@ same test matrix. WHEN IT LANDS, update the paper: the Relation-to-P3413R0
 prose and comparison-table row ("in-place fallback construction"), the
 Design family discussion (quadrants), the interface listings, Proposal,
 and draft wording. Do not edit the paper before the implementation and
-tests are merged.
+tests are merged, AND Steve gives the explicit go-ahead — there are open
+questions about the or_construct surface (as of 2026-06-12, being
+resolved) that may change the overload set, so the merged header is not
+by itself the signal.
 
 * Open questions (each needs a paper section, most need a poll)
 
