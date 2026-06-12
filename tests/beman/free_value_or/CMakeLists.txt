@@ -90,6 +90,11 @@ catch_discover_tests(beman.free_value_or.tests.value_or)
 fvo_add_test(beman.free_value_or.tests.smoke smoke.test.cpp)
 
 # ---------------------------------------------------------------------------
+# Step 01: nullable concept static_assert coverage
+# ---------------------------------------------------------------------------
+fvo_add_test(beman.free_value_or.tests.concept concept.test.cpp)
+
+# ---------------------------------------------------------------------------
 # Negative-compile self-check: int is not nullable
 # The test passes when the build FAILS with the expected diagnostic.
 # ---------------------------------------------------------------------------
