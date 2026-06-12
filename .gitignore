@@ -19,3 +19,5 @@
 /uv.lock
 /.update-submodules
 /.build/
+
+# tmp/ tracked so the agent test plan can be transported between machines
