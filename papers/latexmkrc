@@ -1,0 +1,7 @@
+$cleanup_includes_cusdep_generated = 1;
+$cleanup_includes_generated = 1;
+
+# Paper infrastructure (common.tex, stdtex/, abstract.bst) lives in the
+# wg21-latex subtree; resolve inputs and bibliography styles from there.
+ensure_path('TEXINPUTS', './wg21-latex//');
+ensure_path('BSTINPUTS', './wg21-latex//');

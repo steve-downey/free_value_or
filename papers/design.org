@@ -1,0 +1,110 @@
+#+TITLE: D4270 Free Value Or Else — design notes
+#+AUTHOR: Steve Downey
+
+Working notes for D4270R0. The paper source is [[file:free_value_or.tex]].
+
+* Provenance
+
+- P2988R12 (optional<T&>), Design / value_or: "no particularly wonderful
+  solution for value_or that does not involve a time machine."
+  optional<T&>::value_or returns remove_cv_t<T> by weak consensus, and the
+  paper promises free functions ~reference_or~, ~value_or~, ~or_invoke~, and
+  ~yield_if~ over a nullable/maybe concept "in the next revision of P1255".
+  This paper is that follow-on, extracted to its own number.
+- P3199R0 / homework-tokyo.org has the implementation survey and the
+  common_reference formulation. Reuse the divergence table:
+  | Impl       | Behavior                                               |
+  |------------+--------------------------------------------------------|
+  | Standard   | optional<T>::value_or returns a T                      |
+  | Boost      | optional<T>::value_or returns a T                      |
+  |            | optional<T&>::value_or returns a T&                    |
+  | TL         | optional<T>::value_or returns a T                      |
+  |            | optional<T&>::value_or returns a T                     |
+  | Flux       | returns result of ternary, similar to common_reference |
+  | Think-cell | returns common_reference, with some caveats            |
+- P1255R13 (views::nullable) defines the nullable concept this paper
+  constrains on, and its R13 history already lists "Free functions on maybe
+  types such as optional and pointers". R0 must explain the extraction to a
+  new number rather than a P1255R14.
+
+* Thesis
+
+optional<T>::value_or's return type (remove_cv_t<T>) is wrong and unfixable
+in place. The correct return type is computed from the dereferenced type and
+the alternative — common_type for values, common_reference for references —
+machinery younger than std::optional. Free functions constrained on
+~nullable~ fix the computation and generalize to all pointer-like types:
+optional, expected, raw and smart pointers, optional<T&>.
+
+* Current interface (include/beman/free_value_or/value_or.hpp)
+
+#+begin_src c++
+template <class T>
+concept nullable = requires(const T t) { bool(t); *(t); };
+
+template <nullable T, class U, class R = std::common_reference_t<std::iter_reference_t<T>, U&&>>
+constexpr auto reference_or(T&& m, U&& u) -> R;   // R usually a reference; dangling static_asserts
+
+template <nullable T, class U, class R = std::common_type_t<std::iter_reference_t<T>, U&&>>
+constexpr auto value_or(T&& m, U&& u) -> R;       // R usually a value
+
+template <nullable T, class I, class R = std::common_type_t<std::iter_reference_t<T>, std::invoke_result_t<I>>>
+constexpr auto or_invoke(T&& m, I&& invocable) -> R;  // I() evaluated only when disengaged
+#+end_src
+
+C++23 floor: reference_constructs_from_temporary_v.
+
+* Open questions (each needs a paper section, most need a poll)
+
+** static_assert vs constraint for the dangling guards
+static_assert: best diagnostics, but a hard error inside overload
+resolution. Constraint: SFINAE-friendly, silently removes the overload.
+Current implementation uses static_assert.
+
+** Naming
+- reference_or vs ref_or (Tokyo homework concluded value_or is not an
+  available name for the reference form, suggested ref_or).
+- or_invoke vs value_or_else vs or_eval. optional::or_else is taken and
+  returns an optional, not a value.
+Build the naming table before the first LEWG review.
+
+** Plain function templates vs CPOs/niebloids
+Customization point? ADL concerns? Probably plain constrained function
+templates; argue why.
+
+** Header placement and freestanding
+<optional>? <utility>? new header? Mark freestanding (P1255 precedent).
+Feature test macro name.
+
+** expected<T,E>
+Models nullable; value_or discards the error. Acceptable, or does expected
+deserve an error-observing overload? Likely "out of scope, by design".
+
+** yield_if
+Promised in P2988R12's forward reference; produces a view, not a value.
+Position: stays with P1255 ranges work. Say so explicitly in R0.
+
+** nullable concept details
+- const-qualified requirements: types with only non-const operator bool /
+  operator* do not model nullable. Intentional? Document.
+- iterators excluded (no contextual bool), function pointers excluded
+  (functions are not objects). Matches P1255R13's nullable_object.
+
+* Evidence to cite from the reference implementation
+
+- Test matrix: optional<T>, expected<T,E>, T*, shared_ptr, unique_ptr,
+  optional<T&> (C++26, via vendored beman.optional26) ×
+  engaged/disengaged × lvalue/rvalue/const × constexpr.
+- Negative-compile matrix: dangling rejection in reference_or (temporary
+  from U, temporary from *m), non-nullable arguments rejected by the
+  concept.
+- Test build-out tracked in tmp/test-plan (steps 01–07 pending as of
+  2026-06-12); finish before R0 ships so the matrix is real.
+
+* Mechanics
+
+- Audience LEWG, target C++29.
+- Build: make (latexmk -pdflua -shell-escape, minted, Source Serif/Sans
+  Pro fonts). wg21.bib fetched via make curl-bib.
+- Namespace rename smd::free_value_or -> beman::free_value_or (the "great
+  renaming") before upstreaming; paper text uses std:: spellings.

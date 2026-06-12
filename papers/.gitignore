@@ -1,0 +1,25 @@
+# latexmk / TeX intermediates
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.toc
+*.xtr
+*.idx
+*.ilg
+*.ind
+*.glo
+std-gram.ext
+_minted*/
+*.data.minted
+auto/
+
+# build infrastructure
+.venv/
+.deps/
+
+# downloaded bibliography (make curl-bib)
+wg21.bib

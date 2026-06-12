@@ -1,0 +1,295 @@
+\documentclass[a4paper,10pt,oneside,openany,final,article]{memoir}
+\input{common}
+\settocdepth{chapter}
+\usepackage{minted}
+\usepackage{fontspec}
+% \setromanfont{Source Serif Pro}
+% \setsansfont{Source Sans Pro}
+% \setmonofont{Source Code Pro}
+
+\begin{document}
+\title{Free Value Or Else}
+\author{
+  Steve Downey \small<\href{mailto:sdowney@gmail.com}{sdowney@gmail.com}> \\
+}
+\date{} %unused. Type date explicitly below.
+\maketitle
+
+\begin{flushright}
+  \begin{tabular}{ll}
+    Document \#: & D4270R0 \\
+    Date: & \today \\
+    Project: & Programming Language C++ \\
+    Audience: & LEWG
+  \end{tabular}
+\end{flushright}
+
+\begin{abstract}
+  A set of free functions implementing the pattern of optional and expected
+  \tcode{value_or} as free functions that produce the correct common reference
+  type that was unfixable for \tcode{std::optional::value_or}.
+\end{abstract}
+
+\tableofcontents*
+
+\chapter*{Changes Since Last Version}
+
+\begin{itemize}
+\item \textbf{R0} Initial revision.
+\end{itemize}
+
+\chapter{Comparison table}
+
+% Before/after tables in the P1255/P2988 style. Each section is one
+% alternative-today vs this-proposal pair.
+
+\section{Raw pointer with a manual null check}
+
+\begin{tabular}{ lr }
+  \begin{minipage}[t]{0.45\columnwidth}
+    \begin{minted}[fontsize=\small]{c++}
+Cat* cat = find_cat("Fido");
+return cat ? *cat : Cat{"Default"};
+    \end{minted}
+  \end{minipage}
+  &
+    \begin{minipage}[t]{0.45\columnwidth}
+      \begin{minted}[fontsize=\small]{c++}
+Cat* cat = find_cat("Fido");
+return std::value_or(cat, Cat{"Default"});
+      \end{minted}
+    \end{minipage}
+\end{tabular}
+
+\section{The \tcode{value_or} truncation pitfall}
+
+% optional<unsigned>::value_or(-1) silently converts; the free function
+% computes common_type and does not narrow through T.
+
+\begin{tabular}{ lr }
+  \begin{minipage}[t]{0.45\columnwidth}
+    \begin{minted}[fontsize=\small]{c++}
+std::optional<std::uint16_t> o = get();
+auto v = o.value_or(-1);
+// v is uint16_t{65535}
+    \end{minted}
+  \end{minipage}
+  &
+    \begin{minipage}[t]{0.45\columnwidth}
+      \begin{minted}[fontsize=\small]{c++}
+std::optional<std::uint16_t> o = get();
+auto v = std::value_or(o, -1);
+// v is int, value preserved
+      \end{minted}
+    \end{minipage}
+\end{tabular}
+
+\section{Reference alternative without copies}
+
+% The Logger example from the P2988 homework (P3199R0 material):
+% reference_or returns a common reference, no temporary Logger.
+
+\begin{tabular}{ lr }
+  \begin{minipage}[t]{0.45\columnwidth}
+    \begin{minted}[fontsize=\small]{c++}
+std::optional<Logger&> opt = get_logger();
+Logger& l =
+    opt ? *opt : default_logger();
+    \end{minted}
+  \end{minipage}
+  &
+    \begin{minipage}[t]{0.45\columnwidth}
+      \begin{minted}[fontsize=\small]{c++}
+std::optional<Logger&> opt = get_logger();
+Logger& l = std::reference_or(
+    opt, default_logger());
+      \end{minted}
+    \end{minipage}
+\end{tabular}
+
+\chapter{Motivation}
+
+% TODO: narrative. Key beats, in order:
+%
+% 1. The P2988 impasse. Quote P2988R12 directly:
+%    "After extensive discussion, it seems there is no particularly
+%    wonderful solution for value_or that does not involve a time
+%    machine." optional<T&>::value_or returns remove_cv_t<T> by weak
+%    consensus; this paper is the follow-on promised there: free
+%    functions reference_or, value_or, or_invoke over all types
+%    modeling a nullable concept, covering optional, expected, and
+%    pointer types. \cite{P2988R12}
+%
+% 2. Existing practice diverges (table from the Tokyo homework,
+%    P3199R0):
+%      Standard    optional<T>::value_or returns T
+%      Boost       optional<T>::value_or returns T;
+%                  optional<T&>::value_or returns T&
+%      TL          optional<T>::value_or returns T;
+%                  optional<T&>::value_or returns T
+%      Flux        result of ternary, similar to common_reference
+%      Think-cell  common_reference, with caveats
+%
+% 3. The correct return type is computed from the dereferenced type
+%    and the alternative -- common_type for values, common_reference
+%    for references -- machinery that did not exist when optional was
+%    standardized. Member value_or cannot be changed (API/ABI); a
+%    constrained free function can do it right.
+%
+% 4. Dangling is now detectable: reference_constructs_from_temporary_v
+%    (C++23) lets a reference-returning form reject binding the result
+%    to a temporary at compile time, the thing that made reference
+%    returns untenable before.
+%
+% 5. Uniform vocabulary across all pointer-like types: optional,
+%    expected, raw pointers, smart pointers, optional<T&>. One
+%    spelling for "the value, or this instead".
+
+\chapter{Design}
+
+\section{The \tcode{nullable} concept}
+
+% From P1255: an object contextually convertible to bool and
+% dereferenceable. Current implementation:
+%
+% template <class T>
+% concept nullable = requires(const T t) {
+%     bool(t);
+%     *(t);
+% };
+%
+% TODO: discuss const-qualification (types with only non-const
+% operator bool / operator* do not model nullable), relation to
+% P1255R13's nullable_object, why iterators (no contextual bool) and
+% function pointers (not objects when dereferenced) are excluded.
+
+\section{Return type computation}
+
+% value_or:     common_type_t<iter_reference_t<T>, U&&>
+% reference_or: common_reference_t<iter_reference_t<T>, U&&>
+% or_invoke:    common_type_t<iter_reference_t<T>, invoke_result_t<I>>
+%
+% TODO: explain iter_reference_t as "the type of *m", with examples of
+% the computed types for optional<int>/long, uint16_t/-1, T&/U&.
+
+\section{\tcode{reference_or}}
+
+% Reference-preserving variant. Carries two dangling guards:
+%   static_assert(!reference_constructs_from_temporary_v<R, U>);
+%   static_assert(!reference_constructs_from_temporary_v<R, T&>);
+%
+% OPEN QUESTION: static_assert vs constraint. static_assert gives a
+% clear diagnostic but is a hard error during overload resolution; a
+% constraint is SFINAE-friendly but silently removes the overload.
+%
+% OPEN QUESTION: naming. The Tokyo homework argued for ref_or;
+% reference_or is the current spelling. Present a naming table for a
+% poll.
+
+\section{\tcode{or_invoke} and laziness}
+
+% The alternative is computed only when disengaged. optional::or_else
+% is taken and returns an optional, not a value, so the name does not
+% transfer.
+%
+% OPEN QUESTION: naming - or_invoke / value_or_else / or_eval.
+
+\section{Why free functions}
+
+% Members cannot be retrofitted onto pointers, and changing
+% optional::value_or's return type is an API/ABI break. A constrained
+% free function template works uniformly and can compute the correct
+% type.
+%
+% OPEN QUESTION: plain function templates vs CPOs/niebloids; do we
+% need to inhibit ADL or allow customization?
+
+\section{\tcode{expected} interaction}
+
+% expected<T,E> models nullable; value_or(e, u) discards the error.
+% Is that acceptable as-is, or does expected warrant an overload that
+% can observe the error? (Probably out of scope; discuss.)
+
+\section{What about \tcode{yield_if}}
+
+% P2988R12 also forecast yield_if. It produces a view, not a value,
+% and belongs to the P1255 ranges work. R0 should state explicitly
+% that it is left there. \cite{P1255R13}
+
+\chapter{Principles for Reification of Design}
+
+% P2988-style chapter: enumerate exactly which dangling cases are
+% rejected at compile time, with the negative-compile test matrix from
+% the reference implementation as evidence.
+%
+% - reference_or where R would bind to a temporary materialized from U
+% - reference_or where R would bind to a temporary from *m
+% - non-nullable first argument rejected by the concept
+
+\chapter{Implementation Experience}
+
+% Reference implementation: beman.free_value_or
+% \cite{Downey_free_value_or}. C++23 floor (needs
+% reference_constructs_from_temporary_v). Tested across optional<T>,
+% expected<T,E>, T*, shared_ptr<T>, unique_ptr<T>, and C++26
+% optional<T&> (via beman.optional26), over engaged/disengaged,
+% lvalue/rvalue/const value categories, constexpr evaluation, and
+% negative-compile dangling cases.
+
+\begin{minted}[fontsize=\small]{c++}
+template <class T>
+concept nullable = requires(const T t) {
+    bool(t);
+    *(t);
+};
+
+template <nullable T, class U,
+          class R = std::common_reference_t<std::iter_reference_t<T>, U&&>>
+constexpr auto reference_or(T&& m, U&& u) -> R;
+
+template <nullable T, class U,
+          class R = std::common_type_t<std::iter_reference_t<T>, U&&>>
+constexpr auto value_or(T&& m, U&& u) -> R;
+
+template <nullable T, class I,
+          class R = std::common_type_t<std::iter_reference_t<T>,
+                                       std::invoke_result_t<I>>>
+constexpr auto or_invoke(T&& m, I&& invocable) -> R;
+\end{minted}
+
+\chapter{Proposal}
+
+% Propose value_or, reference_or, or_invoke as free function templates
+% constrained on nullable, for C++29.
+%
+% OPEN QUESTION: header placement - <optional>? <utility>? a new
+% header? Freestanding: should be freestanding (P1255 precedent).
+
+\chapter{Wording}
+
+% TODO after LEWG design review. Feature test macro:
+% __cpp_lib_value_or (name TBD).
+
+\chapter{Impact on the standard}
+
+% Pure library extension. No changes to existing classes, no ABI
+% impact. C++23 language/library facilities required
+% (reference_constructs_from_temporary_v).
+
+\chapter{Acknowledgments}
+
+% Peter Sommerlad and the P2988 co-conspirators; LEWG discussions in
+% Tokyo that produced the homework this paper answers.
+
+\chapter{Document history}
+
+\begin{itemize}
+\item \textbf{R0} \today\ --- Initial draft. The free-function follow-on
+  promised in \cite{P2988R12}, continuing \cite{P1255R13}.
+\end{itemize}
+
+\renewcommand{\bibname}{References}
+\bibliographystyle{abstract}
+\bibliography{wg21,mybiblio}
+
+\end{document}
