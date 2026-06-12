@@ -1,0 +1,147 @@
+\documentclass[a4paper,10pt,oneside,openany,final,article]{memoir}
+\input{common}
+\settocdepth{chapter}
+\usepackage{minted}
+\usepackage{fontspec}
+% \setromanfont{Source Serif Pro}
+% \setsansfont{Source Sans Pro}
+% \setmonofont{Source Code Pro}
+
+\begin{document}
+\title{std::optional<T\&>}
+\author{Steve Downey \small<\href{mailto:sdowney@gmail.com}{sdowney@gmail.com}>}
+\date{} %unused. Type date explicitly below.
+\maketitle
+
+\begin{flushright}
+  \begin{tabular}{ll}
+    Document \#: & PnnnnRm \\
+    Date: & \today \\
+    Project: & Programming Language C++ \\
+    Audience: & LEWG
+  \end{tabular}
+\end{flushright}
+
+\begin{abstract}
+  We propose to fix a hole intentionally left in \tcode{std::optional} ---
+
+  An optional over a reference such that the post condition on assignment is independent of the engaged state, always producing a rebound reference, and assigning a \tcode{U} to a \tcode{T} is disallowed by \tcode{static_assert} if a \tcode{U} can not be bound to a \tcode{T\&}.
+\end{abstract}
+
+\tableofcontents*
+
+\chapter*{Changes Since Last Version}
+
+\begin{itemize}
+\item \textbf{Changes since R_{n-1}}
+  \begin{itemize}
+  \item One.
+  \end{itemize}
+\item \textbf{Changes since R_{n-2}}
+  \begin{itemize}
+  \item Tw
+  \end{itemize}
+\end{itemize}
+
+\chapter{Comparison table}
+\section{Compare Some Things}
+
+This is the convention the ...
+
+\begin{tabular}{ lr }
+  \begin{minipage}[t]{0.45\columnwidth}
+    \begin{minted}[fontsize=\small]{c++}
+      Cat* cat = find_cat("Fido");
+      if (cat!=nullptr) { return doit(*cat); }
+
+
+    \end{minted}
+  \end{minipage}
+  &
+    \begin{minipage}[t]{0.45\columnwidth}
+      \begin{minted}[fontsize=\small]{c++}
+        std::optional<Cat&> cat = find_cat("Fido");
+        return cat.and_then(doit);
+
+      \end{minted}
+    \end{minipage}
+\end{tabular}
+
+
+\chapter{Motivation}
+Other than the standard library's implementation of ...
+
+\chapter{Design}
+
+The design is straightforward. The \tcode{new_thing<T>} ...
+
+\section{Relational Operations}
+
+The definitions of the relational operators ...
+
+\section{Trivial construction}
+Construction of \tcode{optional<T\&>} should be trivial, because it is straightforward to implement, and \tcode{optional<T>} is trivial.
+Boost is not.
+
+\chapter{Rendering Design In C++}
+
+While we value performance, we value safety more.
+
+Errors that can be detected at compile time must be detected at compile time.
+
+New Thing must never construct a temporary, or knowingly take the address of an temporary or part of an temporary.
+
+It is always presumed safe to copy the pointer value from New Thing, since by induction, it is not intrinsically dangling.
+
+\chapter{Proposal}
+
+Add a New Thing which solves all the problems.
+
+\chapter{Wording}
+
+The proposed changes are relative to the current working draft \cite{N5001}.
+
+
+\begin{wording}
+
+\include{new-wording}
+
+\end{wording}
+
+\chapter{Impact on the standard}
+
+A pure library extension, affecting no other parts of the library or language.
+
+\chapter{Acknowledgments}
+Many thanks to all of the reviewers and authors
+
+\chapter*{Document history}
+
+\begin{itemize}
+\item \textbf{Changes since R4}
+  \begin{itemize}
+  \item feature test macro
+  \end{itemize}
+\item \textbf{Changes since R3}
+  \begin{itemize}
+  \item discussion
+  \end{itemize}
+\item \textbf{Changes since R1}
+  \begin{itemize}
+  \item Design points called out
+  \end{itemize}
+\item \textbf{Changes since R0}
+  \begin{itemize}
+  \item Wording Updates
+  \end{itemize}
+\end{itemize}
+
+\renewcommand{\bibname}{References}
+\bibliographystyle{abstract}
+\bibliography{wg21,mybiblio}
+
+\backmatter
+\chapter*{Implementation}
+
+\inputminted{c++}{implementation.hpp}
+\end{document}
