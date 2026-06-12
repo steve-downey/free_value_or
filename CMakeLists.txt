@@ -84,6 +84,8 @@ add_subdirectory(include/beman/free_value_or)
 beman_install_library(beman.free_value_or TARGETS beman.free_value_or)
 configure_build_telemetry()
 
+add_subdirectory(vendored)
+
 if(BEMAN_FREE_VALUE_OR_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests/beman/free_value_or)

@@ -13,12 +13,24 @@
 namespace fvo = smd::free_value_or;  // rename point: smd:: -> beman::
 
 // ---------------------------------------------------------------------------
-// Feature detection for optional<T&> (P2988, C++26, needs newer libstdc++)
+// Feature detection for optional<T&> (P2988).
+//
+// FVO_HAS_OPTIONAL_REF=1 is injected by CMake when the vendored
+// beman::optional library is linked (see vendored/CMakeLists.txt).
+// Falls back to __cpp_lib_optional for standard-library support.
 // ---------------------------------------------------------------------------
+#ifndef FVO_HAS_OPTIONAL_REF
 #if defined(__cpp_lib_optional) && __cpp_lib_optional >= 202406L
 #define FVO_HAS_OPTIONAL_REF 1
 #else
 #define FVO_HAS_OPTIONAL_REF 0
+#endif
+#endif  // FVO_HAS_OPTIONAL_REF
+
+#if FVO_HAS_OPTIONAL_REF
+#include <beman/optional/optional.hpp>
+// fvo_opt::optional<T&> is optional-with-reference-support, usable in Step 07.
+namespace fvo_opt = beman::optional;
 #endif
 
 // ---------------------------------------------------------------------------
