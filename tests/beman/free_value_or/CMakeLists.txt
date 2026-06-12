@@ -145,3 +145,12 @@ fvo_add_test(beman.free_value_or.tests.or_invoke or_invoke.test.cpp)
 # a runnable entry.
 # ---------------------------------------------------------------------------
 fvo_add_test(beman.free_value_or.tests.constexpr constexpr.test.cpp)
+
+# ---------------------------------------------------------------------------
+# Step 07: optional<T&> tests using beman::optional (vendored).
+# FVO_HAS_OPTIONAL_REF=1 is injected by fvo_add_test, so the feature-gated
+# sections are active.  std::optional<T&> (P2988) is NOT available on this
+# toolchain (libstdc++ 15.2, __cpp_lib_optional = 202110); beman::optional
+# provides the reference-optional support instead.
+# ---------------------------------------------------------------------------
+fvo_add_test(beman.free_value_or.tests.optional_ref optional_ref.test.cpp)
