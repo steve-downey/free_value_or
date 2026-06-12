@@ -133,3 +133,8 @@ fvo_add_compile_fail_test(
     or_invoke_non_nullable_fail.cpp
     "no matching function for call to"
 )
+
+# ---------------------------------------------------------------------------
+# Step 05: or_invoke results + laziness
+# ---------------------------------------------------------------------------
+fvo_add_test(beman.free_value_or.tests.or_invoke or_invoke.test.cpp)
