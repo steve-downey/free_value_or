@@ -21,3 +21,6 @@
 /.build/
 
 # tmp/ tracked so the agent test plan can be transported between machines
+
+# probe binary left in repo root
+/a.out
