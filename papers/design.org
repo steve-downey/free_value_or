@@ -26,6 +26,15 @@ Working notes for D4270R0. The paper source is [[file:free_value_or.tex]].
   constrains on, and its R13 history already lists "Free functions on maybe
   types such as optional and pointers". R0 must explain the extraction to a
   new number rather than a P1255R14.
+- Competing/adjacent: P3413R0 "A more flexible optional::value_or (else!)"
+  (Jabot, 2024-10), reviving P2218R0 (Mutz, abandoned). Member
+  value_or_construct (lazy in-place fallback, init-list overloads) and
+  value_or_else (lazy callable) on optional and expected; return type stays
+  T, no references, no pointers, optional<T&> deferred to P2988. Fixes the
+  *cost* of the alternative; D4270 fixes the *type* and the *reach*. Overlap
+  is the lazy case (value_or_else vs or_invoke) — flagged in the paper's
+  "Relation to P3413R0" chapter so LEWG picks one spelling deliberately.
+  Also relevant: LWG3886 (Monad mo' problems), left out of P3413.
 
 * Thesis
 
@@ -53,6 +62,28 @@ constexpr auto or_invoke(T&& m, I&& invocable) -> R;  // I() evaluated only when
 #+end_src
 
 C++23 floor: reference_constructs_from_temporary_v.
+
+* Findings from the test build-out (harvested into the paper)
+
+- expected<T,E> models nullable — bool(e) and *e both valid on const
+  expected (handoff 002). Error-discarding is by design; documented.
+- const-qualified concept is observable behavior: nonconst_nullable (both
+  ops, non-const) rejected. Framed in Design as "observation is a query".
+- Function pointers: the minimal concept ADMITS them (bool + deref both
+  valid); P1255's nullable_object excludes via is_object of the referent.
+  Open question for LEWG; do not claim they're excluded.
+- iter_reference_t<T> computes from T& → rvalue nullables never move their
+  payload; value_or(std::move(opt), u) copies. Deliberate "observe, don't
+  consume" rule in R0; alternative decltype(*forward<T>(m)) design flagged
+  for LEWG (handoff 003 value-category sweep).
+- common_type results table (handoff 003) and common_reference const-
+  propagation table (handoff 004) are reproduced in the paper.
+- value_or fallback confirmed eager (lambda counted while engaged);
+  or_invoke laziness is the step-05 suite.
+- Dangling rejection example verified: reference_or(opt, 0) →
+  common_reference_t<int&, int&&> = const int& → binds temporary →
+  static_assert fires (handoff 004).
+- No header bugs found through step 03 (26/26 tests green).
 
 * Open questions (each needs a paper section, most need a poll)
 
