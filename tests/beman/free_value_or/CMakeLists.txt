@@ -64,24 +64,10 @@ function(fvo_add_compile_fail_test test_name source regex)
 endfunction()
 
 # ---------------------------------------------------------------------------
-# Keep the existing placeholder test building (Step 02 will replace it)
+# Step 02: value_or runtime + return-type + value categories
 # ---------------------------------------------------------------------------
-add_executable(beman.free_value_or.tests.value_or)
-target_sources(beman.free_value_or.tests.value_or PRIVATE value_or.test.cpp)
-target_link_libraries(
-    beman.free_value_or.tests.value_or
-    PRIVATE beman::free_value_or Catch2::Catch2WithMain
-)
-target_compile_features(beman.free_value_or.tests.value_or PRIVATE cxx_std_23)
-if(BEMAN_EXEMPLAR_USE_MODULES)
-    set_target_properties(
-        beman.free_value_or.tests.value_or
-        PROPERTIES CXX_MODULE_STD ON
-    )
-endif()
-
 include(Catch)
-catch_discover_tests(beman.free_value_or.tests.value_or)
+fvo_add_test(beman.free_value_or.tests.value_or value_or.test.cpp)
 
 # ---------------------------------------------------------------------------
 # Smoke test: proves the toolchain compiles the library and vendored optional
