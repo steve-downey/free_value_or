@@ -1,0 +1,11 @@
+# batch-emacs package caches
+.emacs.d/elpa*/
+.emacs.d/eln-cache/
+.emacs.d/custom.el
+.emacs.d/transient/
+
+# export intermediates
+*.deps
+
+# local reveal.js clone (make reveal.js)
+reveal.js/

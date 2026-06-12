@@ -1,0 +1,189 @@
+#+TITLE: Free Value Or Else
+#+SUBTITLE: D4270R0 — value_or, reference_or, or_invoke for everything nullable
+#+DATE: <2026-06-12 Fri>
+#+AUTHOR: Steve Downey
+#+EMAIL: sdowney@gmail.com
+#+EXPORT_SELECT_TAGS: export
+#+EXCLUDE_TAGS: noexport
+
+#+STARTUP: showeverything
+
+#+OPTIONS: reveal_width:1600 reveal_height:900
+#+OPTIONS: ^:nil
+#+OPTIONS: toc:nil num:nil
+#+REVEAL_TRANS: fade
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="./etc/modus-operandi-tinted.css" />
+#+REVEAL_PLUGINS: (math markdown notes search zoom)
+#+REVEAL_EXTRA_CSS: ./etc/modus-operandi-tinted.css
+#+REVEAL_THEME: ./etc/my_theme.css
+
+#+REVEAL_VERSION: 6
+#+reveal_defaulttiming: 40
+
+#+REVEAL_HLEVEL: 1
+#+REVEAL_EXPORT_NOTES_TO_PDF: separate-page
+#+REVEAL_DEFAULT_FRAG_STYLE: (appear)
+#+REVEAL_EXTRA_OPTIONS: controls: false
+
+#+OPTIONS: reveal_single_file:t
+
+* ~value_or~ answers with the wrong type
+
+#+begin_src cpp
+std::optional<std::uint16_t> o = get();
+auto v = o.value_or(-1);   // v is uint16_t{65535}
+#+end_src
+
+- the alternative is forced *inward* through ~T~
+- reference results are impossible — always a copy
+- ~optional<T&>~ made this acute; P2988R12:
+
+#+begin_quote
+"there is no particularly wonderful solution for ~value_or~ that does
+not involve a time machine"
+#+end_quote
+
+- members can't be fixed: API + ABI, shipping since C++17
+
+#+begin_notes
+Clock: now ~00:00~, next ~00:45~
+
+The member function funnels both candidates through T. Truncation,
+copies, no references. P2988 spent meetings on this and landed on
+"least objectionable", returning remove_cv_t<T> — and promised free
+functions as the real fix. This is that paper.
+#+end_notes
+
+* D4270R0: three free functions
+
+#+begin_src cpp
+template <class T>
+concept nullable = requires(const T t) { bool(t); *(t); };
+
+template <nullable T, class U,
+    class R = common_reference_t<iter_reference_t<T>, U&&>>
+constexpr auto reference_or(T&& m, U&& u) -> R;        // eager, reference
+
+template <nullable T, class U,
+    class R = common_type_t<iter_reference_t<T>, U&&>>
+constexpr auto value_or(T&& m, U&& u) -> R;            // eager, value
+
+template <nullable T, class I,
+    class R = common_type_t<iter_reference_t<T>, invoke_result_t<I>>>
+constexpr auto or_invoke(T&& m, I&& invocable) -> R;   // lazy, value
+#+end_src
+
+the library spelling of ~m ? *m : u~ — *the type the conditional would compute*
+
+#+begin_notes
+Clock: now ~00:45~, next ~01:45~
+
+One concept: contextually bool, dereferenceable, through const.
+Return types computed outward — common_type for values,
+common_reference for references — not forced through T. The machinery
+(common_reference, reference_constructs_from_temporary_v) postdates
+optional; the conditional expression had it right all along.
+#+end_notes
+
+* What you get
+
+#+begin_src cpp
+std::optional<std::uint16_t> o = get();
+auto v = std::value_or(o, -1);          // int: -1 preserved, no truncation
+#+end_src
+
+#+begin_src cpp
+std::optional<Logger&> opt = get_logger();
+Logger& l = std::reference_or(opt, default_logger());   // no copy, no dangle
+#+end_src
+
+#+begin_src cpp
+auto cfg = std::or_invoke(p, [] { return load_default_config(); });
+// invocable runs only when disengaged
+#+end_src
+
+#+begin_notes
+Clock: now ~01:45~, next ~02:30~
+
+Three idioms, one shape. The reference form is the one members can
+never give you — and it is compile-time checked against dangling:
+reference_constructs_from_temporary_v rejects every call whose result
+would bind a temporary. reference_or(opt, 0) does not compile.
+#+end_notes
+
+* One protocol, every nullable type
+
+| works with | ~std::optional<T>~ | ~std::expected<T,E>~ | ~T*~ |
+|            | ~std::shared_ptr~  | ~std::unique_ptr~    | ~std::optional<T&>~ |
+
+- pointers have no members to retrofit — free functions or nothing
+- user types model the concept by construction
+- dangling rejected at compile time, both paths:
+
+#+begin_src cpp
+static_assert(!reference_constructs_from_temporary_v<R, U>);
+static_assert(!reference_constructs_from_temporary_v<R, T&>);
+#+end_src
+
+#+begin_notes
+Clock: now ~02:30~, next ~03:15~
+
+This is the P1255 "maybe protocol", landing where it was always
+headed. Range optional supplanted views::maybe; the concept and the
+free functions are what remain, and they cover the pointer world the
+member functions never can.
+#+end_notes
+
+* P3413R0: not strictly competing
+
+P3413R0 (Jabot, reviving P2218R0): member ~value_or_construct~ + ~value_or_else~
+
+|                        | P3413R0                  | P4270                          |
+|------------------------+--------------------------+--------------------------------|
+| form                   | members ×2 classes       | free, every nullable           |
+| return type            | ~T~                      | ~common_type~ / ~common_reference~ |
+| truncation pitfall     | unchanged                | fixed                          |
+| reference results      | no                       | ~reference_or~, checked        |
+| lazy alternative       | ~value_or_else~          | ~or_invoke~                    |
+| ~optional<T&>~         | deferred to P2988        | covered                        |
+
+we *could* have both — but with P4270, far less reason to grow ~optional~ and ~expected~
+
+#+begin_notes
+Clock: now ~03:15~, next ~04:15~
+
+Corentin knows this work is in flight and is happy for it to proceed.
+P3413 fixes the cost of the alternative; this fixes the type of the
+answer and where it applies. The overlap is the lazy case — if the
+generic free function exists, adding per-class members that still
+return T buys little. Choose one spelling deliberately.
+#+end_notes
+
+* Status and asks
+
+- reference implementation: ~beman.free_value_or~
+- 59-test matrix: all six nullable types × value categories ×
+  engaged/disengaged × constexpr, negative-compile dangling suite
+- no implementation defects found; two design notes surfaced and in the paper
+
+for LEWG:
+1. dangling guards: /Mandates/ (proposed) or /Constraints/?
+2. should ~reference_or~ require its result type *be* a reference?
+3. names: ~reference_or~ / ~ref_or~; ~or_invoke~ / ~value_or_else~
+4. concept: exposition-only (proposed) or public?
+
+#+begin_notes
+Clock: now ~04:15~, done ~05:00~
+
+Implementation experience is real: the dangling guards are negative-
+compile tested, and testing surfaced the question in item 2 —
+common_reference of unrelated types can be a prvalue, silently giving
+value semantics under a reference name. R0 has the full discussion.
+Asking for design direction, wording to follow.
+#+end_notes
+
+* Colophon :noexport:
+
+- Slideware: [[https://revealjs.com/][reveal.js]] via [[https://gitlab.com/oer/org-re-reveal][org-re-reveal]]
+- Theme: Modus Operandi Tinted, Atkinson Hyperlegible
+- Paper: D4270R0, papers/free_value_or.tex in this repository
