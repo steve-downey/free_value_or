@@ -81,6 +81,11 @@ fvo_add_test(beman.free_value_or.tests.smoke smoke.test.cpp)
 fvo_add_test(beman.free_value_or.tests.concept concept.test.cpp)
 
 # ---------------------------------------------------------------------------
+# Step 03: reference_or reference semantics
+# ---------------------------------------------------------------------------
+fvo_add_test(beman.free_value_or.tests.reference_or reference_or.test.cpp)
+
+# ---------------------------------------------------------------------------
 # Negative-compile self-check: int is not nullable
 # The test passes when the build FAILS with the expected diagnostic.
 # ---------------------------------------------------------------------------
