@@ -138,3 +138,10 @@ fvo_add_compile_fail_test(
 # Step 05: or_invoke results + laziness
 # ---------------------------------------------------------------------------
 fvo_add_test(beman.free_value_or.tests.or_invoke or_invoke.test.cpp)
+
+# ---------------------------------------------------------------------------
+# Step 06: constexpr constant-evaluation tests
+# The real proof is the static_asserts in the TU; the TEST_CASE gives ctest
+# a runnable entry.
+# ---------------------------------------------------------------------------
+fvo_add_test(beman.free_value_or.tests.constexpr constexpr.test.cpp)
