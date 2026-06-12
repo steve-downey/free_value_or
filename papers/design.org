@@ -115,6 +115,16 @@ deserve an error-observing overload? Likely "out of scope, by design".
 Promised in P2988R12's forward reference; produces a view, not a value.
 Position: stays with P1255 ranges work. Say so explicitly in R0.
 
+** exposition-only vs named public concept (poll)
+For naming: it's vocabulary — P2988 forecast "concept std::maybe", P1255 is
+"a concept to constrain maybes", users re-derive it divergently otherwise,
+testable and appears in diagnostics. Against: a named concept is forever
+while refinements (is_object, semantics wording) are still open;
+boolean-testable is the precedent for staying exposition-only; P1255 names
+overlapping concepts — coordination needed. Asymmetry decides the default:
+promotion later is non-breaking, demotion impossible. R0: exposition-only,
+poll the promotion.
+
 ** nullable concept details
 - const-qualified requirements: types with only non-const operator bool /
   operator* do not model nullable. Intentional? Document.

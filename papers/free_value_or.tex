@@ -244,6 +244,46 @@ and dereferenceable), and they are then rejected only downstream, when
 should require \tcode{is_object_v} of the referent, rejecting function
 pointers at the constraint rather than in the return-type computation.
 
+\section{Exposition-only, or a named public concept?}
+
+Whether \tcode{nullable} is an exposition-only constraint on these three
+functions or a named, public concept is a LEWG question in its own right,
+and the paper presents it for a poll.
+
+The case for a public \tcode{std::nullable}: the protocol is vocabulary.
+\cite{P2988R12} forecast these functions ``over all types modeling
+optional-like, \tcode{concept std::maybe}'', and \cite{P1255R13} is titled,
+in part, ``a concept to constrain maybes'' --- the concept has been treated
+as a deliverable in its own right throughout this line of work. Users
+writing their own functions over nullable types --- a \tcode{value_or}
+variant with different policy, an algorithm taking a range of nullables ---
+need the same constraint, and without a public name each codebase
+re-derives it, not always identically. A named concept can be tested
+directly (\tcode{static_assert(std::nullable<T>)}), appears by name in
+diagnostics, and fixes the meaning of ``optional-like'' across the
+ecosystem once.
+
+The case for exposition-only: a named standard concept is forever, and
+this one is not yet stable. The open refinements above --- the
+\tcode{is_object_v} question, const-observability, and the semantic
+requirements a named concept would have to state in words (dereference is
+valid only when the contextual conversion yields \tcode{true};
+observation is equality-preserving) --- can be adjusted release to release
+while the concept is exposition-only, and cannot be once user code
+constrains against the name. The library has a directly analogous
+precedent: \tcode{\placeholder{boolean-testable}}, among the most-used
+constraints in the standard, is deliberately exposition-only for exactly
+this reason. There is also a coordination hazard: \cite{P1255R13} defines
+its own refinements of the same idea, and two papers should not
+independently name one concept.
+
+The asymmetry favors caution: an exposition-only concept can be promoted
+to a public name in a later standard without breaking anything, while a
+public name can never be demoted or meaningfully tightened. R0 therefore
+specifies \tcode{nullable} as exposition-only, with promotion --- under
+whatever name LEWG prefers, coordinated with P1255 --- as the poll
+alternative.
+
 \section{Return type computation}
 
 \tcode{std::iter_reference_t<T>} is \tcode{decltype(*declval<T\&>())} ---
@@ -588,7 +628,8 @@ Open questions on which LEWG guidance is sought before wording review:
   excluding function pointers at the constraint;
 \item whether rvalue nullables should move their payload
   (see Design);
-\item whether the concept is exposition-only or named and public;
+\item whether the concept is exposition-only (the proposed default) or
+  named and public, coordinated with P1255 (see Design);
 \item header placement: \tcode{<optional>} is where users will look,
   \tcode{<utility>} matches the genericity, a new header is cleanest for
   freestanding; the functions should be freestanding in any case.
