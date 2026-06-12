@@ -94,3 +94,42 @@ fvo_add_compile_fail_test(
     fail_not_nullable.cpp
     "no matching function for call to"
 )
+
+# ---------------------------------------------------------------------------
+# Step 04A: dangling-reference rejection in reference_or
+# Each TU must fail with "static assertion failed" from
+# reference_constructs_from_temporary_v checks in reference_or.
+# ---------------------------------------------------------------------------
+fvo_add_compile_fail_test(
+    fvo.fail.ref_or_temp_from_prvalue
+    ref_or_temp_from_prvalue_fail.cpp
+    "static assertion failed"
+)
+
+fvo_add_compile_fail_test(
+    fvo.fail.ref_or_rvalue_string
+    ref_or_rvalue_string_fail.cpp
+    "static assertion failed"
+)
+
+# ---------------------------------------------------------------------------
+# Step 04B: non-nullable first argument rejected by the nullable concept
+# Each TU must fail with "no matching function for call to" — one per function.
+# ---------------------------------------------------------------------------
+fvo_add_compile_fail_test(
+    fvo.fail.value_or_non_nullable
+    value_or_non_nullable_fail.cpp
+    "no matching function for call to"
+)
+
+fvo_add_compile_fail_test(
+    fvo.fail.reference_or_non_nullable
+    reference_or_non_nullable_fail.cpp
+    "no matching function for call to"
+)
+
+fvo_add_compile_fail_test(
+    fvo.fail.or_invoke_non_nullable
+    or_invoke_non_nullable_fail.cpp
+    "no matching function for call to"
+)
