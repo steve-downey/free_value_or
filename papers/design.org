@@ -104,7 +104,16 @@ Position: stays with P1255 ranges work. Say so explicitly in R0.
 * Mechanics
 
 - Audience LEWG, target C++29.
-- Build: make (latexmk -pdflua -shell-escape, minted, Source Serif/Sans
-  Pro fonts). wg21.bib fetched via make curl-bib.
+- Build: make (latexmk -pdflua -shell-escape, minted). wg21.bib fetched
+  via make curl-bib.
+- LaTeX infrastructure (common.tex, stdtex/, abstract.bst) comes from the
+  [[https://github.com/steve-downey/wg21-latex][wg21-latex]] subtree at papers/wg21-latex, resolved via TEXINPUTS and
+  BSTINPUTS in latexmkrc. Full history, no squash. stdtex/ must match the
+  standard draft sources — fix infrastructure in the subtree and send it
+  upstream, never fork the macros locally.
+  - update: git subtree pull --prefix=papers/wg21-latex \
+      git@github.com:steve-downey/wg21-latex.git main
+  - send fixes back: git subtree push --prefix=papers/wg21-latex \
+      git@github.com:steve-downey/wg21-latex.git <branch>
 - Namespace rename smd::free_value_or -> beman::free_value_or (the "great
   renaming") before upstreaming; paper text uses std:: spellings.
