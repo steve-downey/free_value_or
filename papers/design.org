@@ -85,6 +85,21 @@ C++23 floor: reference_constructs_from_temporary_v.
   static_assert fires (handoff 004).
 - No header bugs found through step 03 (26/26 tests green).
 
+Final-suite findings (steps 04-07, 59/59 green, plan complete):
+- SURPRISE (handoff 005): common_reference of unrelated lvalue refs need
+  not be a reference. common_reference_t<int&, long&> = long;
+  common_reference_t<string&, const char(&)[N]> = string. reference_or
+  then compiles, guards vacuous (R not a reference), returns a prvalue —
+  value_or behavior under a reference_or name. New LEWG question in the
+  paper: mandate R is a reference type?
+- SURPRISE (handoff 006): or_invoke + reference-returning invocable
+  decays via common_type → value. Lazy-reference quadrant of the family
+  is empty; paper says deliberately so, reference_invoke composable later.
+- Confirmed: all three constexpr in constant evaluation (optional,
+  expected, raw pointers); optional<T&> rebinding semantics tracked by
+  value_or/reference_or; negative-compile harness self-validated by
+  mutating the expected-diagnostic regex.
+
 * Open questions (each needs a paper section, most need a poll)
 
 ** static_assert vs constraint for the dangling guards

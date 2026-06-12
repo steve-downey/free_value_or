@@ -340,14 +340,28 @@ produced. Performance-sensitive consuming uses retain the member functions.
 \section{\tcode{reference_or}}
 
 \tcode{reference_or} computes
-\tcode{common_reference_t<iter_reference_t<T>, U\&\&>} and returns it,
-binding the result to the contained value or to the alternative without
-copying either. Const qualification flows through the computation as it
-should: a \tcode{const optional<int>} or a \tcode{const int\&} alternative
-each force \tcode{const int\&} as the result; an \tcode{int*} with an
-\tcode{int\&} alternative yields \tcode{int\&}, writable through, and
-mutation through the result reaches the original object --- the function
-introduces no copies.
+\tcode{common_reference_t<iter_reference_t<T>, U\&\&>} and, when that type
+is a reference, binds the result to the contained value or to the
+alternative without copying either. Const qualification flows through the
+computation as it should: a \tcode{const optional<int>} or a \tcode{const
+int\&} alternative each force \tcode{const int\&} as the result; an
+\tcode{int*} with an \tcode{int\&} alternative yields \tcode{int\&},
+writable through, and mutation through the result reaches the original
+object --- the function introduces no copies.
+
+Testing surfaced a subtlety that deserves to be stated plainly: the common
+reference of two unrelated lvalue references need not be a reference.
+\tcode{common_reference_t<int\&, long\&>} is \tcode{long}, and
+\tcode{common_reference_t<string\&, const char(\&)[2]>} is \tcode{string};
+in such calls \tcode{reference_or} compiles, the dangling guards are
+vacuously satisfied --- \tcode{R} is not a reference, so nothing can bind
+to a temporary --- and the function quietly returns a prvalue, behaving
+exactly like \tcode{value_or}. No lifetime hazard arises, and this is the
+conditional expression's own behavior faithfully reproduced; but a caller
+who wrote \tcode{reference_or} for its reference semantics receives a copy.
+LEWG guidance is sought on whether \tcode{reference_or} should additionally
+mandate that the computed type \emph{is} a reference type, making the
+degenerate calls ill-formed and steering them to \tcode{value_or}.
 
 The danger of returning references is binding one to a temporary, and that
 is now statically detectable. The implementation carries two guards:
@@ -396,6 +410,17 @@ is called only when needed. \tcode{or_invoke(m, f)} returns
 \tcode{f()} converted to \tcode{R} otherwise, with
 \tcode{R = common_type_t<iter_reference_t<T>, invoke_result_t<I>>}; the
 invocable is not called on the engaged path.
+
+Because \tcode{or_invoke} uses \tcode{common_type}, an invocable returning
+a reference still produces a value: \tcode{common_type_t<int\&, int\&>} is
+\tcode{int}. The family therefore covers three of four quadrants --- eager
+value (\tcode{value_or}), eager reference (\tcode{reference_or}), lazy
+value (\tcode{or_invoke}) --- and deliberately omits the fourth. A lazy
+reference-returning form is specifiable (the dangling guard would apply to
+\tcode{invoke_result_t<I>} just as it does to \tcode{U}), but the use case
+--- a reference alternative that is expensive to \emph{name}, rather than
+to construct --- is thin, and it is not proposed. If LEWG wants the
+quadrant filled, it composes naturally as \tcode{reference_invoke} later.
 
 The obvious name, \tcode{or_else}, is taken:
 \tcode{std::optional::or_else} returns an \tcode{optional}, re-wrapping the
@@ -567,7 +592,21 @@ eagerness of \tcode{value_or}; and negative-compilation cases for both
 concept violations and dangling rejection. Reference identity and mutation
 round-trips confirm that \tcode{reference_or} introduces no copies:
 writes through its result reach the contained object when engaged and the
-alternative when not.
+alternative when not. The \tcode{optional<T\&>} suite additionally verifies
+rebinding semantics: after an \tcode{optional<T\&>} is rebound to a new
+referent, \tcode{value_or} produces and \tcode{reference_or} refers to the
+new referent, and disengaging falls through to the alternative.
+
+The suite --- 59 tests at this writing, all green --- found no defects in
+the implementation. It did surface two behaviors reported in Design: that
+\tcode{reference_or} degrades to a prvalue result when the common
+reference of unrelated types is not a reference type, with the dangling
+guards then vacuous; and that \tcode{or_invoke}'s use of
+\tcode{common_type} decays reference-returning invocables to values,
+leaving the lazy-reference quadrant of the family deliberately empty. The
+negative-compilation harness was itself validated: each WILL-FAIL
+translation unit was checked to fail for the required reason by mutating
+its expected-diagnostic pattern and observing the test fail.
 
 Verified \tcode{common_reference} results for \tcode{reference_or},
 showing const propagation:
@@ -635,6 +674,9 @@ Open questions on which LEWG guidance is sought before wording review:
 \begin{itemize}
 \item whether the dangling guards of \tcode{reference_or} are
   \emph{Mandates} (the proposed default) or \emph{Constraints};
+\item whether \tcode{reference_or} should mandate that the computed common
+  reference is a reference type, rather than silently degrading to a
+  prvalue result for unrelated types (see Design);
 \item the names \tcode{reference_or} (vs.\ \tcode{ref_or}) and
   \tcode{or_invoke} (vs.\ \tcode{value_or_else}, \tcode{or_eval});
 \item whether the concept requires \tcode{is_object_v} of the referent,
