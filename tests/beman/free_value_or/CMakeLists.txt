@@ -163,6 +163,11 @@ fvo_add_test(beman.free_value_or.tests.or_construct_behavior or_construct_behavi
 fvo_add_test(beman.free_value_or.tests.or_construct_construct or_construct_construct.test.cpp)
 
 # ---------------------------------------------------------------------------
+# or_construct Step 03: laziness — fallback constructed only when disengaged
+# ---------------------------------------------------------------------------
+fvo_add_test(beman.free_value_or.tests.or_construct_laziness or_construct_laziness.test.cpp)
+
+# ---------------------------------------------------------------------------
 # Step 07: optional<T&> tests using beman::optional (vendored).
 # FVO_HAS_OPTIONAL_REF=1 is injected by fvo_add_test, so the feature-gated
 # sections are active.  std::optional<T&> (P2988) is NOT available on this
