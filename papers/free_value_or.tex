@@ -25,9 +25,12 @@
 \end{flushright}
 
 \begin{abstract}
-  A set of free functions implementing the pattern of optional and expected
-  \tcode{value_or} as free functions that produce the correct common reference
-  type that was unfixable for \tcode{std::optional::value_or}.
+  This paper proposes free function overloads of \tcode{value_or} --- and the
+  related \tcode{reference_or}, \tcode{or_invoke}, and \tcode{or_construct}
+  --- over any nullable type, such as \tcode{std::optional},
+  \tcode{std::expected}, and pointers to objects. They compute the type of the
+  result correctly, via \tcode{common_type} and \tcode{common_reference}, as
+  the member \tcode{std::optional::value_or} could not.
 \end{abstract}
 
 \tableofcontents*
@@ -332,9 +335,9 @@ of \tcode{m ? *m : u}, not of \tcode{m ? *m : T(u)}.
 
 As specified, dereference of the nullable is always performed on an lvalue:
 \tcode{iter_reference_t} is computed from \tcode{T\&}, and the engaged path
-returns \tcode{static_cast<R>(*m)}. A consequence worth stating plainly is
-that an rvalue nullable does \emph{not} move its payload out;
-\tcode{value_or(std::move(opt), u)} copies the contained value where
+returns \tcode{static_cast<R>(*m)}. An rvalue nullable does \emph{not} move
+its payload out: \tcode{value_or(std::move(opt), u)} copies the contained
+value where
 \tcode{std::move(opt).value_or(u)} would move it. The functions observe;
 they do not consume.
 
@@ -360,7 +363,7 @@ int\&} alternative each force \tcode{const int\&} as the result; an
 writable through, and mutation through the result reaches the original
 object --- the function introduces no copies.
 
-Testing surfaced a subtlety that deserves to be stated plainly: the common
+Testing surfaced a subtlety: the common
 reference of two unrelated lvalue references need not be a reference.
 \tcode{common_reference_t<int\&, long\&>} is \tcode{long}, and
 \tcode{common_reference_t<string\&, const char(\&)[2]>} is \tcode{string};
