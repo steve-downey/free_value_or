@@ -203,3 +203,10 @@ fvo_add_test(beman.free_value_or.tests.or_construct_constexpr or_construct_const
 # provides the reference-optional support instead.
 # ---------------------------------------------------------------------------
 fvo_add_test(beman.free_value_or.tests.optional_ref optional_ref.test.cpp)
+
+# ---------------------------------------------------------------------------
+# or_construct Step 06: optional<T&> coverage + finalize
+# or_construct with fvo_opt::optional<int&> and optional<string&>.
+# Proofs that default R = int (value, not reference) for optional<int&>.
+# ---------------------------------------------------------------------------
+fvo_add_test(beman.free_value_or.tests.or_construct_optional_ref or_construct_optional_ref.test.cpp)
