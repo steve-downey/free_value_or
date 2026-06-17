@@ -58,9 +58,9 @@ static_assert(!fvo::nullable<std::string>);
 static_assert(!fvo::nullable<std::vector<int>>);
 
 // Anti-model types from test_types.hpp
-static_assert(!fvo::nullable<bool_only>);        // operator bool, no operator*
-static_assert(!fvo::nullable<deref_only>);       // operator*, no contextual bool
-static_assert(!fvo::nullable<nonconst_nullable>);// both operators are non-const
+static_assert(!fvo::nullable<bool_only>);         // operator bool, no operator*
+static_assert(!fvo::nullable<deref_only>);        // operator*, no contextual bool
+static_assert(!fvo::nullable<nonconst_nullable>); // both operators are non-const
 
 // void and nullptr_t: no operator bool / no operator*
 static_assert(!fvo::nullable<void>);

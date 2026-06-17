@@ -42,10 +42,11 @@ static_assert(fvo::or_construct<long>(std::optional<int>{}, 9L) == 9L);
 // ---------------------------------------------------------------------------
 
 struct Sum {
-    int total = 0;
+    int total       = 0;
     constexpr Sum() = default;
     constexpr Sum(std::initializer_list<int> il) {
-        for (int x : il) total += x;
+        for (int x : il)
+            total += x;
     }
     constexpr bool operator==(const Sum&) const = default;
 };
@@ -58,6 +59,4 @@ static_assert(fvo::or_construct(std::optional<Sum>{Sum{}}, {1, 2, 3}) == Sum{});
 // ---------------------------------------------------------------------------
 // Catch2 entry: the real proof is the static_asserts above.
 // ---------------------------------------------------------------------------
-TEST_CASE("or_construct constexpr static_asserts compile and hold", "[or_construct][constexpr]") {
-    SUCCEED();
-}
+TEST_CASE("or_construct constexpr static_asserts compile and hold", "[or_construct][constexpr]") { SUCCEED(); }

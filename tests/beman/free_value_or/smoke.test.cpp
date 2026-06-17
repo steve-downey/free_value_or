@@ -14,8 +14,8 @@ TEST_CASE("smoke: value_or with optional<int>", "[smoke]") {
 
 #if FVO_HAS_OPTIONAL_REF
 TEST_CASE("smoke: value_or with beman::optional<int&>", "[smoke][optional_ref]") {
-    int x        = 42;
-    int fallback = 0;
+    int                     x        = 42;
+    int                     fallback = 0;
     fvo_opt::optional<int&> engaged{x};
     fvo_opt::optional<int&> disengaged{};
 

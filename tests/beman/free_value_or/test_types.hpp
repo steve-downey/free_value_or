@@ -10,7 +10,7 @@
 
 // Rename-proofing alias: all tests use fvo:: rather than smd:: inline.
 // When the library is renamed to beman::free_value_or, only this line changes.
-namespace fvo = smd::free_value_or;  // rename point: smd:: -> beman::
+namespace fvo = smd::free_value_or; // rename point: smd:: -> beman::
 
 // ---------------------------------------------------------------------------
 // Feature detection for optional<T&> (P2988).
@@ -20,15 +20,15 @@ namespace fvo = smd::free_value_or;  // rename point: smd:: -> beman::
 // Falls back to __cpp_lib_optional for standard-library support.
 // ---------------------------------------------------------------------------
 #ifndef FVO_HAS_OPTIONAL_REF
-#if defined(__cpp_lib_optional) && __cpp_lib_optional >= 202406L
-#define FVO_HAS_OPTIONAL_REF 1
-#else
-#define FVO_HAS_OPTIONAL_REF 0
-#endif
-#endif  // FVO_HAS_OPTIONAL_REF
+    #if defined(__cpp_lib_optional) && __cpp_lib_optional >= 202406L
+        #define FVO_HAS_OPTIONAL_REF 1
+    #else
+        #define FVO_HAS_OPTIONAL_REF 0
+    #endif
+#endif // FVO_HAS_OPTIONAL_REF
 
 #if FVO_HAS_OPTIONAL_REF
-#include <beman/optional/optional.hpp>
+    #include <beman/optional/optional.hpp>
 // fvo_opt::optional<T&> is optional-with-reference-support, usable in Step 07.
 namespace fvo_opt = beman::optional;
 #endif
@@ -48,24 +48,24 @@ struct NullableFixture {
     static std::expected<T, int> exp_disengaged() { return std::unexpected(0); }
 
     // shared_ptr<T>
-    static std::shared_ptr<T> sptr_engaged(T val) {
-        return std::make_shared<T>(val);
-    }
+    static std::shared_ptr<T> sptr_engaged(T val) { return std::make_shared<T>(val); }
     static std::shared_ptr<T> sptr_disengaged() { return nullptr; }
 
     // unique_ptr<T>
-    static std::unique_ptr<T> uptr_engaged(T val) {
-        return std::make_unique<T>(val);
-    }
+    static std::unique_ptr<T> uptr_engaged(T val) { return std::make_unique<T>(val); }
     static std::unique_ptr<T> uptr_disengaged() { return nullptr; }
 };
 
 // Raw pointer helpers (non-owning; caller manages the pointee lifetime)
 template <class T>
-T* raw_engaged(T& obj) { return &obj; }
+T* raw_engaged(T& obj) {
+    return &obj;
+}
 
 template <class T>
-T* raw_disengaged() { return nullptr; }
+T* raw_disengaged() {
+    return nullptr;
+}
 
 // ---------------------------------------------------------------------------
 // Anti-model types: must NOT satisfy the nullable concept
@@ -78,16 +78,16 @@ struct bool_only {
 
 // Has operator* but no contextual bool conversion
 struct deref_only {
-    int value = 0;
+    int  value = 0;
     int& operator*() const { return const_cast<deref_only*>(this)->value; }
 };
 
 // Has operator bool and operator* but they are NON-CONST
 // The nullable concept checks on a 'const T', so this must NOT satisfy it.
 struct nonconst_nullable {
-    int value = 42;
+    int      value = 42;
     explicit operator bool() /* non-const */ { return true; }
-    int& operator*() /* non-const */ { return value; }
+    int&     operator*() /* non-const */ { return value; }
 };
 
-#endif  // FVO_TEST_TYPES_HPP
+#endif // FVO_TEST_TYPES_HPP

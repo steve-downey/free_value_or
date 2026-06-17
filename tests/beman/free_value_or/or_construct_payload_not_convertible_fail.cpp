@@ -8,6 +8,4 @@
 #include <optional>
 #include <string>
 
-void check() {
-    (void)smd::free_value_or::or_construct<int>(std::optional<std::string>{}, 0);
-}
+void check() { (void)smd::free_value_or::or_construct<int>(std::optional<std::string>{}, 0); }

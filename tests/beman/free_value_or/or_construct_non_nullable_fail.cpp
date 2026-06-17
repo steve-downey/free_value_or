@@ -3,6 +3,4 @@
 
 #include <beman/free_value_or/value_or.hpp>
 
-void check() {
-    (void)smd::free_value_or::or_construct(5, 3);
-}
+void check() { (void)smd::free_value_or::or_construct(5, 3); }

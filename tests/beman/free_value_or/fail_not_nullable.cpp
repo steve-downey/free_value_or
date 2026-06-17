@@ -3,7 +3,7 @@
 // Used by the fvo_add_compile_fail_test harness self-check in CMakeLists.txt.
 
 #include <beman/free_value_or/value_or.hpp>
-namespace fvo = smd::free_value_or;  // rename point: smd:: -> beman::
+namespace fvo = smd::free_value_or; // rename point: smd:: -> beman::
 
 void check() {
     int x = 42;

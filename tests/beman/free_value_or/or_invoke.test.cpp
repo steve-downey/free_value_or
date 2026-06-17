@@ -21,24 +21,18 @@
 // ==========================================================================
 
 // optional<int> + [] { return int; } → common_type<int&, int> = int
-static_assert(std::is_same_v<
-    decltype(fvo::or_invoke(std::declval<std::optional<int>&>(),
-                            std::declval<int(*)()>())),
-    int>);
+static_assert(
+    std::is_same_v<decltype(fvo::or_invoke(std::declval<std::optional<int>&>(), std::declval<int (*)()>())), int>);
 
 // optional<int> + [] { return long; } → common_type<int&, long> = long
-static_assert(std::is_same_v<
-    decltype(fvo::or_invoke(std::declval<std::optional<int>&>(),
-                            std::declval<long(*)()>())),
-    long>);
+static_assert(
+    std::is_same_v<decltype(fvo::or_invoke(std::declval<std::optional<int>&>(), std::declval<long (*)()>())), long>);
 
 // optional<int> + ref-returning invocable → invoke_result = int&,
 // common_type_t<int&, int&> = int (common_type decays references).
 // Contrast: reference_or uses common_reference_t which preserves references.
-static_assert(std::is_same_v<
-    decltype(fvo::or_invoke(std::declval<std::optional<int>&>(),
-                            std::declval<int&(*)()>())),
-    int>);
+static_assert(
+    std::is_same_v<decltype(fvo::or_invoke(std::declval<std::optional<int>&>(), std::declval<int& (*)()>())), int>);
 
 // ==========================================================================
 // Runtime: engaged → *m, disengaged → f()
@@ -48,7 +42,7 @@ TEST_CASE("or_invoke: optional<int> engaged and disengaged", "[or_invoke]") {
     auto engaged    = NullableFixture<int>::opt_engaged(42);
     auto disengaged = NullableFixture<int>::opt_disengaged();
 
-    CHECK(fvo::or_invoke(engaged,    [] { return 0; }) == 42);
+    CHECK(fvo::or_invoke(engaged, [] { return 0; }) == 42);
     CHECK(fvo::or_invoke(disengaged, [] { return 7; }) == 7);
 }
 
@@ -56,7 +50,7 @@ TEST_CASE("or_invoke: expected<int,int> engaged and disengaged", "[or_invoke]") 
     auto engaged    = NullableFixture<int>::exp_engaged(42);
     auto disengaged = NullableFixture<int>::exp_disengaged();
 
-    CHECK(fvo::or_invoke(engaged,    [] { return 0; }) == 42);
+    CHECK(fvo::or_invoke(engaged, [] { return 0; }) == 42);
     CHECK(fvo::or_invoke(disengaged, [] { return 7; }) == 7);
 }
 
@@ -65,7 +59,7 @@ TEST_CASE("or_invoke: int* engaged and disengaged", "[or_invoke]") {
     int* engaged    = raw_engaged<int>(obj);
     int* disengaged = raw_disengaged<int>();
 
-    CHECK(fvo::or_invoke(engaged,    [] { return 0; }) == 42);
+    CHECK(fvo::or_invoke(engaged, [] { return 0; }) == 42);
     CHECK(fvo::or_invoke(disengaged, [] { return 7; }) == 7);
 }
 
@@ -73,7 +67,7 @@ TEST_CASE("or_invoke: shared_ptr<int> engaged and disengaged", "[or_invoke]") {
     auto engaged    = NullableFixture<int>::sptr_engaged(42);
     auto disengaged = NullableFixture<int>::sptr_disengaged();
 
-    CHECK(fvo::or_invoke(engaged,    [] { return 0; }) == 42);
+    CHECK(fvo::or_invoke(engaged, [] { return 0; }) == 42);
     CHECK(fvo::or_invoke(disengaged, [] { return 7; }) == 7);
 }
 
@@ -90,21 +84,27 @@ TEST_CASE("or_invoke: unique_ptr<int> engaged and disengaged", "[or_invoke]") {
 // ==========================================================================
 
 TEST_CASE("or_invoke: laziness — invocable not called when engaged", "[or_invoke][laziness]") {
-    int call_count = 0;
-    auto f = [&] { ++call_count; return 99; };
+    int  call_count = 0;
+    auto f          = [&] {
+        ++call_count;
+        return 99;
+    };
 
     std::optional<int> engaged{42};
     (void)fvo::or_invoke(engaged, f);
-    CHECK(call_count == 0);  // NOT invoked when engaged
+    CHECK(call_count == 0); // NOT invoked when engaged
 }
 
 TEST_CASE("or_invoke: laziness — invocable called exactly once when disengaged", "[or_invoke][laziness]") {
-    int call_count = 0;
-    auto f = [&] { ++call_count; return 99; };
+    int  call_count = 0;
+    auto f          = [&] {
+        ++call_count;
+        return 99;
+    };
 
     std::optional<int> disengaged{};
     CHECK(fvo::or_invoke(disengaged, f) == 99);
-    CHECK(call_count == 1);  // invoked exactly once
+    CHECK(call_count == 1); // invoked exactly once
 }
 
 TEST_CASE("or_invoke: laziness — contrast with value_or eagerness", "[or_invoke][laziness]") {
@@ -115,13 +115,16 @@ TEST_CASE("or_invoke: laziness — contrast with value_or eagerness", "[or_invok
 
     std::optional<int> engaged{42};
 
-    auto lazy_f = [&] { ++or_invoke_count; return 0; };
+    auto lazy_f = [&] {
+        ++or_invoke_count;
+        return 0;
+    };
 
     fvo::or_invoke(engaged, lazy_f);
     fvo::value_or(engaged, (++value_or_count, 0));
 
-    CHECK(or_invoke_count == 0);  // lazy: not called
-    CHECK(value_or_count  == 1);  // eager: always evaluated
+    CHECK(or_invoke_count == 0); // lazy: not called
+    CHECK(value_or_count == 1);  // eager: always evaluated
 }
 
 // ==========================================================================
@@ -131,33 +134,48 @@ TEST_CASE("or_invoke: laziness — contrast with value_or eagerness", "[or_invok
 TEST_CASE("or_invoke: value categories of m", "[or_invoke]") {
     SECTION("lvalue engaged") {
         std::optional<int> m{42};
-        int count = 0;
-        auto f = [&] { ++count; return 0; };
+        int                count = 0;
+        auto               f     = [&] {
+            ++count;
+            return 0;
+        };
         CHECK(fvo::or_invoke(m, f) == 42);
         CHECK(count == 0);
     }
     SECTION("const lvalue engaged") {
         const std::optional<int> m{42};
-        int count = 0;
-        auto f = [&] { ++count; return 0; };
+        int                      count = 0;
+        auto                     f     = [&] {
+            ++count;
+            return 0;
+        };
         CHECK(fvo::or_invoke(m, f) == 42);
         CHECK(count == 0);
     }
     SECTION("rvalue engaged") {
-        int count = 0;
-        auto f = [&] { ++count; return 0; };
+        int  count = 0;
+        auto f     = [&] {
+            ++count;
+            return 0;
+        };
         CHECK(fvo::or_invoke(std::optional<int>{42}, f) == 42);
         CHECK(count == 0);
     }
     SECTION("lvalue disengaged") {
         std::optional<int> m{};
-        int count = 0;
-        CHECK(fvo::or_invoke(m, [&] { ++count; return 99; }) == 99);
+        int                count = 0;
+        CHECK(fvo::or_invoke(m, [&] {
+                  ++count;
+                  return 99;
+              }) == 99);
         CHECK(count == 1);
     }
     SECTION("rvalue disengaged") {
         int count = 0;
-        CHECK(fvo::or_invoke(std::optional<int>{}, [&] { ++count; return 99; }) == 99);
+        CHECK(fvo::or_invoke(std::optional<int>{}, [&] {
+                  ++count;
+                  return 99;
+              }) == 99);
         CHECK(count == 1);
     }
 }
@@ -174,7 +192,7 @@ TEST_CASE("or_invoke: invocable returning long promotes result to long", "[or_in
 
     static_assert(std::is_same_v<decltype(fvo::or_invoke(engaged, f)), long>);
 
-    CHECK(fvo::or_invoke(engaged,    f) == 42L);
+    CHECK(fvo::or_invoke(engaged, f) == 42L);
     CHECK(fvo::or_invoke(disengaged, f) == 99L);
 }
 
@@ -187,14 +205,12 @@ TEST_CASE("or_invoke: reference-returning invocable yields value type", "[or_inv
     // invoke_result_t of this lambda is int&, but common_type_t<int&, int&> = int
     auto ref_f = []() -> int& { return fallback_val; };
 
-    static_assert(std::is_same_v<decltype(fvo::or_invoke(std::declval<std::optional<int>&>(),
-                                                          ref_f)),
-                                  int>);
+    static_assert(std::is_same_v<decltype(fvo::or_invoke(std::declval<std::optional<int>&>(), ref_f)), int>);
 
     std::optional<int> engaged{42};
     std::optional<int> disengaged{};
 
-    CHECK(fvo::or_invoke(engaged,    ref_f) == 42);
+    CHECK(fvo::or_invoke(engaged, ref_f) == 42);
     CHECK(fvo::or_invoke(disengaged, ref_f) == 99);
     // Result is a copy (int), not a reference — modifying fallback_val after the
     // call would not affect a stored result (value semantics, unlike reference_or).
@@ -206,7 +222,7 @@ TEST_CASE("or_invoke: reference-returning invocable yields value type", "[or_inv
 
 TEST_CASE("or_invoke: mutable lambda (stateful invocable)", "[or_invoke]") {
     // Mutable lambda has non-const operator(); or_invoke must forward I&& correctly.
-    int  internal = 0;
+    int  internal  = 0;
     auto mutable_f = [internal]() mutable { return ++internal; };
 
     std::optional<int> disengaged{};

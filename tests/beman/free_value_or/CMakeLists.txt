@@ -17,10 +17,8 @@ function(fvo_add_test name source)
     add_executable(${name})
     target_sources(${name} PRIVATE ${source})
     target_link_libraries(
-        ${name} PRIVATE
-        beman::free_value_or
-        beman::optional
-        Catch2::Catch2WithMain
+        ${name}
+        PRIVATE beman::free_value_or beman::optional Catch2::Catch2WithMain
     )
     target_compile_features(${name} PRIVATE cxx_std_23)
     target_compile_definitions(${name} PRIVATE FVO_HAS_OPTIONAL_REF=1)
@@ -43,7 +41,10 @@ function(fvo_add_compile_fail_test test_name source regex)
 
     add_library(${tgt_name} OBJECT)
     target_sources(${tgt_name} PRIVATE ${source})
-    target_link_libraries(${tgt_name} PRIVATE beman::free_value_or beman::optional)
+    target_link_libraries(
+        ${tgt_name}
+        PRIVATE beman::free_value_or beman::optional
+    )
     target_compile_features(${tgt_name} PRIVATE cxx_std_23)
     target_compile_definitions(${tgt_name} PRIVATE FVO_HAS_OPTIONAL_REF=1)
     target_include_directories(${tgt_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -54,8 +55,9 @@ function(fvo_add_compile_fail_test test_name source regex)
 
     add_test(
         NAME ${test_name}
-        COMMAND ${CMAKE_COMMAND} --build "${CMAKE_BINARY_DIR}" --target ${tgt_name}
-                --config $<CONFIGURATION>
+        COMMAND
+            ${CMAKE_COMMAND} --build "${CMAKE_BINARY_DIR}" --target ${tgt_name}
+            --config $<CONFIGURATION>
     )
     set_tests_properties(
         ${test_name}

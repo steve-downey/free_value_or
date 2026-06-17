@@ -5,6 +5,4 @@
 #include <beman/free_value_or/value_or.hpp>
 #include <string>
 
-void check() {
-    (void)smd::free_value_or::or_construct(std::string{"a"}, {1, 2, 3});
-}
+void check() { (void)smd::free_value_or::or_construct(std::string{"a"}, {1, 2, 3}); }

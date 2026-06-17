@@ -23,8 +23,8 @@
 // ==========================================================================
 
 struct Tracked {
-    static inline int ctor_count = 0;
-    int v = 0;
+    inline static int ctor_count = 0;
+    int               v          = 0;
 
     Tracked() { ++ctor_count; }
     explicit Tracked(int x) : v(x) { ++ctor_count; }
@@ -46,7 +46,7 @@ TEST_CASE("or_construct pack: fallback NOT constructed when engaged", "[or_const
         std::optional<Tracked> m{std::in_place, 99};
         Tracked::reset();
         auto r = fvo::or_construct(m);
-        CHECK(Tracked::ctor_count == 0);  // fallback default-ctor never ran
+        CHECK(Tracked::ctor_count == 0); // fallback default-ctor never ran
         CHECK(r.v == 99);
     }
 
@@ -54,7 +54,7 @@ TEST_CASE("or_construct pack: fallback NOT constructed when engaged", "[or_const
         std::optional<Tracked> m{std::in_place, 99};
         Tracked::reset();
         auto r = fvo::or_construct(m, 7);
-        CHECK(Tracked::ctor_count == 0);  // fallback Tracked(int) never ran
+        CHECK(Tracked::ctor_count == 0); // fallback Tracked(int) never ran
         CHECK(r.v == 99);
     }
 }
@@ -85,7 +85,7 @@ TEST_CASE("or_construct init-list: fallback NOT constructed when engaged", "[or_
     std::optional<Tracked> m{std::in_place, 99};
     Tracked::reset();
     auto r = fvo::or_construct(m, {1, 2, 3});
-    CHECK(Tracked::ctor_count == 0);  // init-list ctor never ran
+    CHECK(Tracked::ctor_count == 0); // init-list ctor never ran
     CHECK(r.v == 99);
 }
 
@@ -94,7 +94,7 @@ TEST_CASE("or_construct init-list: fallback constructed exactly once when diseng
     Tracked::reset();
     auto r = fvo::or_construct(m, {1, 2, 3});
     CHECK(Tracked::ctor_count == 1);
-    CHECK(r.v == 3);  // il.size() == 3
+    CHECK(r.v == 3); // il.size() == 3
 }
 
 // ==========================================================================
@@ -121,7 +121,7 @@ TEST_CASE("or_construct laziness: expected<Tracked,int>", "[or_construct][lazine
 
 TEST_CASE("or_construct laziness: raw pointer", "[or_construct][laziness]") {
     SECTION("non-null pointer — fallback NOT constructed") {
-        Tracked held{};  // this construction does not count (reset follows)
+        Tracked  held{}; // this construction does not count (reset follows)
         Tracked* p = &held;
         Tracked::reset();
         auto r = fvo::or_construct(p, 7);

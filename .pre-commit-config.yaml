@@ -39,6 +39,7 @@ repos:
     rev: v2.4.2
     hooks:
       - id: codespell
+        exclude: ^papers/
 
   #   # Beman Standard checking via beman-tidy
   # - repo: https://github.com/bemanproject/beman-tidy
@@ -46,4 +47,4 @@ repos:
   #   hooks:
   #   - id: beman-tidy
 
-exclude: 'template/|copier/|infra/|port/'
+exclude: 'template/|copier/|infra/|port/|vendored/'
