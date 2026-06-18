@@ -106,7 +106,6 @@ ctest --test-dir build
 The file `./lockfile.json` configures the list of dependencies and versions that will be
 acquired by FetchContent.
 
-
 ## Project-specific configure arguments
 
 Project-specific options are prefixed with `BEMAN_FREE_VALUE_OR`.

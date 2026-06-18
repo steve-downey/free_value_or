@@ -1,5 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 # Standard answers and internal state managed by Copier
-_commit: v2.4.0-39-gc3c230c
+_commit: v2.4.1-14-g66b1f43
 _src_path: ~/src/steve-downey/exemplar/copier
 description: Free Function constrained `value_or`
 maintainer: steve-downey

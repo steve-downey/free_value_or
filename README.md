@@ -1,3 +1,29 @@
+# beman.free_value_or: Free Function constrained `value_or`
+
+<!--
+SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+-->
+
+<!-- markdownlint-disable line-length -->
+[![Library Status](https://raw.githubusercontent.com/bemanproject/beman/refs/heads/main/images/badges/beman_badge-beman_library_under_development.svg)](https://github.com/bemanproject/beman/blob/main/docs/beman_library_maturity_model.md#the-beman-library-maturity-model)
+[![Continuous Integration Tests](https://github.com/bemanproject/free_value_or/actions/workflows/ci_tests.yml/badge.svg)](https://github.com/bemanproject/free_value_or/actions/workflows/ci_tests.yml)
+[![Lint Check (pre-commit)](https://github.com/bemanproject/free_value_or/actions/workflows/pre-commit-check.yml/badge.svg)](https://github.com/bemanproject/free_value_or/actions/workflows/pre-commit-check.yml)
+[![Coverage](https://coveralls.io/repos/github/bemanproject/free_value_or/badge.svg?branch=main)](https://coveralls.io/github/bemanproject/free_value_or?branch=main)
+![Standard Target](https://github.com/bemanproject/beman/blob/main/images/badges/cpp29.svg)
+<!-- markdownlint-restore -->
+
+`beman.free_value_or` is (... TODO: description).
+
+**Implements**: `std::todo` proposed in [TODO (PnnnnRr)](https://wg21.link/PnnnnRr).
+
+**Status**: [Under development and not yet ready for production use.](https://github.com/bemanproject/beman/blob/main/docs/beman_library_maturity_model.md#under-development-and-not-yet-ready-for-production-use)
+
+## License
+
+`beman.free_value_or` is licensed under the Apache License v2.0 with LLVM Exceptions.
+
+## Usage
+
 TODO
 
 Full runnable examples can be found in [`examples/`](examples/).
@@ -122,9 +148,3 @@ include an appropriate `beman.free_value_or` header from your source code.
 ```c++
 #include <beman/free_value_or/free_value_or.hpp>
 ```
-
-> [!NOTE]
->
-> `beman.free_value_or` headers are to be included with the `beman/free_value_or/` prefix.
-> Altering include search paths to spell the include target another way (e.g.
-> `#include <free_value_or.hpp>`) is unsupported.
