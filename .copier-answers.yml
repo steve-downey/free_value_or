@@ -1,6 +1,6 @@
 # Standard answers and internal state managed by Copier
 _commit: v2.4.0-39-gc3c230c
-_src_path: /home/sdowney/src/exemplar/copier/
+_src_path: ~/src/steve-downey/exemplar/copier
 description: Free Function constrained `value_or`
 maintainer: steve-downey
 minimum_cpp_build_version: '20'
