@@ -29,15 +29,15 @@ struct is_unexpected_specialization : std::false_type {};
 template <class E>
 struct is_unexpected_specialization<unexpected<E>> : std::true_type {};
 
-// reference_constructs_from_temporary / reference_converts_from_temporary
+// reference_constructs_from_temporary — the only dangling-detection trait this library uses.
+// (The sibling reference_converts_from_temporary is intentionally not defined: it is unused, and
+// its builtin __reference_converts_from_temporary is absent on Clang 18, which has only the
+// __reference_constructs_from_temporary builtin.)
 #ifdef __cpp_lib_reference_from_temporary
 using std::reference_constructs_from_temporary_v;
-using std::reference_converts_from_temporary_v;
 #elif __has_builtin(__reference_constructs_from_temporary)
 template <class T, class U>
 inline constexpr bool reference_constructs_from_temporary_v = __reference_constructs_from_temporary(T, U);
-template <class T, class U>
-inline constexpr bool reference_converts_from_temporary_v = __reference_converts_from_temporary(T, U);
 #endif
 
 } // namespace detail
