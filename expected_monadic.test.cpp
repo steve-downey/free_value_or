@@ -1,20 +1,15 @@
 // tests/beman/expected/expected_monadic.test.cpp                     -*-C++-*-
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-#include <beman/expected/expected.hpp>
-#include <beman/expected/expected.hpp>
+#include "test_expected.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <functional>
 #include <string>
+#include <utility>
 
-#ifndef BEMAN_EXPECTED_TEST_STD
-using namespace beman::expected;
-#else
-    #include <expected>
-using namespace std;
-#endif
+using namespace test_ns;
 
 // ---------------------------------------------------------------------------
 // and_then

@@ -1,8 +1,7 @@
 // beman/expected/expected.test.cpp                                 -*-C++-*-
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-#include <beman/expected/expected.hpp>
-#include <beman/expected/expected.hpp> // ensure idempotent header
+#include "test_expected.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -12,7 +11,7 @@
 #include <utility>
 #include <vector>
 
-namespace expt = beman::expected;
+namespace expt = test_ns;
 
 // =============================================================================
 // Helper types at namespace scope (needed for static_assert outside functions)
@@ -517,7 +516,11 @@ TEST_CASE("expected: value() throw catchable as std::exception", "[ExpectedTest]
         e.value();
         FAIL("should have thrown");
     } catch (const std::exception& ex) {
+        // what() is an implementation-defined NTBS; exact text is beman-specific.
+        CHECK(ex.what() != nullptr);
+#ifndef BEMAN_EXPECTED_TEST_STD
         CHECK(std::string_view(ex.what()) == "bad expected access");
+#endif
     }
 }
 
@@ -527,7 +530,10 @@ TEST_CASE("expected: value() throw catchable as bad_expected_access<void>", "[Ex
         e.value();
         FAIL("should have thrown");
     } catch (const expt::bad_expected_access<void>& ex) {
+        CHECK(ex.what() != nullptr);
+#ifndef BEMAN_EXPECTED_TEST_STD
         CHECK(std::string_view(ex.what()) == "bad expected access");
+#endif
     }
 }
 

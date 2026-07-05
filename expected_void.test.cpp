@@ -1,8 +1,7 @@
 // tests/beman/expected/expected_void.test.cpp                         -*-C++-*-
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-#include <beman/expected/expected.hpp>
-#include <beman/expected/expected.hpp> // idempotence check
+#include "test_expected.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -11,10 +10,10 @@
 #include <utility>
 #include <vector>
 
-using beman::expected::bad_expected_access;
-using beman::expected::expected;
-using beman::expected::unexpect;
-using beman::expected::unexpected;
+using test_ns::bad_expected_access;
+using test_ns::expected;
+using test_ns::unexpect;
+using test_ns::unexpected;
 
 // =============================================================================
 // [expected.void.general] Ill-formed instantiation constraints
