@@ -5,6 +5,7 @@
 
 #ifndef BEMAN_EXPECTED_INCLUDED_FROM_INTERFACE_UNIT
     #include <initializer_list>
+    #include <memory>
     #include <type_traits>
     #include <utility>
 #endif
@@ -27,6 +28,18 @@ template <class T>
 struct is_unexpected_specialization : std::false_type {};
 template <class E>
 struct is_unexpected_specialization<unexpected<E>> : std::true_type {};
+
+// reference_constructs_from_temporary / reference_converts_from_temporary
+#ifdef __cpp_lib_reference_from_temporary
+using std::reference_constructs_from_temporary_v;
+using std::reference_converts_from_temporary_v;
+#elif __has_builtin(__reference_constructs_from_temporary)
+template <class T, class U>
+inline constexpr bool reference_constructs_from_temporary_v = __reference_constructs_from_temporary(T, U);
+template <class T, class U>
+inline constexpr bool reference_converts_from_temporary_v = __reference_converts_from_temporary(T, U);
+#endif
+
 } // namespace detail
 
 // [expected.unexpected]
@@ -91,6 +104,76 @@ class unexpected {
 
 template <class E>
 unexpected(E) -> unexpected<E>;
+
+// [expected.unexpected], partial specialization for reference E
+// Stores a pointer to the referenced object; keeps expected<> from needing a
+// separate set of specializations just to hold a reference error type.
+template <class E>
+class unexpected<E&> {
+    static_assert(std::is_object_v<E>,
+                  "unexpected<E&>: referenced type must be an object type (not void, reference, or function)");
+    static_assert(!std::is_array_v<E>, "unexpected<E&>: referenced type must not be an array type");
+    static_assert(!detail::is_unexpected_specialization<std::remove_cv_t<E>>::value,
+                  "unexpected<E&>: referenced type must not be a specialization of unexpected");
+    // Deliberately no cv-qualification static_assert: unlike the primary template, the referenced
+    // type may be cv-qualified (e.g. unexpected<const int&>).
+
+  public:
+    constexpr unexpected(const unexpected&) = default;
+    constexpr unexpected(unexpected&&)      = default;
+
+    // Binds E& directly to the referenced object; deleted below when G would bind to a temporary.
+    template <class G = E>
+        requires(!std::is_same_v<std::remove_cvref_t<G>, unexpected> &&
+                 !std::is_same_v<std::remove_cvref_t<G>, std::in_place_t> && std::is_constructible_v<E&, G&&> &&
+                 !detail::reference_constructs_from_temporary_v<E&, G>)
+    constexpr explicit unexpected(G&& e) noexcept
+        : ptr_(std::addressof(static_cast<E&>(std::forward<G>(e)))) {}
+
+    // Deleted: binding would dangle (G materializes a temporary)
+    template <class G>
+        requires(detail::reference_constructs_from_temporary_v<E&, G>)
+    constexpr unexpected(G&&) = delete;
+
+    // Deleted catch-all: neither constructible nor a dangling case
+    template <class G>
+        requires(!std::is_same_v<std::remove_cvref_t<G>, unexpected> &&
+                 !std::is_same_v<std::remove_cvref_t<G>, std::in_place_t> && !std::is_constructible_v<E&, G&&> &&
+                 !detail::reference_constructs_from_temporary_v<E&, G>)
+    constexpr unexpected(G&&) = delete;
+
+    // Single-argument in_place_t overload — lets expected's uniform
+    // construct_at(addressof(unex_), std::in_place, args...) pattern work whether E is a
+    // reference or not. Naturally restricted to arity 1: there is no variadic overload here,
+    // and expected only ever calls this when is_constructible_v<E&, Args...> already holds.
+    template <class G = E>
+        requires(std::is_constructible_v<E&, G&&> && !detail::reference_constructs_from_temporary_v<E&, G>)
+    constexpr explicit unexpected(std::in_place_t, G&& e) noexcept
+        : ptr_(std::addressof(static_cast<E&>(std::forward<G>(e)))) {}
+
+    template <class G>
+        requires(detail::reference_constructs_from_temporary_v<E&, G>)
+    constexpr unexpected(std::in_place_t, G&&) = delete;
+
+    constexpr unexpected& operator=(const unexpected&) = default;
+    constexpr unexpected& operator=(unexpected&&)      = default;
+
+    // Single overload — shallow-const, matching expected<T&,E&>'s existing error() style:
+    // there is nothing to move out of a pointer to an external object.
+    constexpr E& error() const noexcept { return *ptr_; }
+
+    constexpr void swap(unexpected& other) noexcept { std::swap(ptr_, other.ptr_); }
+
+    template <class E2>
+    friend constexpr bool operator==(const unexpected& x, const unexpected<E2>& y) {
+        return *x.ptr_ == y.error();
+    }
+
+    friend constexpr void swap(unexpected& x, unexpected& y) noexcept { x.swap(y); }
+
+  private:
+    E* ptr_;
+};
 
 } // namespace expected
 } // namespace beman
