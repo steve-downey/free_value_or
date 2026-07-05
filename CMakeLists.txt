@@ -15,6 +15,7 @@ target_sources(
         expected_trivial.test.cpp
         expected_monadic_constraints.test.cpp
         expected_ref_e.test.cpp
+        expected_void_ref_e.test.cpp
         todo.test.cpp
 )
 target_link_libraries(
@@ -74,8 +75,14 @@ add_fail_test(expected_ref_e_construct_from_unexpected_fail expected_ref_e_const
 add_fail_test(expected_emplace_throwing_fail expected_emplace_throwing_fail.cpp)
 
 # Step 4 — expected<void,E> ill-formed E [expected.void.general]
-add_fail_test(expected_void_ref_fail   expected_void_ref_fail.cpp)
 add_fail_test(expected_void_array_fail expected_void_array_fail.cpp)
+
+# expected<void, E&> — void + error-reference specialization (via unexpected<E&>)
+add_fail_test(expected_void_ref_e_const_lvalue_fail          expected_void_ref_e_const_lvalue_fail.cpp)
+add_fail_test(expected_void_ref_e_no_value_or_fail           expected_void_ref_e_no_value_or_fail.cpp)
+add_fail_test(expected_void_ref_e_temporary_fail             expected_void_ref_e_temporary_fail.cpp)
+add_fail_test(expected_void_ref_e_assign_unexpected_fail     expected_void_ref_e_assign_unexpected_fail.cpp)
+add_fail_test(expected_void_ref_e_construct_from_unexpected_fail expected_void_ref_e_construct_from_unexpected_fail.cpp)
 
 # Step 5 — monadic Mandates [expected.object.monadic]
 add_fail_test(and_then_wrong_error_type_fail    and_then_wrong_error_type_fail.cpp)
