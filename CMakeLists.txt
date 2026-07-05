@@ -14,6 +14,7 @@ target_sources(
         expected_constraints.test.cpp
         expected_trivial.test.cpp
         expected_monadic_constraints.test.cpp
+        expected_ref_e.test.cpp
         todo.test.cpp
 )
 target_link_libraries(
@@ -53,8 +54,21 @@ add_fail_test(unexpected_self_fail  unexpected_self_fail.cpp)
 
 # Step 3 — expected<T,E> ill-formed T/E [expected.object.general]
 add_fail_test(expected_t_ref_fail   expected_t_ref_fail.cpp)
-add_fail_test(expected_e_ref_fail   expected_e_ref_fail.cpp)
 add_fail_test(expected_t_array_fail expected_t_array_fail.cpp)
+
+# expected<T, E&> — error-reference specialization (via unexpected<E&>)
+add_fail_test(expected_ref_e_const_lvalue_fail            expected_ref_e_const_lvalue_fail.cpp)
+add_fail_test(expected_ref_e_temporary_error_fail         expected_ref_e_temporary_error_fail.cpp)
+add_fail_test(expected_ref_e_and_then_wrong_error_type_fail expected_ref_e_and_then_wrong_error_type_fail.cpp)
+add_fail_test(expected_ref_e_e_array_fail                 expected_ref_e_e_array_fail.cpp)
+add_fail_test(expected_ref_e_or_else_wrong_value_type_fail expected_ref_e_or_else_wrong_value_type_fail.cpp)
+add_fail_test(expected_ref_e_t_array_fail                 expected_ref_e_t_array_fail.cpp)
+add_fail_test(expected_ref_e_t_inplace_fail               expected_ref_e_t_inplace_fail.cpp)
+add_fail_test(expected_ref_e_t_unexpect_fail              expected_ref_e_t_unexpect_fail.cpp)
+add_fail_test(expected_ref_e_t_unexpected_fail            expected_ref_e_t_unexpected_fail.cpp)
+add_fail_test(expected_ref_e_transform_error_ref_result_fail expected_ref_e_transform_error_ref_result_fail.cpp)
+add_fail_test(expected_ref_e_assign_unexpected_fail       expected_ref_e_assign_unexpected_fail.cpp)
+add_fail_test(expected_ref_e_construct_from_unexpected_fail expected_ref_e_construct_from_unexpected_fail.cpp)
 
 # Step 3 — expected<T,E> emplace Mandates: nothrow_constructible_v<T,Args...>
 add_fail_test(expected_emplace_throwing_fail expected_emplace_throwing_fail.cpp)
