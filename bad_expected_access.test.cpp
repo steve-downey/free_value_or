@@ -108,3 +108,21 @@ TEST_CASE("bad_expected_access<void>: accessible via base reference", "[BadExpec
     const expt::bad_expected_access<void>& base = ex;
     CHECK(base.what() != nullptr);
 }
+
+TEST_CASE("bad_expected_access: move constructor", "[BadExpectedAccessTest]") {
+    expt::bad_expected_access<std::string> orig("test error");
+    expt::bad_expected_access<std::string> moved(std::move(orig));
+    CHECK(moved.error() == "test error");
+}
+
+TEST_CASE("bad_expected_access: rvalue error accessor (string move)", "[BadExpectedAccessTest]") {
+    expt::bad_expected_access<std::string> e("val");
+    std::string                            s = std::move(e).error();
+    CHECK(s == "val");
+}
+
+TEST_CASE("bad_expected_access: const rvalue error accessor (string move)", "[BadExpectedAccessTest]") {
+    const expt::bad_expected_access<std::string> e("val");
+    std::string                                  s = std::move(e).error();
+    CHECK(s == "val");
+}

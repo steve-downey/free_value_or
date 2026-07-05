@@ -6,6 +6,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include "testing/types.hpp"
+
 #include <string>
 
 using namespace beman::expected;
@@ -125,6 +127,16 @@ TEST_CASE("transform void: F returns void - expected<void, E>()", "[expected_voi
     CHECK(count == 1);
 }
 
+TEST_CASE("transform void: has error, F returns void - propagates", "[expected_void_monadic]") {
+    expected<void, int> e(unexpect, 5);
+    int                 count = 0;
+    auto                r     = e.transform([&]() { ++count; });
+    static_assert(std::is_same_v<decltype(r), expected<void, int>>);
+    CHECK(count == 0);
+    REQUIRE(!r.has_value());
+    CHECK(r.error() == 5);
+}
+
 TEST_CASE("transform void: rvalue overload", "[expected_void_monadic]") {
     expected<void, std::string> e;
     auto                        r = std::move(e).transform([]() -> std::string { return "done"; });
@@ -192,4 +204,243 @@ TEST_CASE("void and_then: all ref qualifications compile", "[expected_void_monad
     (void)(std::as_const(e).and_then(f));
     (void)(std::move(e).and_then(f));
     (void)(std::move(std::as_const(e)).and_then(f));
+}
+
+// =============================================================================
+// Additional coverage tests: rvalue/const-rvalue monadic overloads for void
+// =============================================================================
+using namespace beman::expected::testing;
+
+// --- Monadic: and_then rvalue/const-rvalue on ERROR state ---
+TEST_CASE("and_then rvalue on error short-circuits", "[expected_void_monadic]") {
+    expected<void, std::string> e(unexpect, "err");
+    bool                        called = false;
+    auto                        r      = std::move(e).and_then([&]() -> expected<void, std::string> {
+        called = true;
+        return {};
+    });
+    CHECK(!called);
+    REQUIRE(!r.has_value());
+}
+
+TEST_CASE("and_then const rvalue on error short-circuits", "[expected_void_monadic]") {
+    const expected<void, std::string> e(unexpect, "err");
+    bool                              called = false;
+    auto                              r      = std::move(e).and_then([&]() -> expected<void, std::string> {
+        called = true;
+        return {};
+    });
+    CHECK(!called);
+    REQUIRE(!r.has_value());
+}
+
+// --- Monadic: and_then rvalue/const-rvalue on VALUE state (actual call) ---
+TEST_CASE("and_then rvalue on value calls F", "[expected_void_monadic]") {
+    expected<void, int> e;
+    bool                called = false;
+    auto                r      = std::move(e).and_then([&]() -> expected<int, int> {
+        called = true;
+        return 42;
+    });
+    CHECK(called);
+    REQUIRE(r.has_value());
+    CHECK(*r == 42);
+}
+
+TEST_CASE("and_then const rvalue on value calls F", "[expected_void_monadic]") {
+    const expected<void, int> e;
+    auto                      r = std::move(e).and_then([]() -> expected<int, int> { return 99; });
+    REQUIRE(r.has_value());
+    CHECK(*r == 99);
+}
+
+// --- Monadic: or_else rvalue/const-rvalue on VALUE state ---
+TEST_CASE("or_else rvalue on value short-circuits", "[expected_void_monadic]") {
+    expected<void, int> e;
+    bool                called = false;
+    auto                r      = std::move(e).or_else([&](int) -> expected<void, int> {
+        called = true;
+        return {};
+    });
+    CHECK(!called);
+    REQUIRE(r.has_value());
+}
+
+TEST_CASE("or_else const rvalue on value short-circuits", "[expected_void_monadic]") {
+    const expected<void, int> e;
+    auto                      r = std::move(e).or_else([](int) -> expected<void, int> { return {}; });
+    REQUIRE(r.has_value());
+}
+
+TEST_CASE("or_else rvalue on error calls F", "[expected_void_monadic]") {
+    expected<void, int> e(unexpect, 5);
+    auto                r = std::move(e).or_else([](int v) -> expected<void, int> { return unexpected(v + 1); });
+    REQUIRE(!r.has_value());
+    CHECK(r.error() == 6);
+}
+
+TEST_CASE("or_else const rvalue on error calls F", "[expected_void_monadic]") {
+    const expected<void, int> e(unexpect, 5);
+    auto                       r = std::move(e).or_else([](int v) -> expected<void, int> { return unexpected(v + 1); });
+    REQUIRE(!r.has_value());
+    CHECK(r.error() == 6);
+}
+
+// --- Monadic: transform rvalue/const-rvalue on ERROR state ---
+TEST_CASE("transform rvalue on error short-circuits", "[expected_void_monadic]") {
+    expected<void, std::string> e(unexpect, "err");
+    auto                        r = std::move(e).transform([]() { return 1; });
+    REQUIRE(!r.has_value());
+    CHECK(r.error() == "err");
+}
+
+TEST_CASE("transform const rvalue on error short-circuits", "[expected_void_monadic]") {
+    const expected<void, std::string> e(unexpect, "err");
+    auto                              r = std::move(e).transform([]() { return 1; });
+    REQUIRE(!r.has_value());
+}
+
+// --- Monadic: transform rvalue/const-rvalue on VALUE state ---
+TEST_CASE("transform rvalue on value calls F", "[expected_void_monadic]") {
+    expected<void, int> e;
+    auto                r = std::move(e).transform([]() { return 42; });
+    REQUIRE(r.has_value());
+    CHECK(*r == 42);
+}
+
+TEST_CASE("transform const rvalue on value calls F", "[expected_void_monadic]") {
+    const expected<void, int> e;
+    auto                      r = std::move(e).transform([]() { return 7; });
+    REQUIRE(r.has_value());
+    CHECK(*r == 7);
+}
+
+// --- Monadic: transform_error rvalue/const-rvalue ---
+TEST_CASE("transform_error rvalue on value short-circuits", "[expected_void_monadic]") {
+    expected<void, int> e;
+    auto                r = std::move(e).transform_error([](int v) { return v * 2; });
+    REQUIRE(r.has_value());
+}
+
+TEST_CASE("transform_error rvalue on error calls F", "[expected_void_monadic]") {
+    expected<void, int> e(unexpect, 5);
+    auto                r = std::move(e).transform_error([](int v) { return v * 2; });
+    REQUIRE(!r.has_value());
+    CHECK(r.error() == 10);
+}
+
+TEST_CASE("transform_error const rvalue on error calls F", "[expected_void_monadic]") {
+    const expected<void, int> e(unexpect, 3);
+    auto                      r = std::move(e).transform_error([](int v) { return v + 1; });
+    REQUIRE(!r.has_value());
+    CHECK(r.error() == 4);
+}
+
+// ---------------------------------------------------------------------------
+// void<traced> monadic tests
+// ---------------------------------------------------------------------------
+
+TEST_CASE("void<traced>: and_then lvalue error path", "[expected_void_monadic][traced]") {
+    expected<void, traced> e(unexpect, 5);
+    auto                   r = e.and_then([]() -> expected<void, traced> { return {}; });
+    REQUIRE(!r.has_value());
+}
+
+TEST_CASE("void<traced>: and_then const lvalue error path", "[expected_void_monadic][traced]") {
+    const expected<void, traced> e(unexpect, 5);
+    auto                         r = e.and_then([]() -> expected<void, traced> { return {}; });
+    REQUIRE(!r.has_value());
+}
+
+TEST_CASE("void<traced>: or_else lvalue value path", "[expected_void_monadic][traced]") {
+    expected<void, traced> e;
+    auto                   r = e.or_else([](traced&) -> expected<void, traced> { return {}; });
+    REQUIRE(r.has_value());
+}
+
+TEST_CASE("void<traced>: or_else rvalue value path", "[expected_void_monadic][traced]") {
+    expected<void, traced> e;
+    auto                   r = std::move(e).or_else([](traced&&) -> expected<void, traced> { return {}; });
+    REQUIRE(r.has_value());
+}
+
+TEST_CASE("void<traced>: or_else const rvalue value path", "[expected_void_monadic][traced]") {
+    const expected<void, traced> e;
+    auto                         r = std::move(e).or_else([](const traced&) -> expected<void, traced> { return {}; });
+    REQUIRE(r.has_value());
+}
+
+TEST_CASE("void<traced>: transform lvalue value path", "[expected_void_monadic][traced]") {
+    expected<void, traced> e;
+    auto                   r = e.transform([]() { return traced(1); });
+    REQUIRE(r.has_value());
+    CHECK(r->val == 1);
+}
+
+TEST_CASE("void<traced>: transform lvalue error path", "[expected_void_monadic][traced]") {
+    expected<void, traced> e(unexpect, 5);
+    auto                   r = e.transform([]() { return traced(0); });
+    REQUIRE(!r.has_value());
+}
+
+TEST_CASE("void<traced>: transform rvalue value path", "[expected_void_monadic][traced]") {
+    expected<void, traced> e;
+    auto                   r = std::move(e).transform([]() { return traced(2); });
+    REQUIRE(r.has_value());
+}
+
+TEST_CASE("void<traced>: transform rvalue error path", "[expected_void_monadic][traced]") {
+    expected<void, traced> e(unexpect, 5);
+    auto                   r = std::move(e).transform([]() { return traced(0); });
+    REQUIRE(!r.has_value());
+}
+
+TEST_CASE("void<traced>: transform const rvalue value path", "[expected_void_monadic][traced]") {
+    const expected<void, traced> e;
+    auto                         r = std::move(e).transform([]() { return traced(3); });
+    REQUIRE(r.has_value());
+}
+
+TEST_CASE("void<traced>: transform const rvalue error path", "[expected_void_monadic][traced]") {
+    const expected<void, traced> e(unexpect, 5);
+    auto                         r = std::move(e).transform([]() { return traced(0); });
+    REQUIRE(!r.has_value());
+}
+
+TEST_CASE("void<traced>: transform to void lvalue", "[expected_void_monadic][traced]") {
+    expected<void, traced> e;
+    auto                   r = e.transform([]() {});
+    REQUIRE(r.has_value());
+}
+
+TEST_CASE("void<traced>: transform_error lvalue value path", "[expected_void_monadic][traced]") {
+    expected<void, traced> e;
+    auto                   r = e.transform_error([](traced&) { return traced(0); });
+    REQUIRE(r.has_value());
+}
+
+TEST_CASE("void<traced>: transform_error lvalue error path", "[expected_void_monadic][traced]") {
+    expected<void, traced> e(unexpect, 5);
+    auto                   r = e.transform_error([](traced& v) { return traced(v.val + 1); });
+    REQUIRE(!r.has_value());
+    CHECK(r.error().val == 6);
+}
+
+TEST_CASE("void<traced>: transform_error rvalue value path", "[expected_void_monadic][traced]") {
+    expected<void, traced> e;
+    auto                   r = std::move(e).transform_error([](traced&&) { return traced(0); });
+    REQUIRE(r.has_value());
+}
+
+TEST_CASE("void<traced>: transform_error const rvalue value path", "[expected_void_monadic][traced]") {
+    const expected<void, traced> e;
+    auto                         r = std::move(e).transform_error([](const traced&) { return traced(0); });
+    REQUIRE(r.has_value());
+}
+
+// --- void unexpect_t with init-list ---
+TEST_CASE("void<init_list>: unexpect_t with initializer_list", "[expected_void_monadic][init_list]") {
+    expected<void, init_list_type> e(unexpect, {1, 2, 3});
+    REQUIRE(!e.has_value());
+    CHECK(e.error().sum == 6);
 }

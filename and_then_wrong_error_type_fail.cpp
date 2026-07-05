@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 // NEGATIVE: and_then Mandates U::error_type == E
-// F returns expected<int, double> but E is std::string — ill-formed
+// EXPECT: "F must return expected with the same error_type"
 #include <beman/expected/expected.hpp>
 #include <string>
 void test() {

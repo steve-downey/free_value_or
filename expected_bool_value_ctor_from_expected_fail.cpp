@@ -1,8 +1,9 @@
 // tests/beman/expected/expected_bool_value_ctor_from_expected_fail.cpp -*-C++-*-
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// Negative compile test (WILL_FAIL): expected<bool, E> cannot be constructed
-// from expected<U, G> via the value ctor when the converting ctor is not viable.
+// NEGATIVE: expected<bool, E> cannot be constructed from expected<U, G> via
+// the value ctor when the converting ctor is not viable.
+// EXPECT: "no matching function"
 //
 // Constraint 23.6: if T is cv bool, remove_cvref_t<U> must not be a
 // specialization of expected. This blocks the value ctor from selecting

@@ -6,6 +6,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include "testing/types.hpp"
+
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -336,6 +338,13 @@ TEST_CASE("expected: assign from unexpected&& when has value (state change)", "[
     e = expt::unexpected<std::string>("fail");
     CHECK_FALSE(e.has_value());
     CHECK(e.error() == "fail");
+}
+
+TEST_CASE("expected: assign from unexpected&& when already has error", "[ExpectedTest]") {
+    expt::expected<int, std::string> e(expt::unexpected<std::string>("first"));
+    e = expt::unexpected<std::string>("second");
+    CHECK_FALSE(e.has_value());
+    CHECK(e.error() == "second");
 }
 
 // =============================================================================
@@ -798,4 +807,409 @@ TEST_CASE("expected: value() ref-qualification return types", "[ExpectedTest]") 
     static_assert(std::is_same_v<decltype(std::declval<const expt::expected<int, int>&>().value()), const int&>);
     static_assert(std::is_same_v<decltype(std::declval<expt::expected<int, int>&&>().value()), int&&>);
     static_assert(std::is_same_v<decltype(std::declval<const expt::expected<int, int>&&>().value()), const int&&>);
+}
+
+// =============================================================================
+// Additional coverage tests (using testing helper types and rvalue paths)
+// =============================================================================
+using expt::expected;
+using expt::unexpect;
+using expt::unexpected;
+using namespace beman::expected::testing;
+
+// --- value() throw from rvalue and const rvalue ---
+TEST_CASE("value() rvalue throws with moved error", "[ExpectedTest]") {
+    expected<int, std::string> e(unexpect, "rval-err");
+    CHECK_THROWS_AS(std::move(e).value(), expt::bad_expected_access<std::string>);
+}
+
+TEST_CASE("value() const rvalue throws", "[ExpectedTest]") {
+    const expected<int, std::string> e(unexpect, "crval-err");
+    CHECK_THROWS_AS(std::move(e).value(), expt::bad_expected_access<std::string>);
+}
+
+// --- error_or rvalue overloads ---
+TEST_CASE("error_or rvalue uses default when has value", "[ExpectedTest]") {
+    expected<int, std::string> e(42);
+    std::string                s = std::move(e).error_or("fallback");
+    CHECK(s == "fallback");
+}
+
+// --- unexpect_t constructor with initializer_list ---
+TEST_CASE("unexpect_t constructor with initializer_list", "[ExpectedTest]") {
+    expected<int, std::vector<int>> e(unexpect, {1, 2, 3});
+    REQUIRE(!e.has_value());
+    CHECK(e.error() == std::vector{1, 2, 3});
+}
+
+// --- in_place_t constructor with initializer_list ---
+TEST_CASE("in_place_t constructor with initializer_list", "[ExpectedTest]") {
+    expected<std::vector<int>, int> e(std::in_place, {4, 5, 6});
+    REQUIRE(e.has_value());
+    CHECK(*e == std::vector{4, 5, 6});
+}
+
+// --- emplace on error-state (destroy error, construct value) ---
+TEST_CASE("emplace on error state transitions to value", "[ExpectedTest]") {
+    expected<int, std::string> e(unexpect, "err");
+    e.emplace(42);
+    REQUIRE(e.has_value());
+    CHECK(*e == 42);
+}
+
+// --- Cross-type equality (expected<T,E> vs expected<T2,E2>) ---
+TEST_CASE("cross-type equality different error types", "[ExpectedTest]") {
+    expected<int, int>  a(unexpect, 1);
+    expected<int, long> b(unexpect, 1L);
+    CHECK(a == b);
+}
+
+TEST_CASE("cross-type equality error vs value", "[ExpectedTest]") {
+    expected<int, int>  a(42);
+    expected<int, long> b(unexpect, 0L);
+    CHECK_FALSE(a == b);
+}
+
+// ---------------------------------------------------------------------------
+// expected<traced, traced>: non-trivial destructor, copy/move ctor, assignment
+// ---------------------------------------------------------------------------
+
+TEST_CASE("traced<T,E>: default construct (value state)", "[ExpectedTest][traced]") {
+    expected<traced, traced> e(std::in_place, 42);
+    REQUIRE(e.has_value());
+    CHECK(e->val == 42);
+}
+
+TEST_CASE("traced<T,E>: error construct", "[ExpectedTest][traced]") {
+    expected<traced, traced> e(unexpect, 7);
+    REQUIRE(!e.has_value());
+    CHECK(e.error().val == 7);
+}
+
+TEST_CASE("traced<T,E>: copy construct value state", "[ExpectedTest][traced]") {
+    expected<traced, traced> a(std::in_place, 10);
+    expected<traced, traced> b(a);
+    REQUIRE(b.has_value());
+    CHECK(b->val == 10);
+}
+
+TEST_CASE("traced<T,E>: copy construct error state", "[ExpectedTest][traced]") {
+    expected<traced, traced> a(unexpect, 20);
+    expected<traced, traced> b(a);
+    REQUIRE(!b.has_value());
+    CHECK(b.error().val == 20);
+}
+
+TEST_CASE("traced<T,E>: move construct value state", "[ExpectedTest][traced]") {
+    expected<traced, traced> a(std::in_place, 10);
+    expected<traced, traced> b(std::move(a));
+    REQUIRE(b.has_value());
+    CHECK(b->val == 10);
+}
+
+TEST_CASE("traced<T,E>: move construct error state", "[ExpectedTest][traced]") {
+    expected<traced, traced> a(unexpect, 20);
+    expected<traced, traced> b(std::move(a));
+    REQUIRE(!b.has_value());
+    CHECK(b.error().val == 20);
+}
+
+TEST_CASE("traced<T,E>: copy assign value-to-value", "[ExpectedTest][traced]") {
+    expected<traced, traced> a(std::in_place, 1);
+    expected<traced, traced> b(std::in_place, 2);
+    b = a;
+    CHECK(b->val == 1);
+}
+
+TEST_CASE("traced<T,E>: copy assign error-to-error", "[ExpectedTest][traced]") {
+    expected<traced, traced> a(unexpect, 3);
+    expected<traced, traced> b(unexpect, 4);
+    b = a;
+    CHECK(b.error().val == 3);
+}
+
+TEST_CASE("traced<T,E>: copy assign error-to-value (state change)", "[ExpectedTest][traced]") {
+    expected<traced, traced> a(unexpect, 5);
+    expected<traced, traced> b(std::in_place, 6);
+    b = a;
+    REQUIRE(!b.has_value());
+    CHECK(b.error().val == 5);
+}
+
+TEST_CASE("traced<T,E>: copy assign value-to-error (state change)", "[ExpectedTest][traced]") {
+    expected<traced, traced> a(std::in_place, 7);
+    expected<traced, traced> b(unexpect, 8);
+    b = a;
+    REQUIRE(b.has_value());
+    CHECK(b->val == 7);
+}
+
+TEST_CASE("traced<T,E>: move assign error-to-error", "[ExpectedTest][traced]") {
+    expected<traced, traced> a(unexpect, 9);
+    expected<traced, traced> b(unexpect, 10);
+    b = std::move(a);
+    CHECK(b.error().val == 9);
+}
+
+TEST_CASE("traced<T,E>: move assign error-to-value (state change)", "[ExpectedTest][traced]") {
+    expected<traced, traced> a(unexpect, 11);
+    expected<traced, traced> b(std::in_place, 12);
+    b = std::move(a);
+    REQUIRE(!b.has_value());
+    CHECK(b.error().val == 11);
+}
+
+TEST_CASE("traced<T,E>: move assign value-to-error (state change)", "[ExpectedTest][traced]") {
+    expected<traced, traced> a(std::in_place, 13);
+    expected<traced, traced> b(unexpect, 14);
+    b = std::move(a);
+    REQUIRE(b.has_value());
+    CHECK(b->val == 13);
+}
+
+TEST_CASE("traced<T,E>: assign from unexpected const&", "[ExpectedTest][traced]") {
+    expected<traced, traced> e(std::in_place, 1);
+    unexpected<traced>       u(traced(99));
+    e = u;
+    REQUIRE(!e.has_value());
+    CHECK(e.error().val == 99);
+}
+
+TEST_CASE("traced<T,E>: assign from unexpected&&", "[ExpectedTest][traced]") {
+    expected<traced, traced> e(std::in_place, 1);
+    e = unexpected<traced>(traced(77));
+    REQUIRE(!e.has_value());
+    CHECK(e.error().val == 77);
+}
+
+TEST_CASE("traced<T,E>: emplace on error state", "[ExpectedTest][traced]") {
+    expected<traced, traced> e(unexpect, 1);
+    e.emplace(42);
+    REQUIRE(e.has_value());
+    CHECK(e->val == 42);
+}
+
+TEST_CASE("traced<T,E>: destructor runs for value state", "[ExpectedTest][traced]") {
+    {
+        expected<traced, traced> e(std::in_place, 1);
+    }
+}
+
+TEST_CASE("traced<T,E>: destructor runs for error state", "[ExpectedTest][traced]") {
+    {
+        expected<traced, traced> e(unexpect, 1);
+    }
+}
+
+// --- value_or / error_or rvalue with non-trivial types ---
+TEST_CASE("traced<T,E>: value_or rvalue returns value", "[ExpectedTest][traced]") {
+    expected<traced, int> e(std::in_place, 5);
+    traced                t = std::move(e).value_or(traced(0));
+    CHECK(t.val == 5);
+}
+
+TEST_CASE("traced<T,E>: error_or const lvalue returns error", "[ExpectedTest][traced]") {
+    const expected<int, traced> e(unexpect, 7);
+    traced                      t = e.error_or(traced(0));
+    CHECK(t.val == 7);
+}
+
+TEST_CASE("traced<T,E>: error_or rvalue returns error", "[ExpectedTest][traced]") {
+    expected<int, traced> e(unexpect, 7);
+    traced                t = std::move(e).error_or(traced(0));
+    CHECK(t.val == 7);
+}
+
+TEST_CASE("traced<T,E>: error_or rvalue returns default when value", "[ExpectedTest][traced]") {
+    expected<int, traced> e(42);
+    traced                t = std::move(e).error_or(traced(99));
+    CHECK(t.val == 99);
+}
+
+// ---------------------------------------------------------------------------
+// init_list_type: in_place_t / unexpect_t with initializer_list
+// ---------------------------------------------------------------------------
+
+TEST_CASE("init_list: in_place_t with initializer_list", "[ExpectedTest][init_list]") {
+    expected<init_list_type, int> e(std::in_place, {1, 2, 3});
+    REQUIRE(e.has_value());
+    CHECK(e->sum == 6);
+    CHECK(e->count == 3);
+}
+
+TEST_CASE("init_list: in_place_t with initializer_list and extra arg", "[ExpectedTest][init_list]") {
+    expected<init_list_type, int> e(std::in_place, {1, 2, 3}, 100);
+    REQUIRE(e.has_value());
+    CHECK(e->sum == 106);
+}
+
+TEST_CASE("init_list: unexpect_t with initializer_list", "[ExpectedTest][init_list]") {
+    expected<int, init_list_type> e(unexpect, {10, 20, 30});
+    REQUIRE(!e.has_value());
+    CHECK(e.error().sum == 60);
+    CHECK(e.error().count == 3);
+}
+
+TEST_CASE("init_list: emplace with initializer_list on value state", "[ExpectedTest][init_list]") {
+    expected<init_list_type, int> e(std::in_place, {1});
+    e.emplace({4, 5, 6});
+    REQUIRE(e.has_value());
+    CHECK(e->sum == 15);
+}
+
+TEST_CASE("init_list: emplace with initializer_list on error state", "[ExpectedTest][init_list]") {
+    expected<init_list_type, int> e(unexpect, 0);
+    e.emplace({7, 8});
+    REQUIRE(e.has_value());
+    CHECK(e->sum == 15);
+}
+
+// ---------------------------------------------------------------------------
+// Converting constructors: expected<widened, widened> from expected<narrowed, narrowed>
+// ---------------------------------------------------------------------------
+
+TEST_CASE("converting: copy construct value state", "[ExpectedTest][converting]") {
+    expected<narrowed, narrowed> a(std::in_place, narrowed(5));
+    expected<widened, widened>   b(a);
+    REQUIRE(b.has_value());
+    CHECK(b->val == 5);
+}
+
+TEST_CASE("converting: copy construct error state", "[ExpectedTest][converting]") {
+    expected<narrowed, narrowed> a(unexpect, narrowed(7));
+    expected<widened, widened>   b(a);
+    REQUIRE(!b.has_value());
+    CHECK(b.error().val == 7);
+}
+
+TEST_CASE("converting: move construct value state", "[ExpectedTest][converting]") {
+    expected<narrowed, narrowed> a(std::in_place, narrowed(5));
+    expected<widened, widened>   b(std::move(a));
+    REQUIRE(b.has_value());
+    CHECK(b->val == 5);
+}
+
+TEST_CASE("converting: move construct error state", "[ExpectedTest][converting]") {
+    expected<narrowed, narrowed> a(unexpect, narrowed(7));
+    expected<widened, widened>   b(std::move(a));
+    REQUIRE(!b.has_value());
+    CHECK(b.error().val == 7);
+}
+
+// ---------------------------------------------------------------------------
+// Cross-type equality with eq_a / eq_b
+// ---------------------------------------------------------------------------
+
+TEST_CASE("cross-eq: expected<int,eq_a> == expected<int,eq_b>", "[ExpectedTest][cross_eq]") {
+    expected<int, eq_a> a(unexpect, eq_a(1));
+    expected<int, eq_b> b(unexpect, eq_b(1));
+    CHECK(a == b);
+
+    expected<int, eq_a> c(42);
+    CHECK_FALSE(a == c);
+}
+
+// ---------------------------------------------------------------------------
+// Constraint verification with derived types
+// ---------------------------------------------------------------------------
+
+TEST_CASE("constraint: from_expected is derived from expected", "[ExpectedTest][constraint]") {
+    static_assert(std::is_base_of_v<expected<int, int>, from_expected>);
+    from_expected fe(42);
+    CHECK(fe.has_value());
+    CHECK(*fe == 42);
+}
+
+TEST_CASE("constraint: from_unexpected is derived from unexpected", "[ExpectedTest][constraint]") {
+    static_assert(std::is_base_of_v<unexpected<int>, from_unexpected>);
+    from_unexpected fu(7);
+    CHECK(fu.error() == 7);
+}
+
+// ---------------------------------------------------------------------------
+// expected<expected<K,E>, E>: nested expected as value type
+// ---------------------------------------------------------------------------
+
+TEST_CASE("nested: expected<expected<int,int>, std::string> value construct", "[ExpectedTest][nested]") {
+    expected<int, int>                        inner(42);
+    expected<expected<int, int>, std::string> outer(inner);
+    REQUIRE(outer.has_value());
+    REQUIRE(outer->has_value());
+    CHECK(**outer == 42);
+}
+
+TEST_CASE("nested: expected<expected<int,int>, std::string> error construct", "[ExpectedTest][nested]") {
+    expected<expected<int, int>, std::string> outer(unexpect, "err");
+    REQUIRE(!outer.has_value());
+    CHECK(outer.error() == "err");
+}
+
+TEST_CASE("nested: expected<expected<int,int>, std::string> in_place value construct", "[ExpectedTest][nested]") {
+    expected<expected<int, int>, std::string> outer(std::in_place, 99);
+    REQUIRE(outer.has_value());
+    REQUIRE(outer->has_value());
+    CHECK(**outer == 99);
+}
+
+TEST_CASE("nested: expected<expected<int,int>, std::string> in_place error-inner", "[ExpectedTest][nested]") {
+    expected<expected<int, int>, std::string> outer(std::in_place, unexpect, 7);
+    REQUIRE(outer.has_value());
+    REQUIRE(!outer->has_value());
+    CHECK(outer->error() == 7);
+}
+
+TEST_CASE("nested: expected<expected<int,int>, int> copy construct value", "[ExpectedTest][nested]") {
+    expected<expected<int, int>, int> a(expected<int, int>(5));
+    expected<expected<int, int>, int> b(a);
+    REQUIRE(b.has_value());
+    CHECK(**b == 5);
+}
+
+TEST_CASE("nested: expected<expected<int,int>, int> move construct value", "[ExpectedTest][nested]") {
+    expected<expected<int, int>, int> a(expected<int, int>(5));
+    expected<expected<int, int>, int> b(std::move(a));
+    REQUIRE(b.has_value());
+    CHECK(**b == 5);
+}
+
+TEST_CASE("nested: expected<expected<int,int>, int> monadic and_then", "[ExpectedTest][nested]") {
+    expected<expected<int, int>, int> e(expected<int, int>(5));
+    auto r = e.and_then([](expected<int, int>& inner) -> expected<int, int> { return *inner * 2; });
+    REQUIRE(r.has_value());
+    CHECK(*r == 10);
+}
+
+// ---------------------------------------------------------------------------
+// expected<T, unexpected<V>>: unexpected as error type
+// ---------------------------------------------------------------------------
+
+// Note: both expected<T, unexpected<V>> and expected<unexpected<V>, E> are
+// ill-formed by Mandates. These are tested by the _fail.cpp negative tests.
+// Instead, test with from_expected (derived from expected) as value type
+// and from_unexpected (derived from unexpected) as error type — these are
+// NOT specializations of expected/unexpected, so they bypass the Mandates
+// while still exercising constructor disambiguation.
+
+TEST_CASE("nested: expected<from_expected, std::string> holds expected-derived value", "[ExpectedTest][nested]") {
+    expected<from_expected, std::string> e(std::in_place, 42);
+    REQUIRE(e.has_value());
+    CHECK(e->has_value());
+    CHECK(**e == 42);
+}
+
+TEST_CASE("nested: expected<from_expected, std::string> error state", "[ExpectedTest][nested]") {
+    expected<from_expected, std::string> e(unexpect, "err");
+    REQUIRE(!e.has_value());
+    CHECK(e.error() == "err");
+}
+
+TEST_CASE("nested: expected<from_expected, int> copy and move", "[ExpectedTest][nested]") {
+    expected<from_expected, int> a(std::in_place, 5);
+    expected<from_expected, int> b(a);
+    REQUIRE(b.has_value());
+    CHECK(**b == 5);
+
+    expected<from_expected, int> c(std::move(a));
+    REQUIRE(c.has_value());
+    CHECK(**c == 5);
 }

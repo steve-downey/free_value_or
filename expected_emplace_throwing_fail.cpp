@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// NEGATIVE COMPILE TEST: emplace requires nothrow_constructible_v<T, Args...>
-// Calling emplace with a type whose constructor might throw is ill-formed.
+// NEGATIVE: emplace requires nothrow_constructible_v<T, Args...>
+// EXPECT: "is_nothrow_constructible"
 #include <beman/expected/expected.hpp>
 
 struct ThrowingCtor {

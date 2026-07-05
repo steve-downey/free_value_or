@@ -1,7 +1,8 @@
 // tests/beman/expected/expected_unexpected_value_type_fail.cpp          -*-C++-*-
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-// Negative compile test: T must not be a specialization of unexpected.
+// NEGATIVE: T must not be a specialization of unexpected
+// EXPECT: "T must not be a specialization of unexpected"
 
 #include <beman/expected/expected.hpp>
 

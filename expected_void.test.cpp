@@ -6,6 +6,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include "testing/types.hpp"
+
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -352,4 +354,81 @@ TEST_CASE("expected<void>: cross-type equality", "[expected_void]") {
     expected<void, int>  c(unexpect, 5);
     expected<void, long> d(unexpect, 5L);
     CHECK(c == d);
+}
+
+// =============================================================================
+// Additional coverage tests: rvalue/const-rvalue paths and traced types
+// =============================================================================
+using namespace beman::expected::testing;
+
+// --- value() throw paths for void ---
+TEST_CASE("value() rvalue throws", "[expected_void]") {
+    expected<void, int> e(unexpect, 42);
+    CHECK_THROWS_AS(std::move(e).value(), bad_expected_access<int>);
+}
+
+TEST_CASE("value() const rvalue throws", "[expected_void]") {
+    const expected<void, int> e(unexpect, 42);
+    CHECK_THROWS_AS(std::move(e).value(), bad_expected_access<int>);
+}
+
+// --- void unexpect_t with init-list ---
+TEST_CASE("unexpect_t constructor with initializer_list", "[expected_void]") {
+    expected<void, std::vector<int>> e(unexpect, {1, 2, 3});
+    REQUIRE(!e.has_value());
+    CHECK(e.error() == std::vector{1, 2, 3});
+}
+
+// --- void move-assignment error-to-value and value-to-error ---
+TEST_CASE("move-assign error to value state", "[expected_void]") {
+    expected<void, std::string> a;
+    expected<void, std::string> b(unexpect, "e");
+    a = std::move(b);
+    REQUIRE(!a.has_value());
+    CHECK(a.error() == "e");
+}
+
+TEST_CASE("move-assign value to error state", "[expected_void]") {
+    expected<void, std::string> a(unexpect, "e");
+    expected<void, std::string> b;
+    a = std::move(b);
+    REQUIRE(a.has_value());
+}
+
+// --- void cross-type equality ---
+TEST_CASE("cross-type equality with expected<void,E2>", "[expected_void]") {
+    expected<void, int>  a(unexpect, 1);
+    expected<void, long> b(unexpect, 1L);
+    CHECK(a == b);
+    expected<void, int> c;
+    CHECK_FALSE(a == c);
+}
+
+// ---------------------------------------------------------------------------
+// expected<void, traced>: void specialization with non-trivial E
+// ---------------------------------------------------------------------------
+
+TEST_CASE("void<traced>: unexpect_t constructor", "[expected_void][traced]") {
+    expected<void, traced> e(unexpect, 42);
+    REQUIRE(!e.has_value());
+    CHECK(e.error().val == 42);
+}
+
+TEST_CASE("void<traced>: move construct error state", "[expected_void][traced]") {
+    expected<void, traced> a(unexpect, 10);
+    expected<void, traced> b(std::move(a));
+    REQUIRE(!b.has_value());
+    CHECK(b.error().val == 10);
+}
+
+TEST_CASE("void<traced>: move assign error-to-error", "[expected_void][traced]") {
+    expected<void, traced> a(unexpect, 1);
+    expected<void, traced> b(unexpect, 2);
+    b = std::move(a);
+    CHECK(b.error().val == 1);
+}
+
+TEST_CASE("void<traced>: value() rvalue throws", "[expected_void][traced]") {
+    expected<void, traced> e(unexpect, 42);
+    CHECK_THROWS_AS(std::move(e).value(), bad_expected_access<traced>);
 }

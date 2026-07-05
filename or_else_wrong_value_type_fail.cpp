@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 // NEGATIVE: or_else Mandates G::value_type == T
+// EXPECT: "F must return expected with the same value_type"
 #include <beman/expected/expected.hpp>
 void test() {
     beman::expected::expected<int, int> e(beman::expected::unexpect, 1);
