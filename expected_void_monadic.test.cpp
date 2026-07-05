@@ -1,16 +1,16 @@
 // tests/beman/expected/expected_void_monadic.test.cpp                -*-C++-*-
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-#include <beman/expected/expected.hpp>
-#include <beman/expected/expected.hpp>
+#include "test_expected.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include "testing/types.hpp"
 
 #include <string>
+#include <utility>
 
-using namespace beman::expected;
+using namespace test_ns;
 
 // ---------------------------------------------------------------------------
 // and_then - F called with no args when void

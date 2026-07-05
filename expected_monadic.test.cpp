@@ -1,8 +1,7 @@
 // tests/beman/expected/expected_monadic.test.cpp                     -*-C++-*-
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-#include <beman/expected/expected.hpp>
-#include <beman/expected/expected.hpp>
+#include "test_expected.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -10,13 +9,9 @@
 
 #include <functional>
 #include <string>
+#include <utility>
 
-#ifndef BEMAN_EXPECTED_TEST_STD
-using namespace beman::expected;
-#else
-    #include <expected>
-using namespace std;
-#endif
+using namespace test_ns;
 
 // ---------------------------------------------------------------------------
 // and_then
@@ -589,10 +584,10 @@ TEST_CASE("traced<T,E>: transform_error const rvalue value path", "[expected_mon
 // --- value() throw with non-trivial E ---
 TEST_CASE("traced<T,E>: value() lvalue throws", "[expected_monadic][traced]") {
     expected<traced, traced> e(unexpect, 42);
-    CHECK_THROWS_AS(e.value(), beman::expected::bad_expected_access<traced>);
+    CHECK_THROWS_AS(e.value(), bad_expected_access<traced>);
 }
 
 TEST_CASE("traced<T,E>: value() const rvalue throws", "[expected_monadic][traced]") {
     const expected<traced, traced> e(unexpect, 42);
-    CHECK_THROWS_AS(std::move(e).value(), beman::expected::bad_expected_access<traced>);
+    CHECK_THROWS_AS(std::move(e).value(), bad_expected_access<traced>);
 }

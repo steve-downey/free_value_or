@@ -1,8 +1,7 @@
 // tests/beman/expected/bad_expected_access.test.cpp                  -*-C++-*-
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-#include <beman/expected/bad_expected_access.hpp>
-#include <beman/expected/bad_expected_access.hpp> // test 2nd include OK
+#include "test_expected.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -10,7 +9,7 @@
 #include <string>
 #include <utility>
 
-namespace expt = beman::expected;
+namespace expt = test_ns;
 
 // =============================================================================
 // [expected.bad.void] and [expected.bad] — type-level assertions
@@ -37,13 +36,20 @@ TEST_CASE("bad_expected_access: construct from int", "[BadExpectedAccessTest]") 
 TEST_CASE("bad_expected_access: what() returns message", "[BadExpectedAccessTest]") {
     expt::bad_expected_access<int> e(1);
     CHECK(e.what() != nullptr);
+    // what() returns an implementation-defined NTBS [expected.bad.void]; the
+    // exact text is beman-specific (libstdc++/libc++ differ).
+#ifndef BEMAN_EXPECTED_TEST_STD
     CHECK(std::string_view(e.what()) == "bad expected access");
+#endif
 }
 
 TEST_CASE("bad_expected_access: inherits from std::exception", "[BadExpectedAccessTest]") {
     expt::bad_expected_access<int> e(1);
     std::exception&                ex = e;
+    CHECK(ex.what() != nullptr);
+#ifndef BEMAN_EXPECTED_TEST_STD
     CHECK(std::string_view(ex.what()) == "bad expected access");
+#endif
 }
 
 TEST_CASE("bad_expected_access: error() lvalue ref mutable", "[BadExpectedAccessTest]") {
@@ -79,7 +85,10 @@ TEST_CASE("bad_expected_access: catchable as std::exception", "[BadExpectedAcces
     try {
         throw expt::bad_expected_access<int>(7);
     } catch (const std::exception& ex) {
+        CHECK(ex.what() != nullptr);
+#ifndef BEMAN_EXPECTED_TEST_STD
         CHECK(std::string_view(ex.what()) == "bad expected access");
+#endif
     }
 }
 
@@ -87,7 +96,10 @@ TEST_CASE("bad_expected_access: catchable as bad_expected_access<void>", "[BadEx
     try {
         throw expt::bad_expected_access<int>(7);
     } catch (const expt::bad_expected_access<void>& ex) {
+        CHECK(ex.what() != nullptr);
+#ifndef BEMAN_EXPECTED_TEST_STD
         CHECK(std::string_view(ex.what()) == "bad expected access");
+#endif
     }
 }
 

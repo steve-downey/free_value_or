@@ -4,7 +4,7 @@
 #ifndef BEMAN_EXPECTED_TESTING_TYPES_HPP
 #define BEMAN_EXPECTED_TESTING_TYPES_HPP
 
-#include <beman/expected/expected.hpp>
+#include <beman/expected/test_expected.hpp>
 
 #include <initializer_list>
 #include <utility>
@@ -100,14 +100,14 @@ struct widened {
 // Derived from expected — tests constraint 23.6: if T is cv bool,
 // remove_cvref_t<U> must not be a specialization of expected.
 // Also tests that value ctor rejects expected-derived types.
-struct from_expected : beman::expected::expected<int, int> {
-    using beman::expected::expected<int, int>::expected;
+struct from_expected : test_ns::expected<int, int> {
+    using test_ns::expected<int, int>::expected;
 };
 
 // Derived from unexpected — tests Mandate:
 // T must not be a specialization of unexpected.
-struct from_unexpected : beman::expected::unexpected<int> {
-    using beman::expected::unexpected<int>::unexpected;
+struct from_unexpected : test_ns::unexpected<int> {
+    using test_ns::unexpected<int>::unexpected;
 };
 
 // Cross-type equality pair.

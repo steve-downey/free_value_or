@@ -1,8 +1,7 @@
 // beman/expected/unexpected.test.cpp                                 -*-C++-*-
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-#include <beman/expected/unexpected.hpp>
-#include <beman/expected/unexpected.hpp> // ensure idempotent header
+#include "test_expected.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -11,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-namespace expt = beman::expected;
+namespace expt = test_ns;
 
 // =============================================================================
 // [expected.un.general] para 2 — ill-formed instantiation constraints
