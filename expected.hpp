@@ -2585,12 +2585,17 @@ class expected<T&, E> {
         requires(std::is_object_v<T> && !std::is_array_v<T>)
     constexpr std::remove_cv_t<T> value_or(U&& def) const;
 
+    // Constraints spell error_value_type as its underlying trait expression rather than the
+    // member typedef: clang (through 22) fails to match an out-of-line constrained member of a
+    // partial specialization when the requires-clause names a member typedef of the class.
     template <class G = error_value_type>
-        requires(std::is_copy_constructible_v<error_value_type> && std::is_convertible_v<G, error_value_type>)
+        requires(std::is_copy_constructible_v<std::remove_cv_t<std::remove_reference_t<E>>> &&
+                 std::is_convertible_v<G, std::remove_cv_t<std::remove_reference_t<E>>>)
     constexpr error_value_type error_or(G&& def) const&;
 
     template <class G = error_value_type>
-        requires(std::is_move_constructible_v<error_value_type> && std::is_convertible_v<G, error_value_type>)
+        requires(std::is_move_constructible_v<std::remove_cv_t<std::remove_reference_t<E>>> &&
+                 std::is_convertible_v<G, std::remove_cv_t<std::remove_reference_t<E>>>)
     constexpr error_value_type error_or(G&& def) &&;
 
     // -------------------------------------------------------------------------
@@ -3049,8 +3054,8 @@ constexpr std::remove_cv_t<T> expected<T&, E>::value_or(U&& def) const {
 
 template <class T, class E>
 template <class G>
-    requires(std::is_copy_constructible_v<typename expected<T&, E>::error_value_type> &&
-             std::is_convertible_v<G, typename expected<T&, E>::error_value_type>)
+    requires(std::is_copy_constructible_v<std::remove_cv_t<std::remove_reference_t<E>>> &&
+             std::is_convertible_v<G, std::remove_cv_t<std::remove_reference_t<E>>>)
 constexpr typename expected<T&, E>::error_value_type expected<T&, E>::error_or(G&& def) const& {
     if (!has_val_)
         return unex_.error();
@@ -3059,8 +3064,8 @@ constexpr typename expected<T&, E>::error_value_type expected<T&, E>::error_or(G
 
 template <class T, class E>
 template <class G>
-    requires(std::is_move_constructible_v<typename expected<T&, E>::error_value_type> &&
-             std::is_convertible_v<G, typename expected<T&, E>::error_value_type>)
+    requires(std::is_move_constructible_v<std::remove_cv_t<std::remove_reference_t<E>>> &&
+             std::is_convertible_v<G, std::remove_cv_t<std::remove_reference_t<E>>>)
 constexpr typename expected<T&, E>::error_value_type expected<T&, E>::error_or(G&& def) && {
     if (!has_val_)
         return std::move(unex_).error();
