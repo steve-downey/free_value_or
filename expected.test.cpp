@@ -507,7 +507,7 @@ TEST_CASE("expected: value() throws bad_expected_access from const lvalue", "[Ex
 TEST_CASE("expected: value() throw carries the error value", "[ExpectedTest]") {
     expt::expected<int, std::string> e(expt::unexpected<std::string>("oops"));
     try {
-        e.value();
+        (void)e.value();
         FAIL("should have thrown");
     } catch (const expt::bad_expected_access<std::string>& ex) {
         CHECK(ex.error() == "oops");
@@ -522,7 +522,7 @@ TEST_CASE("expected: value() rvalue throws bad_expected_access", "[ExpectedTest]
 TEST_CASE("expected: value() throw catchable as std::exception", "[ExpectedTest]") {
     expt::expected<int, int> e(expt::unexpected<int>(99));
     try {
-        e.value();
+        (void)e.value();
         FAIL("should have thrown");
     } catch (const std::exception& ex) {
         // what() is an implementation-defined NTBS; exact text is beman-specific.
@@ -536,7 +536,7 @@ TEST_CASE("expected: value() throw catchable as std::exception", "[ExpectedTest]
 TEST_CASE("expected: value() throw catchable as bad_expected_access<void>", "[ExpectedTest]") {
     expt::expected<int, std::string> e(expt::unexpected<std::string>("e"));
     try {
-        e.value();
+        (void)e.value();
         FAIL("should have thrown");
     } catch (const expt::bad_expected_access<void>& ex) {
         CHECK(ex.what() != nullptr);
