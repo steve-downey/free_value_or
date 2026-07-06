@@ -4,6 +4,16 @@
 find_package(Catch2 3 REQUIRED)
 list(APPEND CMAKE_MODULE_PATH "${Catch2_SOURCE_DIR}/extras")
 
+# Detect libc++ (explicit -stdlib=libc++, or AppleClang's implicit default) so
+# the std::expected parity target below can be skipped on it. See the
+# "Known CI failures" section of docs/std-parity.md: several libc++ versions
+# have their own std::expected/std::unexpected bugs (a cross-specialization
+# friend-access error, and a Catch2-decomposition-triggered self-referential
+# constraint check) that are toolchain defects, not beman::expected behavioral
+# differences, and are not worth chasing here.
+include(CheckCXXSymbolExists)
+check_cxx_symbol_exists(_LIBCPP_VERSION "version" BEMAN_EXPECTED_USING_LIBCXX)
+
 # Portable behavioral tests: run against every implementation under test.
 # Parameterized over the implementation via test_expected.hpp (see that header).
 set(beman_expected_behavioral_tests
@@ -57,29 +67,32 @@ catch_discover_tests(beman.expected.tests.expected)
 # behavioral difference from beman::expected is expected except those that
 # involve reference specializations, which are not yet parameterized. Any
 # beman-specific assertion is guarded with #ifndef BEMAN_EXPECTED_TEST_STD.
-add_executable(beman.expected.tests.expected.std)
-target_sources(
-    beman.expected.tests.expected.std
-    PRIVATE ${beman_expected_behavioral_tests}
-)
-target_compile_definitions(
-    beman.expected.tests.expected.std
-    PRIVATE BEMAN_EXPECTED_TEST_STD
-)
-target_compile_features(beman.expected.tests.expected.std PRIVATE cxx_std_23)
-target_include_directories(
-    beman.expected.tests.expected.std
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/tests
-)
-target_link_libraries(
-    beman.expected.tests.expected.std
-    PRIVATE Catch2::Catch2WithMain
-)
-catch_discover_tests(
-    beman.expected.tests.expected.std
-    TEST_PREFIX "std."
-    PROPERTIES LABELS std
-)
+# Skipped on libc++ — see docs/std-parity.md.
+if(NOT BEMAN_EXPECTED_USING_LIBCXX)
+    add_executable(beman.expected.tests.expected.std)
+    target_sources(
+        beman.expected.tests.expected.std
+        PRIVATE ${beman_expected_behavioral_tests}
+    )
+    target_compile_definitions(
+        beman.expected.tests.expected.std
+        PRIVATE BEMAN_EXPECTED_TEST_STD
+    )
+    target_compile_features(beman.expected.tests.expected.std PRIVATE cxx_std_23)
+    target_include_directories(
+        beman.expected.tests.expected.std
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/tests
+    )
+    target_link_libraries(
+        beman.expected.tests.expected.std
+        PRIVATE Catch2::Catch2WithMain
+    )
+    catch_discover_tests(
+        beman.expected.tests.expected.std
+        TEST_PREFIX "std."
+        PROPERTIES LABELS std
+    )
+endif()
 
 # =============================================================================
 # Negative compile tests (WILL_FAIL = compile failure is the expected outcome)
