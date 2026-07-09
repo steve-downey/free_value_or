@@ -67,7 +67,7 @@ TEST_CASE("reference-error construction from unexpected<E&> binds an external ob
 static_assert(std::is_assignable_v<expected<void, int&>&, unexpected<int&>>);
 static_assert(std::is_assignable_v<expected<int, int&>&, unexpected<int&>>);
 static_assert(std::is_assignable_v<expected<int&, int&>&, unexpected<int&>>);
-static_assert(std::is_assignable_v<expected<int, const int&>&, unexpected<int&>>); // more-const OK
+static_assert(std::is_assignable_v<expected<int, const int&>&, unexpected<int&>>);  // more-const OK
 static_assert(!std::is_assignable_v<expected<int, int&>&, unexpected<int>>);        // value G: deleted
 static_assert(!std::is_assignable_v<expected<int, int&>&, unexpected<const int&>>); // const drop: no overload
 
@@ -80,7 +80,7 @@ TEST_CASE("rebinding assignment from unexpected<E&> repoints the error reference
         REQUIRE(&e.error() == &g2); // rebound to g2
         REQUIRE(g1 == 1);           // previously-referenced object untouched
         g2 = 42;
-        REQUIRE(e.error() == 42);   // sees the new referent
+        REQUIRE(e.error() == 42); // sees the new referent
     }
     SECTION("value -> error transition (expected<int, int&>)") {
         expected<int, int&> e{7};
@@ -89,7 +89,7 @@ TEST_CASE("rebinding assignment from unexpected<E&> repoints the error reference
         REQUIRE(&e.error() == &g2);
     }
     SECTION("both references (expected<int&, int&>)") {
-        int target = 5;
+        int                  target = 5;
         expected<int&, int&> e{target};
         e = unexpected<int&>(g2);
         REQUIRE_FALSE(e.has_value());
@@ -129,9 +129,9 @@ TEST_CASE("value constructor propagates a throwing reference conversion", "[ref]
 }
 
 TEST_CASE("emplace propagates a throwing reference conversion", "[ref][emplace][noexcept]") {
-    int target = 5;
+    int                 target = 5;
     expected<int&, int> e{target};
-    int caught = 0;
+    int                 caught = 0;
     try {
         e.emplace(ThrowingRef{});
     } catch (int v) {
@@ -199,14 +199,14 @@ static_assert(!has_error_or<expected<int&, std::string>&, NotConvertible>);
 
 TEST_CASE("converting from an rvalue reference expected does not steal the referent", "[ref][convert][shallow]") {
     SECTION("value side: expected<string,int> <- expected<string&,int>&&") {
-        std::string                s = "bar";
+        std::string                 s = "bar";
         expected<std::string&, int> r{s};
         expected<std::string, int>  o{std::move(r)};
         REQUIRE(s == "bar"); // referent untouched (copied, not moved)
         REQUIRE(o.value() == "bar");
     }
     SECTION("value side, assignment") {
-        std::string                s = "bar";
+        std::string                 s = "bar";
         expected<std::string&, int> r{s};
         expected<std::string, int>  o{std::in_place, "x"};
         o = std::move(r);
@@ -214,7 +214,7 @@ TEST_CASE("converting from an rvalue reference expected does not steal the refer
         REQUIRE(o.value() == "bar");
     }
     SECTION("error side: expected<int,string> <- expected<int,string&>&&") {
-        std::string                s = "bar";
+        std::string                 s = "bar";
         expected<int, std::string&> r{unexpect, s};
         expected<int, std::string>  o{std::move(r)};
         REQUIRE(s == "bar");
@@ -225,8 +225,8 @@ TEST_CASE("converting from an rvalue reference expected does not steal the refer
 TEST_CASE("constructing/assigning a value error from unexpected<E&> does not steal the referent",
           "[unexpected][convert][shallow]") {
     SECTION("construction") {
-        std::string                 s = "bar";
-        expected<int, std::string>  o{unexpected<std::string&>(s)};
+        std::string                s = "bar";
+        expected<int, std::string> o{unexpected<std::string&>(s)};
         REQUIRE(s == "bar"); // external referent copied, not moved
         REQUIRE(o.error() == "bar");
     }

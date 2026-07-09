@@ -78,7 +78,10 @@ if(NOT BEMAN_EXPECTED_USING_LIBCXX)
         beman.expected.tests.expected.std
         PRIVATE BEMAN_EXPECTED_TEST_STD
     )
-    target_compile_features(beman.expected.tests.expected.std PRIVATE cxx_std_23)
+    target_compile_features(
+        beman.expected.tests.expected.std
+        PRIVATE cxx_std_23
+    )
     target_include_directories(
         beman.expected.tests.expected.std
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/tests

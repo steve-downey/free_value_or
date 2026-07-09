@@ -281,7 +281,7 @@ TEST_CASE("or_else rvalue on error calls F", "[expected_void_monadic]") {
 
 TEST_CASE("or_else const rvalue on error calls F", "[expected_void_monadic]") {
     const expected<void, int> e(unexpect, 5);
-    auto                       r = std::move(e).or_else([](int v) -> expected<void, int> { return unexpected(v + 1); });
+    auto                      r = std::move(e).or_else([](int v) -> expected<void, int> { return unexpected(v + 1); });
     REQUIRE(!r.has_value());
     CHECK(r.error() == 6);
 }

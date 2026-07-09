@@ -522,8 +522,8 @@ TEST_CASE("expected<T&>: const transform", "[expected_ref]") {
 
 TEST_CASE("expected<T&>: const transform on error - propagates", "[expected_ref]") {
     const expected<int&, int> e(unexpect, 5);
-    bool                       called = false;
-    auto                       r      = e.transform([&](int&) {
+    bool                      called = false;
+    auto                      r      = e.transform([&](int&) {
         called = true;
         return 0;
     });
