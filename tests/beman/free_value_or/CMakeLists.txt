@@ -94,7 +94,7 @@ fvo_add_test(beman.free_value_or.tests.reference_or reference_or.test.cpp)
 fvo_add_compile_fail_test(
     fvo.fail.not_nullable
     fail_not_nullable.cpp
-    "no matching function for call to"
+    "no matching function for call to|no matching overloaded function|constraints are not satisfied"
 )
 
 # ---------------------------------------------------------------------------
@@ -105,13 +105,13 @@ fvo_add_compile_fail_test(
 fvo_add_compile_fail_test(
     fvo.fail.ref_or_temp_from_prvalue
     ref_or_temp_from_prvalue_fail.cpp
-    "static assertion failed"
+    "static assertion failed|static_assert failed"
 )
 
 fvo_add_compile_fail_test(
     fvo.fail.ref_or_rvalue_string
     ref_or_rvalue_string_fail.cpp
-    "static assertion failed"
+    "static assertion failed|static_assert failed"
 )
 
 # ---------------------------------------------------------------------------
@@ -121,19 +121,19 @@ fvo_add_compile_fail_test(
 fvo_add_compile_fail_test(
     fvo.fail.value_or_non_nullable
     value_or_non_nullable_fail.cpp
-    "no matching function for call to"
+    "no matching function for call to|no matching overloaded function|constraints are not satisfied"
 )
 
 fvo_add_compile_fail_test(
     fvo.fail.reference_or_non_nullable
     reference_or_non_nullable_fail.cpp
-    "no matching function for call to"
+    "no matching function for call to|no matching overloaded function|constraints are not satisfied"
 )
 
 fvo_add_compile_fail_test(
     fvo.fail.or_invoke_non_nullable
     or_invoke_non_nullable_fail.cpp
-    "no matching function for call to"
+    "no matching function for call to|no matching overloaded function|constraints are not satisfied"
 )
 
 # ---------------------------------------------------------------------------
@@ -176,19 +176,23 @@ fvo_add_test(beman.free_value_or.tests.or_construct_laziness or_construct_lazine
 fvo_add_compile_fail_test(
     fvo.fail.or_construct_non_nullable
     or_construct_non_nullable_fail.cpp
-    "no matching function for call to"
+    "no matching function for call to|no matching overloaded function|constraints are not satisfied"
 )
 
 fvo_add_compile_fail_test(
     fvo.fail.or_construct_initlist_non_nullable
     or_construct_initlist_non_nullable_fail.cpp
-    "no matching function for call to"
+    "no matching function for call to|no matching overloaded function|constraints are not satisfied"
 )
 
+# Diagnostic wording for a bad static_cast differs by compiler:
+#   gcc:   invalid 'static_cast' from type ...
+#   clang: no matching conversion for static_cast ...
+#   msvc:  'static_cast': cannot convert from ...
 fvo_add_compile_fail_test(
     fvo.fail.or_construct_payload_not_convertible
     or_construct_payload_not_convertible_fail.cpp
-    "invalid .*static_cast"
+    "invalid.*static_cast|no matching conversion|cannot convert"
 )
 
 # ---------------------------------------------------------------------------
