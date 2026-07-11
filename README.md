@@ -36,7 +36,7 @@ This project requires at least the following to build:
 
 * A C++ compiler that conforms to the C++20 standard or greater
 * CMake 3.30 or later
-* (Test Only) GoogleTest
+* (Test Only) Catch2
 
 You can disable building tests by setting CMake option `BEMAN_FREE_VALUE_OR_BUILD_TESTS` to
 `OFF` when configuring the project.
