@@ -16,12 +16,12 @@ namespace fvo = smd::free_value_or;
 
 int main() {
     // ---- value_or: engaged / disengaged across nullable models ----
-    std::optional<int>       o_eng{42}, o_dis{};
-    std::expected<int, int>  e_eng{7},  e_dis{std::unexpected(0)};
-    int                      obj = 5;
-    int*                     p_eng = &obj, *p_dis = nullptr;
-    auto                     s_eng = std::make_shared<int>(9);
-    std::shared_ptr<int>     s_dis{};
+    std::optional<int>      o_eng{42}, o_dis{};
+    std::expected<int, int> e_eng{7}, e_dis{std::unexpected(0)};
+    int                     obj   = 5;
+    int *                   p_eng = &obj, *p_dis = nullptr;
+    auto                    s_eng = std::make_shared<int>(9);
+    std::shared_ptr<int>    s_dis{};
 
     assert(fvo::value_or(o_eng, 0) == 42);
     assert(fvo::value_or(o_dis, 0) == 0);
@@ -31,7 +31,7 @@ int main() {
     assert(fvo::value_or(p_dis, 0) == 0);
     assert(fvo::value_or(s_eng, 0) == 9);
     assert(fvo::value_or(s_dis, 0) == 0);
-    assert(fvo::value_or(std::make_unique<int>(11), 0) == 11);        // move-only rvalue
+    assert(fvo::value_or(std::make_unique<int>(11), 0) == 11); // move-only rvalue
 
     // common_type promotion
     static_assert(std::is_same_v<decltype(fvo::value_or(o_eng, 1L)), long>);
@@ -39,17 +39,20 @@ int main() {
 
     // ---- reference_or: returns a reference into the engaged object ----
     std::optional<int> r{100};
-    int                 fallback = -1;
-    decltype(auto)      ref = fvo::reference_or(r, fallback);
+    int                fallback = -1;
+    decltype(auto)     ref      = fvo::reference_or(r, fallback);
     static_assert(std::is_reference_v<decltype(ref)>);
     assert(&ref == &*r);
 
     // ---- or_invoke: lazy fallback only runs when disengaged ----
-    int calls = 0;
-    auto make = [&] { ++calls; return -7; };
-    assert(fvo::or_invoke(o_eng, make) == 42);   // engaged: not called
+    int  calls = 0;
+    auto make  = [&] {
+        ++calls;
+        return -7;
+    };
+    assert(fvo::or_invoke(o_eng, make) == 42); // engaged: not called
     assert(calls == 0);
-    assert(fvo::or_invoke(o_dis, make) == -7);   // disengaged: called
+    assert(fvo::or_invoke(o_dis, make) == -7); // disengaged: called
     assert(calls == 1);
 
     // ---- or_construct: build the fallback in place ----

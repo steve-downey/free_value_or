@@ -72,34 +72,28 @@ Ends with `100% tests passed, 0 tests failed out of 106`. Other useful goals
 
 ### Portable path — CMake presets
 
-⚠️ `cmake --workflow --preset gcc-debug` **fails here** on the
-`all_verify_interface_header_sets` step (see Gotchas). Build the `all` target
-explicitly instead, then test:
+The full workflow (configure + build + header-verify + test) passes:
 
 ```bash
-cmake --build --preset gcc-debug --target all
-ctest --preset gcc-debug
+cmake --workflow --preset gcc-debug
 ```
 
-Also ends with `100% tests passed ... out of 106`. (First run configures the
-preset and git-clones Catch2 into `build/gcc-debug/_deps`.) Other presets:
+Ends with `100% tests passed ... out of 106`. (First run configures the preset
+and git-clones Catch2 into `build/gcc-debug/_deps`.) Other presets:
 `gcc-release`, `llvm-debug`, `llvm-release`.
 
 ## Gotchas
 
-- **`cmake --workflow --preset *` fails on `all_verify_interface_header_sets`
-  with gcc/clang whose libstdc++ gates the trait.** That target compiles each
-  public header standalone at **C++20** (the root preset sets
-  `CMAKE_CXX_STANDARD=20`), but `value_or.hpp` uses
-  `std::reference_constructs_from_temporary_v`, a **C++23** trait. gcc-13's
-  libstdc++ only defines it at `-std=c++23`, so the C++20 header-verify errors
-  with *"reference_constructs_from_temporary_v is not a member of std"*. The
-  library's own targets build fine because they set `cxx_std_23`. Workaround:
-  build `--target all` (above), which skips the verify target. `make
-  compile-headers` hits the same wall for the same reason.
-- **The header requires C++23, not C++20.** `value_or.hpp` pulls in
-  `std::expected`, `std::iter_reference_t`, and the temporary-binding trait.
-  Always compile consumers with `-std=c++23`.
+- **`value_or.hpp` is C++20-clean; C++17 is not supported.** The header uses
+  concepts, `iter_reference_t`, `common_reference_t`, `remove_cvref_t` — all
+  C++20. It also needs the P2255 dangling-reference trait
+  `std::reference_constructs_from_temporary_v` (C++23), which is polyfilled via
+  the `__reference_constructs_from_temporary` builtin so the header still
+  compiles (with the check active) at C++20 and on C++23 stdlibs that predate
+  the trait (libstdc++ < 13, Apple libc++). The header-set verify at C++20 and
+  the `make compile-headers` target both pass because of this. The *test suite*
+  and the driver's `smoke.cpp` additionally use `std::expected` (C++23), so
+  compile those with `-std=c++23`.
 - **The umbrella header does not include the implementation.**
   `free_value_or.hpp` includes the `todo.hpp` scaffold (namespace
   `beman::free_value_or`), *not* `value_or.hpp`. Include
@@ -110,9 +104,8 @@ preset and git-clones Catch2 into `build/gcc-debug/_deps`.) Other presets:
 
 ## Troubleshooting
 
-- `reference_constructs_from_temporary_v is not a member of 'std'` → you (or the
-  verify target) are compiling at C++20. Use `-std=c++23`, or for the preset
-  build use `--target all` instead of the full workflow.
+- `'concept' only available with '-std=c++20'` → you are compiling below C++20.
+  This library requires C++20 minimum; C++17 cannot work.
 - `Could NOT find Catch2` / git clone errors during a preset or `make` build →
   the suite needs network to FetchContent Catch2. The `driver.sh` path avoids
   this entirely; use it when offline.
