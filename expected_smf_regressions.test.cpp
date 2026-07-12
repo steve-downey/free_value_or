@@ -48,7 +48,7 @@ struct NonTrivialDtor {
 
 // User-provided (non-trivial) but noexcept copy and move.
 struct NoexceptNonTrivial {
-    NoexceptNonTrivial()                                     = default;
+    NoexceptNonTrivial() = default;
     NoexceptNonTrivial(const NoexceptNonTrivial&) noexcept {}
     NoexceptNonTrivial(NoexceptNonTrivial&&) noexcept {}
     NoexceptNonTrivial& operator=(const NoexceptNonTrivial&) noexcept { return *this; }
