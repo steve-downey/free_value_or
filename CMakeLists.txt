@@ -39,6 +39,7 @@ set(beman_expected_beman_only_tests
     expected_ref_both.test.cpp
     expected_void_ref_e.test.cpp
     expected_review_corrections.test.cpp
+    expected_smf_regressions.test.cpp
     header_idempotence.test.cpp
 )
 
@@ -95,6 +96,31 @@ if(NOT BEMAN_EXPECTED_USING_LIBCXX)
         TEST_PREFIX "std."
         PROPERTIES LABELS std
     )
+endif()
+
+# --- beman::expected vs std::expected trait-equivalence gate ----------------
+# The exposition-only held member is unexpected<E>, but every observable
+# special-member property is keyed on E. This target asserts (both headers in
+# one TU) that the resulting traits match std::expected across a battery of
+# adversarial error types -- i.e. the unexpected<E> member is behaviourally
+# inert against a T/E rendering. Requires C++23; skipped on libc++ for the same
+# reason as the std parity gate above (see docs/std-parity.md).
+if(NOT BEMAN_EXPECTED_USING_LIBCXX)
+    add_executable(beman.expected.tests.equivalence)
+    target_sources(
+        beman.expected.tests.equivalence
+        PRIVATE expected_std_equivalence.test.cpp
+    )
+    target_compile_features(beman.expected.tests.equivalence PRIVATE cxx_std_23)
+    target_include_directories(
+        beman.expected.tests.equivalence
+        PRIVATE ${PROJECT_SOURCE_DIR}/tests
+    )
+    target_link_libraries(
+        beman.expected.tests.equivalence
+        PRIVATE beman::expected Catch2::Catch2WithMain
+    )
+    catch_discover_tests(beman.expected.tests.equivalence)
 endif()
 
 # =============================================================================
