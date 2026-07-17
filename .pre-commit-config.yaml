@@ -41,11 +41,15 @@ repos:
       - id: codespell
         exclude: ^(papers/wg21-latex/|papers/presentation/)
 
-  #   # Beman Standard checking via beman-tidy
+    # Beman Standard checking via beman-tidy.
+    # Disabled: beman-tidy walks the whole repo (ignoring the pre-commit
+    # exclude below), so it flags the vendored beman.optional26 tree, and it
+    # enforces the beman::free_value_or namespace while the implementation
+    # still lives in smd::free_value_or. Re-enable once those are resolved.
   # - repo: https://github.com/bemanproject/beman-tidy
   #   rev: v0.5.1
   #   hooks:
   #     - id: beman-tidy
   #       exclude: ^(vendored)
 
-exclude: '^(infra/|port/|vendored|.venv)'
+exclude: 'template/|copier/|infra/|port/|vendored/'
