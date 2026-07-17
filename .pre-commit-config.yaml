@@ -21,7 +21,7 @@ repos:
 
     # CMake linting and formatting
   - repo: https://github.com/BlankSpruce/gersemi-pre-commit
-    rev: 0.27.6
+    rev: 0.27.7
     hooks:
     - id: gersemi
       name: CMake linting
@@ -39,22 +39,13 @@ repos:
     rev: v2.4.2
     hooks:
       - id: codespell
-        exclude: ^papers/
+        exclude: ^(papers/wg21-latex/|papers/presentation/)
 
-<<<<<<< before updating
   #   # Beman Standard checking via beman-tidy
   # - repo: https://github.com/bemanproject/beman-tidy
-  #   rev: v0.3.1
+  #   rev: v0.5.1
   #   hooks:
-  #   - id: beman-tidy
+  #     - id: beman-tidy
+  #       exclude: ^(vendored)
 
-exclude: 'template/|copier/|infra/|port/|vendored/'
-=======
-    # Beman Standard checking via beman-tidy
-  - repo: https://github.com/bemanproject/beman-tidy
-    rev: v0.5.1
-    hooks:
-    - id: beman-tidy
-
-exclude: 'infra/|port/'
->>>>>>> after updating
+exclude: '^(infra/|port/|vendored|.venv)'
