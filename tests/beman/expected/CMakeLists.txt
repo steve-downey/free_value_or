@@ -35,6 +35,7 @@ set(beman_expected_beman_only_tests
     expected_monadic_constraints.test.cpp
     expected_ref.test.cpp
     expected_ref_constraints.test.cpp
+    value_or_construct.test.cpp
     expected_ref_e.test.cpp
     expected_ref_both.test.cpp
     expected_void_ref_e.test.cpp

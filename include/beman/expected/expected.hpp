@@ -439,6 +439,24 @@ class expected {
     template <class U = std::remove_cv_t<T>>
     constexpr T value_or(U&& def) &&;
 
+    // [P3413] value_or_construct / value_or_else: like value_or, but the
+    // alternate is produced (constructed / invoked) only when *this holds an
+    // error (lazy), improving both performance and ergonomics.
+    template <class... Args>
+    constexpr T value_or_construct(Args&&... args) const&;
+    template <class... Args>
+    constexpr T value_or_construct(Args&&... args) &&;
+
+    template <class U, class... Args>
+    constexpr T value_or_construct(std::initializer_list<U> il, Args&&... args) const&;
+    template <class U, class... Args>
+    constexpr T value_or_construct(std::initializer_list<U> il, Args&&... args) &&;
+
+    template <class F>
+    constexpr T value_or_else(F&& f) const&;
+    template <class F>
+    constexpr T value_or_else(F&& f) &&;
+
     template <class G = error_value_type>
         requires(std::is_copy_constructible_v<error_value_type> && std::is_convertible_v<G, error_value_type>)
     constexpr error_value_type error_or(G&& def) const&;
@@ -1098,6 +1116,71 @@ constexpr T expected<T, E>::value_or(U&& def) && {
     if (has_val_)
         return std::move(val_);
     return static_cast<T>(std::forward<U>(def));
+}
+
+// [P3413] value_or_construct / value_or_else
+template <class T, class E>
+template <class... Args>
+constexpr T expected<T, E>::value_or_construct(Args&&... args) const& {
+    static_assert(std::is_copy_constructible_v<T>, "value_or_construct requires is_copy_constructible_v<T>");
+    static_assert(std::is_constructible_v<T, Args...>, "value_or_construct requires is_constructible_v<T, Args...>");
+    if (has_val_)
+        return val_;
+    return T(std::forward<Args>(args)...);
+}
+
+template <class T, class E>
+template <class... Args>
+constexpr T expected<T, E>::value_or_construct(Args&&... args) && {
+    static_assert(std::is_move_constructible_v<T>, "value_or_construct requires is_move_constructible_v<T>");
+    static_assert(std::is_constructible_v<T, Args...>, "value_or_construct requires is_constructible_v<T, Args...>");
+    if (has_val_)
+        return std::move(val_);
+    return T(std::forward<Args>(args)...);
+}
+
+template <class T, class E>
+template <class U, class... Args>
+constexpr T expected<T, E>::value_or_construct(std::initializer_list<U> il, Args&&... args) const& {
+    static_assert(std::is_copy_constructible_v<T>, "value_or_construct requires is_copy_constructible_v<T>");
+    static_assert(std::is_constructible_v<T, std::initializer_list<U>&, Args...>,
+                  "value_or_construct requires is_constructible_v<T, initializer_list<U>&, Args...>");
+    if (has_val_)
+        return val_;
+    return T(il, std::forward<Args>(args)...);
+}
+
+template <class T, class E>
+template <class U, class... Args>
+constexpr T expected<T, E>::value_or_construct(std::initializer_list<U> il, Args&&... args) && {
+    static_assert(std::is_move_constructible_v<T>, "value_or_construct requires is_move_constructible_v<T>");
+    static_assert(std::is_constructible_v<T, std::initializer_list<U>&, Args...>,
+                  "value_or_construct requires is_constructible_v<T, initializer_list<U>&, Args...>");
+    if (has_val_)
+        return std::move(val_);
+    return T(il, std::forward<Args>(args)...);
+}
+
+template <class T, class E>
+template <class F>
+constexpr T expected<T, E>::value_or_else(F&& f) const& {
+    static_assert(std::is_copy_constructible_v<T>, "value_or_else requires is_copy_constructible_v<T>");
+    static_assert(std::is_convertible_v<std::invoke_result_t<F>, T>,
+                  "value_or_else requires is_convertible_v<invoke_result_t<F>, T>");
+    if (has_val_)
+        return val_;
+    return std::forward<F>(f)();
+}
+
+template <class T, class E>
+template <class F>
+constexpr T expected<T, E>::value_or_else(F&& f) && {
+    static_assert(std::is_move_constructible_v<T>, "value_or_else requires is_move_constructible_v<T>");
+    static_assert(std::is_convertible_v<std::invoke_result_t<F>, T>,
+                  "value_or_else requires is_convertible_v<invoke_result_t<F>, T>");
+    if (has_val_)
+        return std::move(val_);
+    return std::forward<F>(f)();
 }
 
 template <class T, class E>
@@ -2595,6 +2678,20 @@ class expected<T&, E> {
         requires(std::is_object_v<T> && !std::is_array_v<T>)
     constexpr std::remove_cv_t<T> value_or(U&& def) const;
 
+    // [P3413] value_or_construct / value_or_else for the reference specialization:
+    // the alternate is produced only when *this holds an error (lazy).
+    template <class... Args>
+        requires(std::is_object_v<T> && !std::is_array_v<T>)
+    constexpr std::remove_cv_t<T> value_or_construct(Args&&... args) const;
+
+    template <class U, class... Args>
+        requires(std::is_object_v<T> && !std::is_array_v<T>)
+    constexpr std::remove_cv_t<T> value_or_construct(std::initializer_list<U> il, Args&&... args) const;
+
+    template <class F>
+        requires(std::is_object_v<T> && !std::is_array_v<T>)
+    constexpr std::remove_cv_t<T> value_or_else(F&& f) const;
+
     // Constraints spell error_value_type as its underlying trait expression rather than the
     // member typedef: clang (through 22) fails to match an out-of-line constrained member of a
     // partial specialization when the requires-clause names a member typedef of the class.
@@ -3061,6 +3158,46 @@ constexpr std::remove_cv_t<T> expected<T&, E>::value_or(U&& def) const {
     if (has_val_)
         return *val_;
     return static_cast<X>(std::forward<U>(def));
+}
+
+// [P3413] value_or_construct / value_or_else for expected<T&, E>
+template <class T, class E>
+template <class... Args>
+    requires(std::is_object_v<T> && !std::is_array_v<T>)
+constexpr std::remove_cv_t<T> expected<T&, E>::value_or_construct(Args&&... args) const {
+    using X = std::remove_cv_t<T>;
+    static_assert(std::is_convertible_v<T&, X>, "value_or_construct requires T& convertible to remove_cv_t<T>");
+    static_assert(std::is_constructible_v<X, Args...>,
+                  "value_or_construct requires is_constructible_v<remove_cv_t<T>, Args...>");
+    if (has_val_)
+        return *val_;
+    return X(std::forward<Args>(args)...);
+}
+
+template <class T, class E>
+template <class U, class... Args>
+    requires(std::is_object_v<T> && !std::is_array_v<T>)
+constexpr std::remove_cv_t<T> expected<T&, E>::value_or_construct(std::initializer_list<U> il, Args&&... args) const {
+    using X = std::remove_cv_t<T>;
+    static_assert(std::is_convertible_v<T&, X>, "value_or_construct requires T& convertible to remove_cv_t<T>");
+    static_assert(std::is_constructible_v<X, std::initializer_list<U>&, Args...>,
+                  "value_or_construct requires is_constructible_v<remove_cv_t<T>, initializer_list<U>&, Args...>");
+    if (has_val_)
+        return *val_;
+    return X(il, std::forward<Args>(args)...);
+}
+
+template <class T, class E>
+template <class F>
+    requires(std::is_object_v<T> && !std::is_array_v<T>)
+constexpr std::remove_cv_t<T> expected<T&, E>::value_or_else(F&& f) const {
+    using X = std::remove_cv_t<T>;
+    static_assert(std::is_convertible_v<T&, X>, "value_or_else requires T& convertible to remove_cv_t<T>");
+    static_assert(std::is_convertible_v<std::invoke_result_t<F>, X>,
+                  "value_or_else requires is_convertible_v<invoke_result_t<F>, remove_cv_t<T>>");
+    if (has_val_)
+        return *val_;
+    return std::forward<F>(f)();
 }
 
 template <class T, class E>
