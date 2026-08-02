@@ -777,13 +777,12 @@ Add as well the member functions of \cite{P3413R0}:
 and \tcode{value_or_else}, on both \tcode{std::optional} and
 \tcode{std::expected}, each in \tcode{const\&} and \tcode{\&\&} form,
 producing the fallback lazily and in place. Their wording is reproduced
-below, unchanged in substance from P3413. Where a reference specialization
-exists --- \tcode{std::optional<T\&>} today \cite{P2988R12}, and a future
-\tcode{std::expected<T\&,E>} --- the members apply there too, returning a
-value; the reference cases depend on those papers and are called out in the
-wording. The two feature sets are severable: LEWG may take the free
-functions, the members, or both, but the point of unifying is that it need
-not.
+below, unchanged in substance from P3413. \tcode{std::optional<T\&>}
+\cite{P2988R12} is in C++26, and the members apply to it directly, returning a
+value; a future \tcode{std::expected<T\&,E>} would carry them the same way, and
+that one case depends on the expected-over-references work, as the wording
+notes. The two feature sets are severable: LEWG may take the free functions,
+the members, or both, but the point of unifying is that it need not.
 
 Open questions on which LEWG guidance is sought before wording review:
 
@@ -1186,12 +1185,12 @@ proposed, following \cite{P3413R0}.
 
 \subsection{Reference specializations, and the expected-over-references dependency}
 
-\tcode{std::optional<T\&>} \cite{P2988R12} exists; \tcode{std::expected<T\&,E>}
-does not yet, but is expected to follow. On both, these members return a value
-rather than a reference --- exactly as \tcode{value_or} does on those
-specializations --- and are declared \tcode{const}, there being no rvalue
-overload to distinguish. For \tcode{optional<T\&>} and \tcode{expected<T\&,E>},
-add:
+\tcode{std::optional<T\&>} \cite{P2988R12} is in C++26;
+\tcode{std::expected<T\&,E>} is not standardized yet, but is expected to
+follow. On both, these members return a value rather than a reference ---
+exactly as \tcode{value_or} does on those specializations --- and are declared
+\tcode{const}, there being no rvalue overload to distinguish. For
+\tcode{optional<T\&>} and \tcode{expected<T\&,E>}, add:
 
 \begin{codeblock}
 template<class... Args>
@@ -1223,13 +1222,14 @@ return has_value() ? **this : std::forward<F>(f)();
 \end{itemdescr}
 
 \pnum
-The \tcode{optional<T\&>} case depends on \cite{P2988R12} and the
-\tcode{expected<T\&,E>} case on the expected-over-references work; neither
-specialization is in the working draft yet, so this wording is contingent on
-their adoption. Both are implemented already --- the Beman \tcode{expected}
-carries \tcode{expected<T\&,E>}, \tcode{expected<T,E\&>}, and
-\tcode{expected<T\&,E\&>} --- so the reference forms are exercised now, not
-merely specified (see Implementation Experience).
+The \tcode{optional<T\&>} wording above is a plain addition to a C++26
+facility; nothing about it is contingent. Only the \tcode{expected<T\&,E>}
+case is: it depends on the expected-over-references work, which is not yet in
+the working draft. Both reference forms are implemented already --- the Beman
+\tcode{expected} carries \tcode{expected<T\&,E>}, \tcode{expected<T,E\&>}, and
+\tcode{expected<T\&,E\&>}, and the Beman \tcode{optional} the adopted
+\tcode{optional<T\&>} --- so they are exercised now, not merely specified (see
+Implementation Experience).
 
 \section{Feature test macro}
 
