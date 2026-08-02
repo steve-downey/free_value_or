@@ -1,3 +1,0 @@
-pre-commit
-clang-format==22.1.4
-gcovr

@@ -84,7 +84,12 @@ add_subdirectory(include/beman/free_value_or)
 beman_install_library(beman.free_value_or TARGETS beman.free_value_or)
 configure_build_telemetry()
 
-add_subdirectory(vendored)
+# Co-located, vendored-by-subtree proposal dependencies (beman::optional,
+# beman::expected). These live under include/beman/<lib> and tests/beman/<lib>
+# as non-squash git subtrees so their sources are edited in place here and
+# pushed back upstream (see scripts/vendor-*.sh). This is part of the proposal
+# surface, not test-only infrastructure.
+include(cmake/vendored-libs.cmake)
 
 if(BEMAN_FREE_VALUE_OR_BUILD_TESTS)
     enable_testing()

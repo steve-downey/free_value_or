@@ -1,3 +1,0 @@
-[submodule "vendored/beman.optional26/papers/P2988/wg21"]
-	path = vendored/beman.optional26/papers/P2988/wg21
-	url = https://github.com/mpark/wg21.git
