@@ -11,13 +11,14 @@
 \title{Free Value Or Else}
 \author{
   Steve Downey \small<\href{mailto:sdowney@gmail.com}{sdowney@gmail.com}> \\
+  Corentin Jabot \small<\href{mailto:corentin.jabot@gmail.com}{corentin.jabot@gmail.com}> \\
 }
 \date{} %unused. Type date explicitly below.
 \maketitle
 
 \begin{flushright}
   \begin{tabular}{ll}
-    Document \#: & D4270R0 \\
+    Document \#: & D4270R1 \\
     Date: & \today \\
     Project: & Programming Language C++ \\
     Audience: & LEWG
@@ -42,6 +43,9 @@
 \chapter*{Changes Since Last Version}
 
 \begin{itemize}
+\item \textbf{R1} Unified with \cite{P3413R0} at LEWG's request: Corentin Jabot
+  joins as co-author, and the member functions \tcode{value_or_construct} and
+  \tcode{value_or_else} are folded into the proposal and wording.
 \item \textbf{R0} Initial revision.
 \end{itemize}
 
@@ -1104,16 +1108,21 @@ Thanks to Peter Sommerlad, co-author of \cite{P2988R12}, where the member
 \tcode{value_or} question was fought to a standstill, and to the LEWG
 reviewers of P1255 and P2988 whose objections shaped these functions. The
 Tokyo review homework on \tcode{value_or} alternatives surveyed the
-implementation divergence reported here. Thanks to Marc Mutz and Corentin
-Jabot, whose \cite{P2218R0} and \cite{P3413R0} map the member-function side
-of this design space.
+implementation divergence reported here. Thanks to Marc Mutz, whose
+\cite{P2218R0} originated the member \tcode{value_or_construct} and
+\tcode{value_or_else} that \cite{P3413R0} revived, and to Barry Revzin for the
+wording feedback carried through that paper.
 
 \chapter{Document history}
 
 \begin{itemize}
-\item \textbf{R0} \today\ --- Initial draft. The free-function follow-on
-  promised in \cite{P2988R12}, concluding the line of work begun in
-  \cite{P1255R13}.
+\item \textbf{R1} \today\ --- Unified with \cite{P3413R0} following LEWG's
+  Brno review, which asked for a single proposal. Corentin Jabot joins as
+  co-author; the members \tcode{value_or_construct} and \tcode{value_or_else}
+  are folded into the proposal, wording, and implementation.
+\item \textbf{R0} Brno, 2026-06 --- Initial draft, reviewed by LEWG. The
+  free-function follow-on promised in \cite{P2988R12}, concluding the line of
+  work begun in \cite{P1255R13}.
 \end{itemize}
 
 \renewcommand{\bibname}{References}
