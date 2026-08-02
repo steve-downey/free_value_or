@@ -158,6 +158,12 @@ TEST_CASE("expected<void,const E&>: convert from expected<void, G&> (lvalue and 
     CHECK(&dst2.error() == &err);
 }
 
+TEST_CASE("expected<void,E&>: convert value state from expected<void, G&>", "[expected_void_ref_e]") {
+    const expected<void, int&> src;
+    expected<void, const int&> dst(src);
+    CHECK(dst.has_value());
+}
+
 // ---------------------------------------------------------------------------
 // Error rebind semantics on assignment
 // ---------------------------------------------------------------------------

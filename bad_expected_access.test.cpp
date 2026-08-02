@@ -153,3 +153,25 @@ TEST_CASE("bad_expected_access: const rvalue error accessor (string move)", "[Ba
     std::string                                  s = std::move(e).error();
     CHECK(s == "val");
 }
+
+// bad_expected_access<void>::what() is only reachable from a class derived from
+// bad_expected_access<void> that does not itself override what(): the special
+// members of bad_expected_access<void> are protected, so no standalone object
+// can be made, and every bad_expected_access<E> overrides what(), so virtual
+// dispatch through a base reference always lands on the derived override.
+namespace {
+struct derived_bad_access : expt::bad_expected_access<void> {
+    derived_bad_access() = default;
+};
+} // namespace
+
+TEST_CASE("bad_expected_access<void>: what() from a derived class", "[BadExpectedAccessTest]") {
+    derived_bad_access d;
+    CHECK(d.what() != nullptr);
+#ifndef BEMAN_EXPECTED_TEST_STD
+    CHECK(std::string_view(d.what()) == "bad expected access");
+#endif
+
+    const std::exception& ex = d;
+    CHECK(ex.what() != nullptr);
+}
