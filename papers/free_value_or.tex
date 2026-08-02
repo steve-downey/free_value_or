@@ -1065,24 +1065,171 @@ Equivalent to:
 \end{itemdescr}
 
 \pnum
-For the \tcode{optional<T\&>} specialization \cite{P2988R12} these members
-are declared \tcode{const} and return \tcode{remove_cv_t<T>}, constructing or
-invoking a value on the disengaged path exactly as \tcode{value_or} does
-there; they never yield a reference. That specialization is not yet in the
-working draft, so this reference case depends on \cite{P2988R12}.
+The reference specialization \tcode{optional<T\&>} \cite{P2988R12} carries
+these members too; its wording is given together with
+\tcode{expected<T\&,E>} below.
 
 \subsection{\tcode{expected} [expected.expected], [expected.object.obs]}
 
-The same two members are added to \tcode{expected<T,E>}, in
-[expected.expected.general] and [expected.object.obs], with \emph{Effects}
-identical in form (the disengaged path is taken when
-\tcode{!has_value()}). \tcode{expected<void,E>} gains nothing --- there is no
-value to construct --- and no \tcode{error_or_construct} or
-\tcode{error_or_else} is proposed, following \cite{P3413R0}. A future
-\tcode{std::expected<T\&,E>} would carry the members as the
-reference-returning-a-value forms above; that case depends on the
-expected-over-references work, and is implemented against it already (see
-Implementation Experience).
+To the synopsis of \tcode{expected} in [expected.expected.general], after the
+\tcode{value_or} declarations, add:
+
+\begin{codeblock}
+template<class... Args> constexpr T value_or_construct(Args&&... args) const&;
+template<class... Args> constexpr T value_or_construct(Args&&... args) &&;
+
+template<class U, class... Args>
+  constexpr T value_or_construct(initializer_list<U> il, Args&&... args) const&;
+template<class U, class... Args>
+  constexpr T value_or_construct(initializer_list<U> il, Args&&... args) &&;
+
+template<class F> constexpr T value_or_else(F&& f) const&;
+template<class F> constexpr T value_or_else(F&& f) &&;
+\end{codeblock}
+
+To [expected.object.obs], add:
+
+\begin{itemdescr}
+\begin{codeblock}
+template<class... Args> constexpr T value_or_construct(Args&&... args) const&;
+\end{codeblock}
+\pnum
+\mandates
+\tcode{is_copy_constructible_v<T>} is \tcode{true} and
+\tcode{is_constructible_v<T, Args...>} is \tcode{true}.
+\pnum
+\effects
+Equivalent to:
+\tcode{return has_value() ? **this : T(std::forward<Args>(args)...);}
+\end{itemdescr}
+
+\begin{itemdescr}
+\begin{codeblock}
+template<class... Args> constexpr T value_or_construct(Args&&... args) &&;
+\end{codeblock}
+\pnum
+\mandates
+\tcode{is_move_constructible_v<T>} is \tcode{true} and
+\tcode{is_constructible_v<T, Args...>} is \tcode{true}.
+\pnum
+\effects
+Equivalent to:
+\tcode{return has_value() ? std::move(**this) : T(std::forward<Args>(args)...);}
+\end{itemdescr}
+
+\begin{itemdescr}
+\begin{codeblock}
+template<class U, class... Args>
+  constexpr T value_or_construct(initializer_list<U> il, Args&&... args) const&;
+\end{codeblock}
+\pnum
+\mandates
+\tcode{is_copy_constructible_v<T>} is \tcode{true} and
+\tcode{is_constructible_v<T, initializer_list<U>\&, Args...>} is \tcode{true}.
+\pnum
+\effects
+Equivalent to:
+\tcode{return has_value() ? **this : T(il, std::forward<Args>(args)...);}
+\end{itemdescr}
+
+\begin{itemdescr}
+\begin{codeblock}
+template<class U, class... Args>
+  constexpr T value_or_construct(initializer_list<U> il, Args&&... args) &&;
+\end{codeblock}
+\pnum
+\mandates
+\tcode{is_move_constructible_v<T>} is \tcode{true} and
+\tcode{is_constructible_v<T, initializer_list<U>\&, Args...>} is \tcode{true}.
+\pnum
+\effects
+Equivalent to:
+\tcode{return has_value() ? std::move(**this) : T(il, std::forward<Args>(args)...);}
+\end{itemdescr}
+
+\begin{itemdescr}
+\begin{codeblock}
+template<class F> constexpr T value_or_else(F&& f) const&;
+\end{codeblock}
+\pnum
+Let \tcode{U} be \tcode{invoke_result_t<F>}.
+\pnum
+\mandates
+\tcode{is_copy_constructible_v<T>} is \tcode{true} and
+\tcode{is_convertible_v<U, T>} is \tcode{true}.
+\pnum
+\effects
+Equivalent to:
+\tcode{return has_value() ? **this : T(std::forward<F>(f)());}
+\end{itemdescr}
+
+\begin{itemdescr}
+\begin{codeblock}
+template<class F> constexpr T value_or_else(F&& f) &&;
+\end{codeblock}
+\pnum
+Let \tcode{U} be \tcode{invoke_result_t<F>}.
+\pnum
+\mandates
+\tcode{is_move_constructible_v<T>} is \tcode{true} and
+\tcode{is_convertible_v<U, T>} is \tcode{true}.
+\pnum
+\effects
+Equivalent to:
+\tcode{return has_value() ? std::move(**this) : T(std::forward<F>(f)());}
+\end{itemdescr}
+
+\pnum
+\tcode{expected<void,E>} gains neither member --- there is no value to
+construct --- and no \tcode{error_or_construct} or \tcode{error_or_else} is
+proposed, following \cite{P3413R0}.
+
+\subsection{Reference specializations, and the expected-over-references dependency}
+
+\tcode{std::optional<T\&>} \cite{P2988R12} exists; \tcode{std::expected<T\&,E>}
+does not yet, but is expected to follow. On both, these members return a value
+rather than a reference --- exactly as \tcode{value_or} does on those
+specializations --- and are declared \tcode{const}, there being no rvalue
+overload to distinguish. For \tcode{optional<T\&>} and \tcode{expected<T\&,E>},
+add:
+
+\begin{codeblock}
+template<class... Args>
+  constexpr remove_cv_t<T> value_or_construct(Args&&... args) const;
+template<class U, class... Args>
+  constexpr remove_cv_t<T> value_or_construct(initializer_list<U> il, Args&&... args) const;
+template<class F>
+  constexpr remove_cv_t<T> value_or_else(F&& f) const;
+\end{codeblock}
+
+\begin{itemdescr}
+\pnum
+Let \tcode{X} be \tcode{remove_cv_t<T>}, and for \tcode{value_or_else} let
+\tcode{U} be \tcode{invoke_result_t<F>}.
+\pnum
+\mandates
+\tcode{is_convertible_v<T\&, X>} is \tcode{true}; for
+\tcode{value_or_construct}, \tcode{is_constructible_v<X, Args...>} (respectively
+\tcode{is_constructible_v<X, initializer_list<U>\&, Args...>}) is \tcode{true};
+for \tcode{value_or_else}, \tcode{is_convertible_v<U, X>} is \tcode{true}.
+\pnum
+\effects
+Equivalent to, respectively:
+\begin{codeblock}
+return has_value() ? **this : X(std::forward<Args>(args)...);
+return has_value() ? **this : X(il, std::forward<Args>(args)...);
+return has_value() ? **this : std::forward<F>(f)();
+\end{codeblock}
+\end{itemdescr}
+
+\pnum
+The \tcode{optional<T\&>} case depends on \cite{P2988R12} and the
+\tcode{expected<T\&,E>} case on the expected-over-references work; neither
+specialization is in the working draft yet, so this wording is contingent on
+their adoption. Both are implemented already --- the Beman \tcode{expected}
+carries \tcode{expected<T\&,E>}, \tcode{expected<T,E\&>}, and
+\tcode{expected<T\&,E\&>} --- so the reference forms are exercised now, not
+merely specified (see Implementation Experience).
 
 \section{Feature test macro}
 
