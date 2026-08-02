@@ -94,6 +94,9 @@ include(cmake/vendored-libs.cmake)
 if(BEMAN_FREE_VALUE_OR_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests/beman/free_value_or)
+    # Run the vendored beman::optional / beman::expected suites as project tests
+    # (they validate our in-place edits before push-back). See the file header.
+    include(cmake/vendored-tests.cmake)
 endif()
 
 if(BEMAN_FREE_VALUE_OR_BUILD_EXAMPLES)
