@@ -30,7 +30,11 @@
   --- over any nullable type, such as \tcode{std::optional},
   \tcode{std::expected}, and pointers to objects. They compute the type of the
   result correctly, via \tcode{common_type} and \tcode{common_reference}, as
-  the member \tcode{std::optional::value_or} could not.
+  the member \tcode{std::optional::value_or} could not. At LEWG's request it
+  also carries the member functions of \cite{P3413R0} ---
+  \tcode{value_or_construct} and \tcode{value_or_else} on \tcode{optional} and
+  \tcode{expected} --- so that the two proposals are reviewed, and can be
+  adopted, as one.
 \end{abstract}
 
 \tableofcontents*
@@ -590,14 +594,20 @@ rvalue nullable moves payload & yes (\tcode{\&\&} overloads) &
 \end{tabular}
 \end{center}
 
-The proposals are not mutually exclusive: adopting P3413 makes the member
-interface more complete, and adopting this paper makes the corrected
-semantics available generically. But the overlap is now total --- every
-use P3413's members serve has a free-function spelling here that works on
-more types and, where a type is computed, computes a better one. If this
-paper is adopted, there is far less reason to grow the member surface of
-\tcode{optional} and \tcode{expected}; the committee should choose the
-long-term spelling deliberately rather than adopting both by accident.
+The proposals are not alternatives to choose between. LEWG in Brno asked for
+a single proposal --- ``Can we ask you and Corentin to come back with one
+proposal?'' --- and Corentin is amenable; this chapter, and the wording
+below, are that unification. The two compose. Adopt the members and
+\tcode{optional} and \tcode{expected} gain the lazy, in-place fallback,
+spelled the way a member is spelled and moving out of an rvalue. Adopt the
+free functions and the corrected semantics --- the computed result type,
+reference results, the reach to pointers and every other nullable --- become
+available generically, over those same types and over the ones that have no
+members to grow. A caller writing \tcode{x.value_or_construct(args...)} and
+one writing \tcode{or_construct<R>(m, args...)} are served by the same design
+at two spellings, and neither forecloses the other. This paper therefore
+proposes both: the free functions of the preceding chapters, and the members
+of \cite{P3413R0}, whose wording it reproduces below.
 
 \chapter{Principles for Reification of Design}
 
@@ -731,6 +741,21 @@ constexpr R or_construct(T&& m, std::initializer_list<E> il,
 }
 \end{minted}
 
+The member side is implemented too. \tcode{value_or_construct} and
+\tcode{value_or_else} were added to the Beman reference implementations of
+\tcode{optional} \cite{The_Beman_Project_beman_optional} and \tcode{expected}
+\cite{The_Beman_Project_beman_expected} --- vendored into
+\tcode{beman.free_value_or} and edited in place --- on both the primary
+templates and their reference specializations. \tcode{beman.expected} already
+carries \tcode{expected<T\&,E>}, \tcode{expected<T,E\&>}, and
+\tcode{expected<T\&,E\&>}, so the members run over references now, ahead of any
+such paper reaching the working draft; standardizing those forms is the only
+dependency, not implementing them. The two libraries' own suites ---
+GoogleTest for \tcode{optional}, Catch2 for \tcode{expected} --- run as part of
+this project's tests, and cover laziness (a construction counter that never
+ticks on the engaged path), the \tcode{initializer_list} overload, rvalue
+move-out, constant evaluation, and the reference specializations. All green.
+
 \chapter{Proposal}
 
 Add to the standard library four constrained free function templates ---
@@ -742,6 +767,19 @@ contextually convertible to \tcode{bool} and dereferenceable, including
 \tcode{std::optional}, \tcode{std::expected}, raw pointers,
 \tcode{std::shared_ptr}, \tcode{std::unique_ptr}, and
 \tcode{std::optional<T\&>}.
+
+Add as well the member functions of \cite{P3413R0}:
+\tcode{value_or_construct} --- with its \tcode{initializer_list} overload ---
+and \tcode{value_or_else}, on both \tcode{std::optional} and
+\tcode{std::expected}, each in \tcode{const\&} and \tcode{\&\&} form,
+producing the fallback lazily and in place. Their wording is reproduced
+below, unchanged in substance from P3413. Where a reference specialization
+exists --- \tcode{std::optional<T\&>} today \cite{P2988R12}, and a future
+\tcode{std::expected<T\&,E>} --- the members apply there too, returning a
+value; the reference cases depend on those papers and are called out in the
+wording. The two feature sets are severable: LEWG may take the free
+functions, the members, or both, but the point of unifying is that it need
+not.
 
 Open questions on which LEWG guidance is sought before wording review:
 
@@ -903,16 +941,162 @@ Equivalent to:
 \tcode{return bool(m) ? static_cast<R>(*m) : R(il, std::forward<Args>(args)...);}
 \end{itemdescr}
 
+\section{Member functions, from P3413R0}
+
+The following member wording is reproduced from \cite{P3413R0}, relative to
+\cite{N5008}, and is proposed jointly with the free functions above. It is
+purely additive: the existing \tcode{value_or} is unchanged. Return types and
+\emph{Effects} follow P3413; the \emph{Mandates} spell the construction
+requirement as \tcode{is_constructible_v<T, Args...>}, matching the
+\emph{Effects}.
+
+\subsection{\tcode{optional} [optional.optional], [optional.observe]}
+
+To the synopsis of \tcode{optional} in [optional.optional.general], after the
+\tcode{value_or} declarations, add:
+
+\begin{codeblock}
+template<class... Args> constexpr T value_or_construct(Args&&... args) const&;
+template<class... Args> constexpr T value_or_construct(Args&&... args) &&;
+
+template<class U, class... Args>
+  constexpr T value_or_construct(initializer_list<U> il, Args&&... args) const&;
+template<class U, class... Args>
+  constexpr T value_or_construct(initializer_list<U> il, Args&&... args) &&;
+
+template<class F> constexpr T value_or_else(F&& f) const&;
+template<class F> constexpr T value_or_else(F&& f) &&;
+\end{codeblock}
+
+To [optional.observe], add:
+
+\begin{itemdescr}
+\begin{codeblock}
+template<class... Args> constexpr T value_or_construct(Args&&... args) const&;
+\end{codeblock}
+\pnum
+\mandates
+\tcode{is_copy_constructible_v<T>} is \tcode{true} and
+\tcode{is_constructible_v<T, Args...>} is \tcode{true}.
+\pnum
+\effects
+Equivalent to:
+\tcode{return has_value() ? **this : T(std::forward<Args>(args)...);}
+\end{itemdescr}
+
+\begin{itemdescr}
+\begin{codeblock}
+template<class... Args> constexpr T value_or_construct(Args&&... args) &&;
+\end{codeblock}
+\pnum
+\mandates
+\tcode{is_move_constructible_v<T>} is \tcode{true} and
+\tcode{is_constructible_v<T, Args...>} is \tcode{true}.
+\pnum
+\effects
+Equivalent to:
+\tcode{return has_value() ? std::move(**this) : T(std::forward<Args>(args)...);}
+\end{itemdescr}
+
+\begin{itemdescr}
+\begin{codeblock}
+template<class U, class... Args>
+  constexpr T value_or_construct(initializer_list<U> il, Args&&... args) const&;
+\end{codeblock}
+\pnum
+\mandates
+\tcode{is_copy_constructible_v<T>} is \tcode{true} and
+\tcode{is_constructible_v<T, initializer_list<U>\&, Args...>} is \tcode{true}.
+\pnum
+\effects
+Equivalent to:
+\tcode{return has_value() ? **this : T(il, std::forward<Args>(args)...);}
+\end{itemdescr}
+
+\begin{itemdescr}
+\begin{codeblock}
+template<class U, class... Args>
+  constexpr T value_or_construct(initializer_list<U> il, Args&&... args) &&;
+\end{codeblock}
+\pnum
+\mandates
+\tcode{is_move_constructible_v<T>} is \tcode{true} and
+\tcode{is_constructible_v<T, initializer_list<U>\&, Args...>} is \tcode{true}.
+\pnum
+\effects
+Equivalent to:
+\tcode{return has_value() ? std::move(**this) : T(il, std::forward<Args>(args)...);}
+\end{itemdescr}
+
+\begin{itemdescr}
+\begin{codeblock}
+template<class F> constexpr T value_or_else(F&& f) const&;
+\end{codeblock}
+\pnum
+Let \tcode{U} be \tcode{invoke_result_t<F>}.
+\pnum
+\mandates
+\tcode{is_copy_constructible_v<T>} is \tcode{true} and
+\tcode{is_convertible_v<U, T>} is \tcode{true}.
+\pnum
+\effects
+Equivalent to:
+\tcode{return has_value() ? **this : std::forward<F>(f)();}
+\end{itemdescr}
+
+\begin{itemdescr}
+\begin{codeblock}
+template<class F> constexpr T value_or_else(F&& f) &&;
+\end{codeblock}
+\pnum
+Let \tcode{U} be \tcode{invoke_result_t<F>}.
+\pnum
+\mandates
+\tcode{is_move_constructible_v<T>} is \tcode{true} and
+\tcode{is_convertible_v<U, T>} is \tcode{true}.
+\pnum
+\effects
+Equivalent to:
+\tcode{return has_value() ? std::move(**this) : std::forward<F>(f)();}
+\end{itemdescr}
+
+\pnum
+For the \tcode{optional<T\&>} specialization \cite{P2988R12} these members
+are declared \tcode{const} and return \tcode{remove_cv_t<T>}, constructing or
+invoking a value on the disengaged path exactly as \tcode{value_or} does
+there; they never yield a reference. That specialization is not yet in the
+working draft, so this reference case depends on \cite{P2988R12}.
+
+\subsection{\tcode{expected} [expected.expected], [expected.object.obs]}
+
+The same two members are added to \tcode{expected<T,E>}, in
+[expected.expected.general] and [expected.object.obs], with \emph{Effects}
+identical in form (the disengaged path is taken when
+\tcode{!has_value()}). \tcode{expected<void,E>} gains nothing --- there is no
+value to construct --- and no \tcode{error_or_construct} or
+\tcode{error_or_else} is proposed, following \cite{P3413R0}. A future
+\tcode{std::expected<T\&,E>} would carry the members as the
+reference-returning-a-value forms above; that case depends on the
+expected-over-references work, and is implemented against it already (see
+Implementation Experience).
+
 \section{Feature test macro}
 
 Add a new feature test macro \tcode{__cpp_lib_value_or}, set to the date of
-adoption.
+adoption, for the free functions. For the member functions, bump
+\tcode{__cpp_lib_optional} and \tcode{__cpp_lib_expected} to the date of
+adoption, per \cite{P3413R0}; these are independent of each other and of the
+\tcode{optional<T\&>} macro.
 
 \chapter{Impact on the standard}
 
-A pure library extension. No existing class, function, or wording changes;
-no ABI impact. The facilities require C++23 library support
-(\tcode{reference_constructs_from_temporary_v}).
+A pure library extension. The free functions change no existing class or
+function. The member functions add \tcode{value_or_construct} and
+\tcode{value_or_else} to \tcode{optional} and \tcode{expected} without
+altering any existing member, so nothing existing changes meaning; being
+member function templates, they add no ABI surface. The free functions
+require C++23 library support (\tcode{reference_constructs_from_temporary_v});
+the members impose no requirement beyond the class they are added to.
 
 \chapter{Acknowledgments}
 
