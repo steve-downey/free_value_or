@@ -430,6 +430,10 @@ add_fail_test(expected_void_ref_e_initializer_list_fail
 
 add_executable(beman.expected.tests.hardened)
 target_sources(beman.expected.tests.hardened PRIVATE expected_hardened.test.cpp)
+target_include_directories(
+    beman.expected.tests.hardened
+    PRIVATE ${PROJECT_SOURCE_DIR}/tests
+)
 target_link_libraries(
     beman.expected.tests.hardened
     PRIVATE beman::expected Catch2::Catch2WithMain
