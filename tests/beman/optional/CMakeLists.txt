@@ -10,6 +10,7 @@ target_sources(
         optional_range_support.test.cpp
         optional_ref.test.cpp
         optional_ref_monadic.test.cpp
+        value_or_construct.test.cpp
 )
 
 target_sources(

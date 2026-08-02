@@ -623,6 +623,56 @@ class optional {
     template <class U = std::remove_cv_t<T>>
     constexpr std::remove_cv_t<T> value_or(U&& u) &&;
 
+    /**
+     * @brief Returns the contained value if there is one, otherwise constructs
+     *        the result in place from `args...`.
+     *
+     * @tparam Args The types of the arguments used to construct the alternate value
+     * @param args The arguments used to construct the value in the empty case
+     * @return std::remove_cv_t<T>
+     *
+     * @details Unlike `value_or`, the alternate value is constructed only when
+     * `*this` is empty (lazy construction).
+     */
+    template <class... Args>
+    constexpr std::remove_cv_t<T> value_or_construct(Args&&... args) const&;
+    /// @copydoc value_or_construct
+    template <class... Args>
+    constexpr std::remove_cv_t<T> value_or_construct(Args&&... args) &&;
+
+    /**
+     * @brief Returns the contained value if there is one, otherwise constructs
+     *        the result in place from `il` and `args...`.
+     *
+     * @tparam U The element type of the initializer_list
+     * @tparam Args The types of the trailing constructor arguments
+     * @param il The initializer_list used to construct the value in the empty case
+     * @param args The trailing arguments used to construct the value in the empty case
+     * @return std::remove_cv_t<T>
+     */
+    template <class U, class... Args>
+    constexpr std::remove_cv_t<T> value_or_construct(std::initializer_list<U> il, Args&&... args) const&;
+    /// @copydoc value_or_construct
+    template <class U, class... Args>
+    constexpr std::remove_cv_t<T> value_or_construct(std::initializer_list<U> il, Args&&... args) &&;
+
+    /**
+     * @brief Returns the contained value if there is one, otherwise returns the
+     *        result of invoking `f`.
+     *
+     * @tparam F The type of the invocable supplying the alternate value
+     * @param f The invocable, called with no arguments in the empty case
+     * @return std::remove_cv_t<T>
+     *
+     * @details Unlike `value_or`, `f` is invoked only when `*this` is empty
+     * (lazy evaluation).
+     */
+    template <class F>
+    constexpr std::remove_cv_t<T> value_or_else(F&& f) const&;
+    /// @copydoc value_or_else
+    template <class F>
+    constexpr std::remove_cv_t<T> value_or_else(F&& f) &&;
+
     // \ref{optional.monadic}, monadic operations
 
     /**
@@ -1140,6 +1190,78 @@ inline constexpr std::remove_cv_t<T> optional<T>::value_or(U&& u) && {
         return std::move(value_);
     }
     return std::forward<U>(u);
+}
+
+/// Returns the contained value if there is one, otherwise constructs the result from `args...`
+template <class T>
+template <class... Args>
+inline constexpr std::remove_cv_t<T> optional<T>::value_or_construct(Args&&... args) const& {
+    using X = std::remove_cv_t<T>;
+    static_assert(std::is_convertible_v<const T&, X>, "Must be able to convert const T& to remove_cv_t<T>");
+    static_assert(std::is_constructible_v<X, Args...>, "Must be able to construct remove_cv_t<T> from args");
+    if (has_value())
+        return value_;
+    return X(std::forward<Args>(args)...);
+}
+
+template <class T>
+template <class... Args>
+inline constexpr std::remove_cv_t<T> optional<T>::value_or_construct(Args&&... args) && {
+    using X = std::remove_cv_t<T>;
+    static_assert(std::is_convertible_v<T, X>, "Must be able to convert T to remove_cv_t<T>");
+    static_assert(std::is_constructible_v<X, Args...>, "Must be able to construct remove_cv_t<T> from args");
+    if (has_value())
+        return std::move(value_);
+    return X(std::forward<Args>(args)...);
+}
+
+template <class T>
+template <class U, class... Args>
+inline constexpr std::remove_cv_t<T> optional<T>::value_or_construct(std::initializer_list<U> il, Args&&... args) const& {
+    using X = std::remove_cv_t<T>;
+    static_assert(std::is_convertible_v<const T&, X>, "Must be able to convert const T& to remove_cv_t<T>");
+    static_assert(std::is_constructible_v<X, std::initializer_list<U>&, Args...>,
+                  "Must be able to construct remove_cv_t<T> from the initializer_list and args");
+    if (has_value())
+        return value_;
+    return X(il, std::forward<Args>(args)...);
+}
+
+template <class T>
+template <class U, class... Args>
+inline constexpr std::remove_cv_t<T> optional<T>::value_or_construct(std::initializer_list<U> il, Args&&... args) && {
+    using X = std::remove_cv_t<T>;
+    static_assert(std::is_convertible_v<T, X>, "Must be able to convert T to remove_cv_t<T>");
+    static_assert(std::is_constructible_v<X, std::initializer_list<U>&, Args...>,
+                  "Must be able to construct remove_cv_t<T> from the initializer_list and args");
+    if (has_value())
+        return std::move(value_);
+    return X(il, std::forward<Args>(args)...);
+}
+
+/// Returns the contained value if there is one, otherwise returns the result of invoking `f`
+template <class T>
+template <class F>
+inline constexpr std::remove_cv_t<T> optional<T>::value_or_else(F&& f) const& {
+    using X = std::remove_cv_t<T>;
+    static_assert(std::is_convertible_v<const T&, X>, "Must be able to convert const T& to remove_cv_t<T>");
+    static_assert(std::is_convertible_v<std::invoke_result_t<F>, X>,
+                  "Must be able to convert the result of f() to remove_cv_t<T>");
+    if (has_value())
+        return value_;
+    return std::forward<F>(f)();
+}
+
+template <class T>
+template <class F>
+inline constexpr std::remove_cv_t<T> optional<T>::value_or_else(F&& f) && {
+    using X = std::remove_cv_t<T>;
+    static_assert(std::is_convertible_v<T, X>, "Must be able to convert T to remove_cv_t<T>");
+    static_assert(std::is_convertible_v<std::invoke_result_t<F>, X>,
+                  "Must be able to convert the result of f() to remove_cv_t<T>");
+    if (has_value())
+        return std::move(value_);
+    return std::forward<F>(f)();
 }
 
 // 22.5.3.8 Monadic operations[optional.monadic]
@@ -1850,6 +1972,36 @@ class optional<T&> {
         requires (std::is_object_v<T> && !std::is_array_v<T>)
     constexpr std::decay_t<T> value_or(U&& u) const;
 
+    /**
+     * @brief Returns the referenced value if there is one, otherwise constructs
+     *        the result in place from `args...` (lazily).
+     *
+     * @return std::decay_t<T>
+     */
+    template <class... Args>
+        requires (std::is_object_v<T> && !std::is_array_v<T>)
+    constexpr std::decay_t<T> value_or_construct(Args&&... args) const;
+
+    /**
+     * @brief Returns the referenced value if there is one, otherwise constructs
+     *        the result in place from `il` and `args...` (lazily).
+     *
+     * @return std::decay_t<T>
+     */
+    template <class U, class... Args>
+        requires (std::is_object_v<T> && !std::is_array_v<T>)
+    constexpr std::decay_t<T> value_or_construct(std::initializer_list<U> il, Args&&... args) const;
+
+    /**
+     * @brief Returns the referenced value if there is one, otherwise returns the
+     *        result of invoking `f` (lazily).
+     *
+     * @return std::decay_t<T>
+     */
+    template <class F>
+        requires (std::is_object_v<T> && !std::is_array_v<T>)
+    constexpr std::decay_t<T> value_or_else(F&& f) const;
+
     // \ref{optionalref.monadic}, monadic operations
     /**
      * @brief Applies a function to the contained value if there is one.
@@ -2053,6 +2205,44 @@ constexpr std::decay_t<T> optional<T&>::value_or(U&& u) const {
         return *value_;
     }
     return std::forward<U>(u);
+}
+
+template <class T>
+template <class... Args>
+    requires (std::is_object_v<T> && !std::is_array_v<T>)
+constexpr std::decay_t<T> optional<T&>::value_or_construct(Args&&... args) const {
+    using X = std::decay_t<T>;
+    static_assert(std::is_convertible_v<T&, X>, "decay_t<T> must be constructible from a T&");
+    static_assert(std::is_constructible_v<X, Args...>, "Must be able to construct decay_t<T> from args");
+    if (has_value())
+        return *value_;
+    return X(std::forward<Args>(args)...);
+}
+
+template <class T>
+template <class U, class... Args>
+    requires (std::is_object_v<T> && !std::is_array_v<T>)
+constexpr std::decay_t<T> optional<T&>::value_or_construct(std::initializer_list<U> il, Args&&... args) const {
+    using X = std::decay_t<T>;
+    static_assert(std::is_convertible_v<T&, X>, "decay_t<T> must be constructible from a T&");
+    static_assert(std::is_constructible_v<X, std::initializer_list<U>&, Args...>,
+                  "Must be able to construct decay_t<T> from the initializer_list and args");
+    if (has_value())
+        return *value_;
+    return X(il, std::forward<Args>(args)...);
+}
+
+template <class T>
+template <class F>
+    requires (std::is_object_v<T> && !std::is_array_v<T>)
+constexpr std::decay_t<T> optional<T&>::value_or_else(F&& f) const {
+    using X = std::decay_t<T>;
+    static_assert(std::is_convertible_v<T&, X>, "decay_t<T> must be constructible from a T&");
+    static_assert(std::is_convertible_v<std::invoke_result_t<F>, X>,
+                  "Must be able to convert the result of f() to decay_t<T>");
+    if (has_value())
+        return *value_;
+    return std::forward<F>(f)();
 }
 
 //   \rSec3[optionalref.monadic]{Monadic operations}
