@@ -38,6 +38,23 @@ static_assert(std::is_move_assignable_v<expected<void, int&>>);
 static_assert(std::is_copy_assignable_v<expected<void, const int&>>);
 static_assert(std::is_move_assignable_v<expected<void, const int&>>);
 
+// Finding 2: the general (value-G) void converting constructors must be gated on
+// !is_reference_v<E> — for reference E they are unsound: the lvalue form would bind into
+// the source's owned error (dangling once the source is gone), and the rvalue form hard-errors
+// by selecting a deleted unexpected<E&> constructor deep in the body instead of being excluded
+// from overload resolution. is_constructible_v must report false for both, matching reality.
+static_assert(!std::is_constructible_v<expected<void, const int&>, const expected<void, int>&>);
+static_assert(!std::is_constructible_v<expected<void, const int&>, expected<void, int>&&>);
+static_assert(!std::is_constructible_v<expected<void, int&>, const expected<void, int>&>);
+static_assert(!std::is_constructible_v<expected<void, int&>, expected<void, int>&&>);
+
+// The dedicated reference-E path (source error type is itself a reference) remains available,
+// for both lvalue and rvalue sources.
+static_assert(std::is_constructible_v<expected<void, int&>, const expected<void, int&>&>);
+static_assert(std::is_constructible_v<expected<void, int&>, expected<void, int&>&&>);
+static_assert(std::is_constructible_v<expected<void, const int&>, const expected<void, int&>&>);
+static_assert(std::is_constructible_v<expected<void, const int&>, expected<void, int&>&&>);
+
 // ---------------------------------------------------------------------------
 // Construction
 // ---------------------------------------------------------------------------
@@ -90,6 +107,32 @@ TEST_CASE("expected<void,E&>: convert from expected<void, G&>", "[expected_void_
     expected<void, int&> dst(src);
     REQUIRE(!dst.has_value());
     CHECK(&dst.error() == &err);
+}
+
+// Finding 2: the rvalue overload of the reference-E converting constructor was missing;
+// only the const& form existed. Verify the && form works and still binds the external
+// referent (never dangles — G is itself a reference to the caller's object).
+TEST_CASE("expected<void,E&>: convert from expected<void, G&>&& binds external referent",
+          "[expected_void_ref_e]") {
+    int                  err = 9;
+    expected<void, int&> src(unexpect, err);
+    expected<void, int&> dst(std::move(src));
+    REQUIRE(!dst.has_value());
+    CHECK(&dst.error() == &err);
+}
+
+TEST_CASE("expected<void,const E&>: convert from expected<void, G&> (lvalue and rvalue)",
+          "[expected_void_ref_e]") {
+    int                        err = 11;
+    expected<void, int&>       src1(unexpect, err);
+    expected<void, const int&> dst1(src1);
+    REQUIRE(!dst1.has_value());
+    CHECK(&dst1.error() == &err);
+
+    expected<void, int&>       src2(unexpect, err);
+    expected<void, const int&> dst2(std::move(src2));
+    REQUIRE(!dst2.has_value());
+    CHECK(&dst2.error() == &err);
 }
 
 // ---------------------------------------------------------------------------
