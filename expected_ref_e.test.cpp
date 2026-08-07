@@ -14,6 +14,27 @@
 using namespace beman::expected;
 
 // =============================================================================
+// Finding 5: feature-test macro for the reference-E / reference-T extensions
+// =============================================================================
+
+#ifndef __cpp_lib_expected_ref
+    #error "__cpp_lib_expected_ref must be defined by <beman/expected/expected.hpp>"
+#endif
+static_assert(__cpp_lib_expected_ref > 0);
+
+// =============================================================================
+// Finding 4: guarded delete-with-message macro (falls back to plain `delete`
+// pre-C++26; either way, the deleted overload stays deleted).
+// =============================================================================
+
+static_assert(!std::is_constructible_v<unexpected<int&>, int&&>,
+              "unexpected<E&> dangling-temporary ctor must stay deleted regardless of "
+              "BEMAN_EXPECTED_DELETE_MSG's expansion");
+static_assert(!std::is_default_constructible_v<expected<int&, int>>,
+              "expected<T&,E> must stay non-default-constructible regardless of "
+              "BEMAN_EXPECTED_DELETE_MSG's expansion");
+
+// =============================================================================
 // Type-level static assertions
 // =============================================================================
 
