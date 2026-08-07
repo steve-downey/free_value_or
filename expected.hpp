@@ -1443,7 +1443,8 @@ class expected<void, E> {
     // unexpected<E>'s constructibility from this very class, which some standard library
     // implementations of reference_constructs_from_temporary_v resolve as a circular constraint.
     template <class U, class G>
-        requires(std::is_void_v<U> && !std::is_same_v<G, E> && std::is_constructible_v<E, const G&> &&
+        requires(std::is_void_v<U> && !std::is_reference_v<E> && !std::is_same_v<G, E> &&
+                 std::is_constructible_v<E, const G&> &&
                  !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
                  !std::is_constructible_v<unexpected<E>, expected<U, G> &&> &&
                  !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
@@ -1451,7 +1452,8 @@ class expected<void, E> {
     constexpr explicit(!std::is_convertible_v<const G&, E>) expected(const expected<U, G>& rhs);
 
     template <class U, class G>
-        requires(std::is_void_v<U> && !std::is_same_v<G, E> && std::is_constructible_v<E, G> &&
+        requires(std::is_void_v<U> && !std::is_reference_v<E> && !std::is_same_v<G, E> &&
+                 std::is_constructible_v<E, G> &&
                  !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
                  !std::is_constructible_v<unexpected<E>, expected<U, G> &&> &&
                  !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
@@ -1514,10 +1516,20 @@ class expected<void, E> {
         requires std::is_constructible_v<E, std::initializer_list<U>&, Args...>
     constexpr explicit expected(unexpect_t, std::initializer_list<U> il, Args&&... args);
 
-    // Converting constructor from expected<void, G&> — reference-E path only
+    // Converting constructor from expected<void, G&> — reference-E path only. G is itself a
+    // reference to an external object, so binding E& to it cannot dangle regardless of the
+    // source's value category, provided the reference conversion itself does not materialize a
+    // temporary (e.g. a base-from-derived or qualification conversion is fine; a user-defined
+    // conversion that returns by value is not). Mirrors the unexpected<G> reference-E path above.
     template <class G>
-        requires(std::is_reference_v<E> && std::is_convertible_v<G&, E>)
+        requires(std::is_reference_v<E> && std::is_convertible_v<G&, E> &&
+                 !detail::reference_constructs_from_temporary_v<E, G&>)
     constexpr explicit(!std::is_convertible_v<G&, E>) expected(const expected<void, G&>& rhs);
+
+    template <class G>
+        requires(std::is_reference_v<E> && std::is_convertible_v<G&, E> &&
+                 !detail::reference_constructs_from_temporary_v<E, G&>)
+    constexpr explicit(!std::is_convertible_v<G&, E>) expected(expected<void, G&>&& rhs);
 
     // -------------------------------------------------------------------------
     // [expected.void.dtor] Destructor
@@ -1741,7 +1753,8 @@ constexpr expected<void, E>::expected(expected&& rhs) noexcept(std::is_nothrow_m
 
 template <class E>
 template <class U, class G>
-    requires(std::is_void_v<U> && !std::is_same_v<G, E> && std::is_constructible_v<E, const G&> &&
+    requires(std::is_void_v<U> && !std::is_reference_v<E> && !std::is_same_v<G, E> &&
+             std::is_constructible_v<E, const G&> &&
              !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
              !std::is_constructible_v<unexpected<E>, expected<U, G> &&> &&
              !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
@@ -1753,7 +1766,8 @@ constexpr expected<void, E>::expected(const expected<U, G>& rhs) : has_val_(rhs.
 
 template <class E>
 template <class U, class G>
-    requires(std::is_void_v<U> && !std::is_same_v<G, E> && std::is_constructible_v<E, G> &&
+    requires(std::is_void_v<U> && !std::is_reference_v<E> && !std::is_same_v<G, E> &&
+             std::is_constructible_v<E, G> &&
              !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
              !std::is_constructible_v<unexpected<E>, expected<U, G> &&> &&
              !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
@@ -1809,8 +1823,18 @@ constexpr expected<void, E>::expected(unexpect_t, std::initializer_list<U> il, A
 
 template <class E>
 template <class G>
-    requires(std::is_reference_v<E> && std::is_convertible_v<G&, E>)
+    requires(std::is_reference_v<E> && std::is_convertible_v<G&, E> &&
+             !detail::reference_constructs_from_temporary_v<E, G&>)
 constexpr expected<void, E>::expected(const expected<void, G&>& rhs) : has_val_(rhs.has_value()) {
+    if (!has_val_)
+        std::construct_at(std::addressof(unex_), rhs.error());
+}
+
+template <class E>
+template <class G>
+    requires(std::is_reference_v<E> && std::is_convertible_v<G&, E> &&
+             !detail::reference_constructs_from_temporary_v<E, G&>)
+constexpr expected<void, E>::expected(expected<void, G&>&& rhs) : has_val_(rhs.has_value()) {
     if (!has_val_)
         std::construct_at(std::addressof(unex_), rhs.error());
 }
