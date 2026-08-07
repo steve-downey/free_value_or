@@ -10,6 +10,15 @@
     #include <utility>
 #endif
 
+// Deleted-function diagnostic messages (P2573, C++26 `= delete("reason")`). Falls back to a plain
+// `= delete` pre-C++26 so this header keeps compiling at the project's configured floor; no
+// behavioral difference either way, just a worse diagnostic on older compilers.
+#if defined(__cpp_deleted_function) && __cpp_deleted_function >= 202403L
+    #define BEMAN_EXPECTED_DELETE_MSG(msg) delete (msg)
+#else
+    #define BEMAN_EXPECTED_DELETE_MSG(msg) delete
+#endif
+
 namespace beman {
 namespace expected {
 
@@ -132,14 +141,16 @@ class unexpected<E&> {
     // Deleted: binding would dangle (G materializes a temporary)
     template <class G>
         requires(detail::reference_constructs_from_temporary_v<E&, G>)
-    constexpr unexpected(G&&) = delete;
+    constexpr unexpected(G&&) = BEMAN_EXPECTED_DELETE_MSG(
+        "unexpected<E&>: argument would bind a temporary that dangles; pass an lvalue reference");
 
     // Deleted catch-all: neither constructible nor a dangling case
     template <class G>
         requires(!std::is_same_v<std::remove_cvref_t<G>, unexpected> &&
                  !std::is_same_v<std::remove_cvref_t<G>, std::in_place_t> && !std::is_constructible_v<E&, G &&> &&
                  !detail::reference_constructs_from_temporary_v<E&, G>)
-    constexpr unexpected(G&&) = delete;
+    constexpr unexpected(G&&) =
+        BEMAN_EXPECTED_DELETE_MSG("unexpected<E&>: no viable conversion from the given argument to E&");
 
     // Single-argument in_place_t overload — lets expected's uniform
     // construct_at(addressof(unex_), std::in_place, args...) pattern work whether E is a
@@ -152,7 +163,8 @@ class unexpected<E&> {
 
     template <class G>
         requires(detail::reference_constructs_from_temporary_v<E&, G>)
-    constexpr unexpected(std::in_place_t, G&&) = delete;
+    constexpr unexpected(std::in_place_t, G&&) = BEMAN_EXPECTED_DELETE_MSG(
+        "unexpected<E&>: in_place argument would bind a temporary that dangles; pass an lvalue reference");
 
     constexpr unexpected& operator=(const unexpected&) = default;
     constexpr unexpected& operator=(unexpected&&)      = default;

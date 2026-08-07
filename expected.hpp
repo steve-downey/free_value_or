@@ -23,6 +23,13 @@
     #define BEMAN_EXPECTED_TRAP() std::abort()
 #endif
 
+// Feature-test macro for the reference-E / reference-T extensions (expected<T,E&>,
+// expected<void,E&>, expected<T&,E>) implemented by this header. Not yet a WG21-assigned
+// macro; the value below is a placeholder pending standardization.
+#ifndef __cpp_lib_expected_ref
+    #define __cpp_lib_expected_ref 202608L // placeholder value pending WG21 assignment
+#endif
+
 /***
 22.8.2 Header <expected> synopsis[expected.syn]
 
@@ -244,11 +251,13 @@ class expected {
     // an unexpected<E&> holding an external object, instead.
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected(const unexpected<G>&) = delete;
+    constexpr expected(const unexpected<G>&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T,E&>: cannot construct from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected(unexpected<G>&&) = delete;
+    constexpr expected(unexpected<G>&&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T,E&>: cannot construct from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     // In-place constructor for value
     template <class... Args>
@@ -268,14 +277,16 @@ class expected {
     // Deleted: single argument would bind E& to a temporary — dangling prevention
     template <class... Args>
         requires(detail::unexpect_dangles_v<E, Args...>)
-    constexpr expected(unexpect_t, Args&&...) = delete;
+    constexpr expected(unexpect_t, Args&&...) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T,E&>: unexpect argument would bind a temporary that dangles; pass an lvalue reference");
 
     // Deleted catch-all: reference E, argument neither constructible nor a dangling case
     // (e.g. binding a non-const E& from a const lvalue).
     template <class... Args>
         requires(std::is_reference_v<E> && !std::is_constructible_v<E, Args...> &&
                  !detail::unexpect_dangles_v<E, Args...>)
-    constexpr expected(unexpect_t, Args&&...) = delete;
+    constexpr expected(unexpect_t, Args&&...) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T,E&>: no viable conversion from the given argument(s) to E&");
 
     // In-place constructor for error with initializer_list
     template <class U, class... Args>
@@ -373,11 +384,13 @@ class expected {
     // Deleted for reference E with value G: would rebind E& to unexpected<G>'s temporary storage.
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected& operator=(const unexpected<G>&) = delete;
+    constexpr expected& operator=(const unexpected<G>&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T,E&>: cannot assign from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected& operator=(unexpected<G>&&) = delete;
+    constexpr expected& operator=(unexpected<G>&&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T,E&>: cannot assign from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     // Emplace: destroy current value/error, construct value in-place
     template <class... Args>
@@ -1485,11 +1498,13 @@ class expected<void, E> {
     // binding E& to it would dangle once the source is destroyed. Use (unexpect, lvalue) instead.
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected(const unexpected<G>&) = delete;
+    constexpr expected(const unexpected<G>&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<void,E&>: cannot construct from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected(unexpected<G>&&) = delete;
+    constexpr expected(unexpected<G>&&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<void,E&>: cannot construct from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     // In-place constructor for value (no args, just marks has-value)
     constexpr explicit expected(std::in_place_t) noexcept;
@@ -1502,14 +1517,16 @@ class expected<void, E> {
     // Deleted: single argument would bind E& to a temporary — dangling prevention
     template <class... Args>
         requires(detail::unexpect_dangles_v<E, Args...>)
-    constexpr expected(unexpect_t, Args&&...) = delete;
+    constexpr expected(unexpect_t, Args&&...) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<void,E&>: unexpect argument would bind a temporary that dangles; pass an lvalue reference");
 
     // Deleted catch-all: reference E, argument neither constructible nor a dangling case
     // (e.g. binding a non-const E& from a const lvalue).
     template <class... Args>
         requires(std::is_reference_v<E> && !std::is_constructible_v<E, Args...> &&
                  !detail::unexpect_dangles_v<E, Args...>)
-    constexpr expected(unexpect_t, Args&&...) = delete;
+    constexpr expected(unexpect_t, Args&&...) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<void,E&>: no viable conversion from the given argument(s) to E&");
 
     // In-place constructor for error with initializer_list
     template <class U, class... Args>
@@ -1595,11 +1612,13 @@ class expected<void, E> {
     // Deleted for reference E with value G: would bind E& to storage inside the temporary unexpected.
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected& operator=(const unexpected<G>&) = delete;
+    constexpr expected& operator=(const unexpected<G>&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<void,E&>: cannot assign from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected& operator=(unexpected<G>&&) = delete;
+    constexpr expected& operator=(unexpected<G>&&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<void,E&>: cannot assign from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     constexpr void emplace() noexcept;
 
@@ -1649,7 +1668,9 @@ class expected<void, E> {
     // for value E, no value_or overload is declared at all (there is nothing to delete against).
     template <class U>
         requires std::is_reference_v<E>
-    constexpr void value_or(U&&) const = delete;
+    constexpr void value_or(U&&) const =
+        BEMAN_EXPECTED_DELETE_MSG("expected<void,E>: value_or is not defined for void value_type; there is no "
+                                   "value to fall back from — use has_value()/error()");
 
     // -------------------------------------------------------------------------
     // [expected.void.monadic] Monadic operations
@@ -2371,7 +2392,7 @@ class expected<T&, E> {
     // Constructors
     // -------------------------------------------------------------------------
 
-    expected() = delete;
+    expected() = BEMAN_EXPECTED_DELETE_MSG("expected<T&,E>: no default constructor; T& cannot be null");
 
     // Copy constructor (trivial path). Unconstrained; see the primary
     // template's copy constructor for why.
@@ -2390,7 +2411,9 @@ class expected<T&, E> {
 
     // Deleted: no in-place value constructor — T& cannot be constructed in-place
     template <class... Args>
-    constexpr expected(std::in_place_t, Args&&...) = delete;
+    constexpr expected(std::in_place_t, Args&&...) =
+        BEMAN_EXPECTED_DELETE_MSG("expected<T&,E>: no in-place value constructor; T& cannot be constructed "
+                                   "in-place — pass a U convertible to T&");
 
     // Value constructor — takes U that can bind to T&
     template <class U = T>
@@ -2407,7 +2430,8 @@ class expected<T&, E> {
     // Deleted: binding a temporary to T& creates a dangling reference
     template <class U>
         requires(detail::reference_constructs_from_temporary_v<T&, U>)
-    constexpr expected(U&&) = delete;
+    constexpr expected(U&&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T&,E>: argument would bind a temporary that dangles; pass an lvalue reference");
 
     // Converting constructor from expected<U&, G> (copy) — value-E path
     template <class U, class G>
@@ -2462,11 +2486,13 @@ class expected<T&, E> {
     // an unexpected<E&> holding an external object, instead.
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected(const unexpected<G>&) = delete;
+    constexpr expected(const unexpected<G>&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T&,E&>: cannot construct from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected(unexpected<G>&&) = delete;
+    constexpr expected(unexpected<G>&&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T&,E&>: cannot construct from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     // In-place constructor for error
     template <class... Args>
@@ -2476,13 +2502,15 @@ class expected<T&, E> {
     // Deleted: single argument would bind E& to a temporary — dangling prevention
     template <class... Args>
         requires(detail::unexpect_dangles_v<E, Args...>)
-    constexpr expected(unexpect_t, Args&&...) = delete;
+    constexpr expected(unexpect_t, Args&&...) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T&,E&>: unexpect argument would bind a temporary that dangles; pass an lvalue reference");
 
     // Deleted catch-all: reference E, argument neither constructible nor a dangling case
     template <class... Args>
         requires(std::is_reference_v<E> && !std::is_constructible_v<E, Args...> &&
                  !detail::unexpect_dangles_v<E, Args...>)
-    constexpr expected(unexpect_t, Args&&...) = delete;
+    constexpr expected(unexpect_t, Args&&...) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T&,E&>: no viable conversion from the given argument(s) to E&");
 
     // In-place constructor for error with initializer_list
     template <class U, class... Args>
@@ -2571,11 +2599,13 @@ class expected<T&, E> {
     // Deleted for reference E with value G: would rebind E& to unexpected<G>'s temporary storage.
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected& operator=(const unexpected<G>&) = delete;
+    constexpr expected& operator=(const unexpected<G>&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T&,E&>: cannot assign from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected& operator=(unexpected<G>&&) = delete;
+    constexpr expected& operator=(unexpected<G>&&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T&,E&>: cannot assign from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     // emplace — rebind the reference
     template <class U = T>
