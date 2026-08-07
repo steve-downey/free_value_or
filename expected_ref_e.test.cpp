@@ -37,6 +37,14 @@ static_assert(std::is_same_v<decltype(std::declval<const expected<int, int&>>().
 static_assert(std::is_copy_constructible_v<expected<int, int&>>);
 static_assert(std::is_move_constructible_v<expected<int, int&>>);
 
+// Finding 1: copy/move assignment must be available for reference E, including
+// const-reference E, where E itself is not assignable (is_copy_assignable_v<const
+// int&> is false) but the stored unexpected<E&> rebinds via pointer assignment.
+static_assert(std::is_copy_assignable_v<expected<int, int&>>);
+static_assert(std::is_move_assignable_v<expected<int, int&>>);
+static_assert(std::is_copy_assignable_v<expected<int, const int&>>);
+static_assert(std::is_move_assignable_v<expected<int, const int&>>);
+
 // Triviality: when T is trivial, copy/move/assign/destroy should be trivial
 static_assert(std::is_trivially_copy_constructible_v<expected<int, int&>>);
 static_assert(std::is_trivially_move_constructible_v<expected<int, int&>>);
@@ -133,6 +141,26 @@ TEST_CASE("expected<T,E&>: rebind does NOT assign through error reference", "[ex
     a = b;
     CHECK(err1 == 10); // err1 unchanged
     CHECK(a.error() == 20);
+}
+
+TEST_CASE("expected<T,const E&>: copy assignment rebinds, does not assign through", "[expected_ref_e]") {
+    int                       a = 1, b = 2;
+    expected<int, const int&> e(unexpect, a);
+    expected<int, const int&> f(unexpect, b);
+    e = f;
+    REQUIRE(!e.has_value());
+    CHECK(&e.error() == &b); // rebound to f's referent
+    CHECK(a == 1);           // a unchanged — no assign-through
+}
+
+TEST_CASE("expected<T,const E&>: move assignment rebinds, does not assign through", "[expected_ref_e]") {
+    int                       a = 1, b = 2;
+    expected<int, const int&> e(unexpect, a);
+    expected<int, const int&> f(unexpect, b);
+    e = std::move(f);
+    REQUIRE(!e.has_value());
+    CHECK(&e.error() == &b);
+    CHECK(a == 1);
 }
 
 TEST_CASE("expected<T,E&>: assign value when in error state", "[expected_ref_e]") {

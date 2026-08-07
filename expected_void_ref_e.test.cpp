@@ -30,6 +30,14 @@ static_assert(std::is_void_v<decltype(*std::declval<expected<void, int&>>())>);
 
 // absence of operator-> and value_or tested by _fail.cpp negative compile tests
 
+// Finding 1: copy/move assignment must be available for reference E, including
+// const-reference E, where E itself is not assignable (is_copy_assignable_v<const
+// int&> is false) but the stored unexpected<E&> rebinds via pointer assignment.
+static_assert(std::is_copy_assignable_v<expected<void, int&>>);
+static_assert(std::is_move_assignable_v<expected<void, int&>>);
+static_assert(std::is_copy_assignable_v<expected<void, const int&>>);
+static_assert(std::is_move_assignable_v<expected<void, const int&>>);
+
 // ---------------------------------------------------------------------------
 // Construction
 // ---------------------------------------------------------------------------
@@ -120,6 +128,26 @@ TEST_CASE("expected<void,E&>: assign error state to value state", "[expected_voi
     expected<void, int&> e(unexpect, err);
     e = expected<void, int&>();
     CHECK(e.has_value());
+}
+
+TEST_CASE("expected<void,const E&>: copy assignment rebinds, does not assign through", "[expected_void_ref_e]") {
+    int                        a = 1, b = 2;
+    expected<void, const int&> e(unexpect, a);
+    expected<void, const int&> f(unexpect, b);
+    e = f;
+    REQUIRE(!e.has_value());
+    CHECK(&e.error() == &b);
+    CHECK(a == 1);
+}
+
+TEST_CASE("expected<void,const E&>: move assignment rebinds, does not assign through", "[expected_void_ref_e]") {
+    int                        a = 1, b = 2;
+    expected<void, const int&> e(unexpect, a);
+    expected<void, const int&> f(unexpect, b);
+    e = std::move(f);
+    REQUIRE(!e.has_value());
+    CHECK(&e.error() == &b);
+    CHECK(a == 1);
 }
 
 // ---------------------------------------------------------------------------
