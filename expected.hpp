@@ -309,8 +309,8 @@ class expected {
                                                                 std::is_nothrow_copy_assignable_v<T> &&
                                                                 std::is_nothrow_copy_constructible_v<E> &&
                                                                 std::is_nothrow_copy_assignable_v<E>)
-        requires(std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T> && std::is_copy_constructible_v<E> &&
-                 std::is_copy_assignable_v<E> &&
+        requires(std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T> &&
+                 (std::is_reference_v<E> || (std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E>)) &&
                  (std::is_nothrow_move_constructible_v<T> || std::is_nothrow_move_constructible_v<E>) &&
                  !(std::is_trivially_copy_constructible_v<T> && std::is_trivially_copy_assignable_v<T> &&
                    std::is_trivially_destructible_v<T> && std::is_trivially_copy_constructible_v<E> &&
@@ -328,8 +328,8 @@ class expected {
                                                            std::is_nothrow_move_assignable_v<T> &&
                                                            std::is_nothrow_move_constructible_v<E> &&
                                                            std::is_nothrow_move_assignable_v<E>)
-        requires(std::is_move_constructible_v<T> && std::is_move_assignable_v<T> && std::is_move_constructible_v<E> &&
-                 std::is_move_assignable_v<E> &&
+        requires(std::is_move_constructible_v<T> && std::is_move_assignable_v<T> &&
+                 (std::is_reference_v<E> || (std::is_move_constructible_v<E> && std::is_move_assignable_v<E>)) &&
                  (std::is_nothrow_move_constructible_v<T> || std::is_nothrow_move_constructible_v<E>) &&
                  !(std::is_trivially_move_constructible_v<T> && std::is_trivially_move_assignable_v<T> &&
                    std::is_trivially_destructible_v<T> && std::is_trivially_move_constructible_v<E> &&
@@ -715,8 +715,8 @@ template <class T, class E>
 constexpr expected<T, E>& expected<T, E>::operator=(const expected& rhs) noexcept(
     std::is_nothrow_copy_constructible_v<T> && std::is_nothrow_copy_assignable_v<T> &&
     std::is_nothrow_copy_constructible_v<E> && std::is_nothrow_copy_assignable_v<E>)
-    requires(std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T> && std::is_copy_constructible_v<E> &&
-             std::is_copy_assignable_v<E> &&
+    requires(std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T> &&
+             (std::is_reference_v<E> || (std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E>)) &&
              (std::is_nothrow_move_constructible_v<T> || std::is_nothrow_move_constructible_v<E>) &&
              !(std::is_trivially_copy_constructible_v<T> && std::is_trivially_copy_assignable_v<T> &&
                std::is_trivially_destructible_v<T> && std::is_trivially_copy_constructible_v<E> &&
@@ -743,8 +743,8 @@ constexpr expected<T, E>& expected<T, E>::operator=(expected&& rhs) noexcept(std
                                                                              std::is_nothrow_move_assignable_v<T> &&
                                                                              std::is_nothrow_move_constructible_v<E> &&
                                                                              std::is_nothrow_move_assignable_v<E>)
-    requires(std::is_move_constructible_v<T> && std::is_move_assignable_v<T> && std::is_move_constructible_v<E> &&
-             std::is_move_assignable_v<E> &&
+    requires(std::is_move_constructible_v<T> && std::is_move_assignable_v<T> &&
+             (std::is_reference_v<E> || (std::is_move_constructible_v<E> && std::is_move_assignable_v<E>)) &&
              (std::is_nothrow_move_constructible_v<T> || std::is_nothrow_move_constructible_v<E>) &&
              !(std::is_trivially_move_constructible_v<T> && std::is_trivially_move_assignable_v<T> &&
                std::is_trivially_destructible_v<T> && std::is_trivially_move_constructible_v<E> &&
@@ -1543,7 +1543,7 @@ class expected<void, E> {
     // Copy assignment (non-trivial path)
     constexpr expected& operator=(const expected& rhs) noexcept(std::is_nothrow_copy_constructible_v<E> &&
                                                                 std::is_nothrow_copy_assignable_v<E>)
-        requires(std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E> &&
+        requires((std::is_reference_v<E> || (std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E>)) &&
                  !(std::is_trivially_copy_constructible_v<E> && std::is_trivially_copy_assignable_v<E> &&
                    std::is_trivially_destructible_v<E>));
 
@@ -1556,7 +1556,7 @@ class expected<void, E> {
     // Move assignment (non-trivial path)
     constexpr expected& operator=(expected&& rhs) noexcept(std::is_nothrow_move_constructible_v<E> &&
                                                            std::is_nothrow_move_assignable_v<E>)
-        requires(std::is_move_constructible_v<E> && std::is_move_assignable_v<E> &&
+        requires((std::is_reference_v<E> || (std::is_move_constructible_v<E> && std::is_move_assignable_v<E>)) &&
                  !(std::is_trivially_move_constructible_v<E> && std::is_trivially_move_assignable_v<E> &&
                    std::is_trivially_destructible_v<E>));
 
@@ -1835,7 +1835,7 @@ template <class E>
 constexpr expected<void, E>&
 expected<void, E>::operator=(const expected& rhs) noexcept(std::is_nothrow_copy_constructible_v<E> &&
                                                            std::is_nothrow_copy_assignable_v<E>)
-    requires(std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E> &&
+    requires((std::is_reference_v<E> || (std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E>)) &&
              !(std::is_trivially_copy_constructible_v<E> && std::is_trivially_copy_assignable_v<E> &&
                std::is_trivially_destructible_v<E>))
 {
@@ -1857,7 +1857,7 @@ template <class E>
 constexpr expected<void, E>&
 expected<void, E>::operator=(expected&& rhs) noexcept(std::is_nothrow_move_constructible_v<E> &&
                                                       std::is_nothrow_move_assignable_v<E>)
-    requires(std::is_move_constructible_v<E> && std::is_move_assignable_v<E> &&
+    requires((std::is_reference_v<E> || (std::is_move_constructible_v<E> && std::is_move_assignable_v<E>)) &&
              !(std::is_trivially_move_constructible_v<E> && std::is_trivially_move_assignable_v<E> &&
                std::is_trivially_destructible_v<E>))
 {
@@ -2489,7 +2489,7 @@ class expected<T&, E> {
     // Copy assignment (non-trivial path)
     constexpr expected& operator=(const expected& rhs) noexcept(std::is_nothrow_copy_constructible_v<E> &&
                                                                 std::is_nothrow_copy_assignable_v<E>)
-        requires(std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E> &&
+        requires((std::is_reference_v<E> || (std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E>)) &&
                  !(std::is_trivially_copy_constructible_v<E> && std::is_trivially_copy_assignable_v<E> &&
                    std::is_trivially_destructible_v<E>));
 
@@ -2502,7 +2502,7 @@ class expected<T&, E> {
     // Move assignment (non-trivial path)
     constexpr expected& operator=(expected&& rhs) noexcept(std::is_nothrow_move_constructible_v<E> &&
                                                            std::is_nothrow_move_assignable_v<E>)
-        requires(std::is_move_constructible_v<E> && std::is_move_assignable_v<E> &&
+        requires((std::is_reference_v<E> || (std::is_move_constructible_v<E> && std::is_move_assignable_v<E>)) &&
                  !(std::is_trivially_move_constructible_v<E> && std::is_trivially_move_assignable_v<E> &&
                    std::is_trivially_destructible_v<E>));
 
@@ -2831,7 +2831,7 @@ template <class T, class E>
 constexpr expected<T&, E>&
 expected<T&, E>::operator=(const expected& rhs) noexcept(std::is_nothrow_copy_constructible_v<E> &&
                                                          std::is_nothrow_copy_assignable_v<E>)
-    requires(std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E> &&
+    requires((std::is_reference_v<E> || (std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E>)) &&
              !(std::is_trivially_copy_constructible_v<E> && std::is_trivially_copy_assignable_v<E> &&
                std::is_trivially_destructible_v<E>))
 {
@@ -2854,7 +2854,7 @@ template <class T, class E>
 constexpr expected<T&, E>&
 expected<T&, E>::operator=(expected&& rhs) noexcept(std::is_nothrow_move_constructible_v<E> &&
                                                     std::is_nothrow_move_assignable_v<E>)
-    requires(std::is_move_constructible_v<E> && std::is_move_assignable_v<E> &&
+    requires((std::is_reference_v<E> || (std::is_move_constructible_v<E> && std::is_move_assignable_v<E>)) &&
              !(std::is_trivially_move_constructible_v<E> && std::is_trivially_move_assignable_v<E> &&
                std::is_trivially_destructible_v<E>))
 {
