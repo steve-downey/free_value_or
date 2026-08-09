@@ -202,8 +202,7 @@ TEST_CASE("expected<T&,E&>: transition from value to error via copy assignment",
     CHECK(&a.error() == &err);
 }
 
-TEST_CASE("expected<T&,const E&>: copy assignment rebinds error, does not assign through",
-          "[expected_ref_both]") {
+TEST_CASE("expected<T&,const E&>: copy assignment rebinds error, does not assign through", "[expected_ref_both]") {
     int                        e1 = 1, e2 = 2;
     expected<int&, const int&> a(unexpect, e1);
     expected<int&, const int&> b(unexpect, e2);
@@ -213,8 +212,7 @@ TEST_CASE("expected<T&,const E&>: copy assignment rebinds error, does not assign
     CHECK(e1 == 1);
 }
 
-TEST_CASE("expected<T&,const E&>: move assignment rebinds error, does not assign through",
-          "[expected_ref_both]") {
+TEST_CASE("expected<T&,const E&>: move assignment rebinds error, does not assign through", "[expected_ref_both]") {
     int                        e1 = 1, e2 = 2;
     expected<int&, const int&> a(unexpect, e1);
     expected<int&, const int&> b(unexpect, e2);

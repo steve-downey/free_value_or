@@ -112,8 +112,7 @@ TEST_CASE("expected<void,E&>: convert from expected<void, G&>", "[expected_void_
 // Finding 2: the rvalue overload of the reference-E converting constructor was missing;
 // only the const& form existed. Verify the && form works and still binds the external
 // referent (never dangles — G is itself a reference to the caller's object).
-TEST_CASE("expected<void,E&>: convert from expected<void, G&>&& binds external referent",
-          "[expected_void_ref_e]") {
+TEST_CASE("expected<void,E&>: convert from expected<void, G&>&& binds external referent", "[expected_void_ref_e]") {
     int                  err = 9;
     expected<void, int&> src(unexpect, err);
     expected<void, int&> dst(std::move(src));
@@ -121,8 +120,7 @@ TEST_CASE("expected<void,E&>: convert from expected<void, G&>&& binds external r
     CHECK(&dst.error() == &err);
 }
 
-TEST_CASE("expected<void,const E&>: convert from expected<void, G&> (lvalue and rvalue)",
-          "[expected_void_ref_e]") {
+TEST_CASE("expected<void,const E&>: convert from expected<void, G&> (lvalue and rvalue)", "[expected_void_ref_e]") {
     int                        err = 11;
     expected<void, int&>       src1(unexpect, err);
     expected<void, const int&> dst1(src1);
