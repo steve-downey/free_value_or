@@ -285,8 +285,8 @@ class expected {
     template <class... Args>
         requires(std::is_reference_v<E> && !std::is_constructible_v<E, Args...> &&
                  !detail::unexpect_dangles_v<E, Args...>)
-    constexpr expected(unexpect_t, Args&&...) = BEMAN_EXPECTED_DELETE_MSG(
-        "expected<T,E&>: no viable conversion from the given argument(s) to E&");
+    constexpr expected(unexpect_t, Args&&...) =
+        BEMAN_EXPECTED_DELETE_MSG("expected<T,E&>: no viable conversion from the given argument(s) to E&");
 
     // In-place constructor for error with initializer_list
     template <class U, class... Args>
@@ -1457,8 +1457,7 @@ class expected<void, E> {
     // implementations of reference_constructs_from_temporary_v resolve as a circular constraint.
     template <class U, class G>
         requires(std::is_void_v<U> && !std::is_reference_v<E> && !std::is_same_v<G, E> &&
-                 std::is_constructible_v<E, const G&> &&
-                 !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
+                 std::is_constructible_v<E, const G&> && !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
                  !std::is_constructible_v<unexpected<E>, expected<U, G> &&> &&
                  !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
                  !std::is_constructible_v<unexpected<E>, const expected<U, G> &&>)
@@ -1466,8 +1465,7 @@ class expected<void, E> {
 
     template <class U, class G>
         requires(std::is_void_v<U> && !std::is_reference_v<E> && !std::is_same_v<G, E> &&
-                 std::is_constructible_v<E, G> &&
-                 !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
+                 std::is_constructible_v<E, G> && !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
                  !std::is_constructible_v<unexpected<E>, expected<U, G> &&> &&
                  !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
                  !std::is_constructible_v<unexpected<E>, const expected<U, G> &&>)
@@ -1525,8 +1523,8 @@ class expected<void, E> {
     template <class... Args>
         requires(std::is_reference_v<E> && !std::is_constructible_v<E, Args...> &&
                  !detail::unexpect_dangles_v<E, Args...>)
-    constexpr expected(unexpect_t, Args&&...) = BEMAN_EXPECTED_DELETE_MSG(
-        "expected<void,E&>: no viable conversion from the given argument(s) to E&");
+    constexpr expected(unexpect_t, Args&&...) =
+        BEMAN_EXPECTED_DELETE_MSG("expected<void,E&>: no viable conversion from the given argument(s) to E&");
 
     // In-place constructor for error with initializer_list
     template <class U, class... Args>
@@ -1670,7 +1668,7 @@ class expected<void, E> {
         requires std::is_reference_v<E>
     constexpr void value_or(U&&) const =
         BEMAN_EXPECTED_DELETE_MSG("expected<void,E>: value_or is not defined for void value_type; there is no "
-                                   "value to fall back from — use has_value()/error()");
+                                  "value to fall back from — use has_value()/error()");
 
     // -------------------------------------------------------------------------
     // [expected.void.monadic] Monadic operations
@@ -1775,8 +1773,7 @@ constexpr expected<void, E>::expected(expected&& rhs) noexcept(std::is_nothrow_m
 template <class E>
 template <class U, class G>
     requires(std::is_void_v<U> && !std::is_reference_v<E> && !std::is_same_v<G, E> &&
-             std::is_constructible_v<E, const G&> &&
-             !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
+             std::is_constructible_v<E, const G&> && !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
              !std::is_constructible_v<unexpected<E>, expected<U, G> &&> &&
              !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
              !std::is_constructible_v<unexpected<E>, const expected<U, G> &&>)
@@ -1787,8 +1784,7 @@ constexpr expected<void, E>::expected(const expected<U, G>& rhs) : has_val_(rhs.
 
 template <class E>
 template <class U, class G>
-    requires(std::is_void_v<U> && !std::is_reference_v<E> && !std::is_same_v<G, E> &&
-             std::is_constructible_v<E, G> &&
+    requires(std::is_void_v<U> && !std::is_reference_v<E> && !std::is_same_v<G, E> && std::is_constructible_v<E, G> &&
              !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
              !std::is_constructible_v<unexpected<E>, expected<U, G> &&> &&
              !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
@@ -2413,7 +2409,7 @@ class expected<T&, E> {
     template <class... Args>
     constexpr expected(std::in_place_t, Args&&...) =
         BEMAN_EXPECTED_DELETE_MSG("expected<T&,E>: no in-place value constructor; T& cannot be constructed "
-                                   "in-place — pass a U convertible to T&");
+                                  "in-place — pass a U convertible to T&");
 
     // Value constructor — takes U that can bind to T&
     template <class U = T>
@@ -2509,8 +2505,8 @@ class expected<T&, E> {
     template <class... Args>
         requires(std::is_reference_v<E> && !std::is_constructible_v<E, Args...> &&
                  !detail::unexpect_dangles_v<E, Args...>)
-    constexpr expected(unexpect_t, Args&&...) = BEMAN_EXPECTED_DELETE_MSG(
-        "expected<T&,E&>: no viable conversion from the given argument(s) to E&");
+    constexpr expected(unexpect_t, Args&&...) =
+        BEMAN_EXPECTED_DELETE_MSG("expected<T&,E&>: no viable conversion from the given argument(s) to E&");
 
     // In-place constructor for error with initializer_list
     template <class U, class... Args>
