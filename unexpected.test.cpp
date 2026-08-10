@@ -5,6 +5,9 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <beman/expected/testing/constant_eval.hpp>
+#include <beman/expected/testing/type_name.hpp>
+
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -12,32 +15,49 @@
 
 namespace expt = test_ns;
 
+using beman::expected::testing::constant_eval;
+using beman::expected::testing::type_name;
+
 // =============================================================================
 // [expected.un.general] para 2 — ill-formed instantiation constraints
 // (actual ill-formed cases tested via negative compile files)
+//
+// These type-level properties are checked at runtime rather than with
+// static_assert so that a violated property is reported by the test run, with
+// the responsible type named, instead of stopping the build at the first
+// failure and reporting nothing. Type identity is checked by comparing the
+// compiler's spelling of the two types, so a mismatch prints what was deduced
+// next to what was wanted rather than the bare word `false`.
 // =============================================================================
 
-// [expected.un.cons] Constraint 1.3: is_constructible_v<E, Err> must be true
-static_assert(std::is_constructible_v<expt::unexpected<int>, int>);
-static_assert(std::is_constructible_v<expt::unexpected<std::string>, const char*>);
-static_assert(!std::is_constructible_v<expt::unexpected<int>, std::string>);
+TEST_CASE("unexpected: construction constraints", "[UnexpectedTest]") {
+    // [expected.un.cons] Constraint 1.3: is_constructible_v<E, Err> must be true
+    CHECK(std::is_constructible_v<expt::unexpected<int>, int>);
+    CHECK(std::is_constructible_v<expt::unexpected<std::string>, const char*>);
+    CHECK_FALSE(std::is_constructible_v<expt::unexpected<int>, std::string>);
 
-// [expected.un.cons] Constraint 1.2: the *converting* ctor excludes in_place_t as Err,
-// routing it to the in-place constructor instead. Both work:
-static_assert(std::is_constructible_v<expt::unexpected<int>, std::in_place_t>); // in-place ctor
+    // [expected.un.cons] Constraint 1.2: the *converting* ctor excludes in_place_t as Err,
+    // routing it to the in-place constructor instead. Both work:
+    CHECK(std::is_constructible_v<expt::unexpected<int>, std::in_place_t>); // in-place ctor
+}
 
-// Copy and move constructible
-static_assert(std::is_copy_constructible_v<expt::unexpected<int>>);
-static_assert(std::is_move_constructible_v<expt::unexpected<int>>);
+TEST_CASE("unexpected: copy, move and swap availability", "[UnexpectedTest]") {
+    // Copy and move constructible
+    CHECK(std::is_copy_constructible_v<expt::unexpected<int>>);
+    CHECK(std::is_move_constructible_v<expt::unexpected<int>>);
 
-// [expected.un.swap] Constraint: is_swappable_v<E>
-static_assert(std::is_swappable_v<expt::unexpected<int>>);
+    // [expected.un.swap] Constraint: is_swappable_v<E>
+    CHECK(std::is_swappable_v<expt::unexpected<int>>);
+}
 
-// [expected.un.obs] error() ref-qualification return types
-static_assert(std::is_same_v<decltype(std::declval<expt::unexpected<int>&>().error()), int&>);
-static_assert(std::is_same_v<decltype(std::declval<const expt::unexpected<int>&>().error()), const int&>);
-static_assert(std::is_same_v<decltype(std::declval<expt::unexpected<int>&&>().error()), int&&>);
-static_assert(std::is_same_v<decltype(std::declval<const expt::unexpected<int>&&>().error()), const int&&>);
+TEST_CASE("unexpected: error() ref-qualification return types", "[UnexpectedTest]") {
+    // [expected.un.obs] error() ref-qualification return types
+    using unexpected_t = expt::unexpected<int>;
+    CHECK(type_name<decltype(std::declval<unexpected_t&>().error())>() == type_name<int&>());
+    CHECK(type_name<decltype(std::declval<const unexpected_t&>().error())>() == type_name<const int&>());
+    CHECK(type_name<decltype(std::declval<unexpected_t&&>().error())>() == type_name<int&&>());
+    CHECK(type_name<decltype(std::declval<const unexpected_t&&>().error())>() == type_name<const int&&>());
+}
 
 TEST_CASE("unexpected: construct from int", "[UnexpectedTest]") {
     expt::unexpected<int> u(42);
@@ -147,29 +167,37 @@ TEST_CASE("unexpected: equality different types", "[UnexpectedTest]") {
 
 TEST_CASE("unexpected: CTAD from int", "[UnexpectedTest]") {
     expt::unexpected u(42);
-    static_assert(std::is_same_v<decltype(u), expt::unexpected<int>>);
+    CHECK(type_name<decltype(u)>() == type_name<expt::unexpected<int>>());
     CHECK(u.error() == 42);
 }
 
 TEST_CASE("unexpected: CTAD from string", "[UnexpectedTest]") {
     std::string      s("deduced");
     expt::unexpected u(s);
-    static_assert(std::is_same_v<decltype(u), expt::unexpected<std::string>>);
+    CHECK(type_name<decltype(u)>() == type_name<expt::unexpected<std::string>>());
     CHECK(u.error() == "deduced");
 }
 
 TEST_CASE("unexpected: copy and move constructible", "[UnexpectedTest]") {
-    static_assert(std::is_copy_constructible_v<expt::unexpected<int>>);
-    static_assert(std::is_move_constructible_v<expt::unexpected<std::string>>);
+    CHECK(std::is_copy_constructible_v<expt::unexpected<int>>);
+    CHECK(std::is_move_constructible_v<expt::unexpected<std::string>>);
 }
 
 TEST_CASE("unexpected: unexpect_t tag type", "[UnexpectedTest]") {
-    static_assert(std::is_same_v<decltype(expt::unexpect), const expt::unexpect_t>);
+    CHECK(type_name<decltype(expt::unexpect)>() == type_name<const expt::unexpect_t>());
 }
 
 TEST_CASE("unexpected: constexpr basic usage", "[UnexpectedTest]") {
-    constexpr expt::unexpected<int> u(123);
-    static_assert(u.error() == 123);
+    // The probe declares the constexpr variable itself, so "is unexpected<int>
+    // usable as a constexpr variable?" is still answered by the compiler;
+    // `constant_eval` then hands the observed error back as an ordinary value
+    // so that a wrong answer is reported rather than breaking the build.
+    constexpr auto probe = [] {
+        constexpr expt::unexpected<int> u(123);
+        return u.error();
+    };
+    CHECK(constant_eval(probe) == 123);
+    CHECK(probe() == 123);
 }
 
 TEST_CASE("unexpected: inequality operator (synthesized)", "[UnexpectedTest]") {
@@ -180,6 +208,5 @@ TEST_CASE("unexpected: inequality operator (synthesized)", "[UnexpectedTest]") {
 
 TEST_CASE("unexpected: in-place ilist constraint: is_constructible from ilist", "[UnexpectedTest]") {
     // is_constructible_v<E, initializer_list<U>&, Args...> must hold
-    static_assert(
-        std::is_constructible_v<expt::unexpected<std::vector<int>>, std::in_place_t, std::initializer_list<int>>);
+    CHECK(std::is_constructible_v<expt::unexpected<std::vector<int>>, std::in_place_t, std::initializer_list<int>>);
 }

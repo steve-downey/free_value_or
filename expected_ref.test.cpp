@@ -6,6 +6,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <beman/expected/testing/type_name.hpp>
+
 #include "testing/types.hpp"
 
 #include <string>
@@ -13,36 +15,59 @@
 
 using namespace beman::expected;
 
+using beman::expected::testing::type_name;
+
 // =============================================================================
-// Type-level static assertions
+// Type-level properties
+//
+// These are checked at runtime rather than with static_assert so that a
+// violated property is reported by the test run, with the responsible type
+// named, instead of stopping the build at the first failure and reporting
+// nothing. Type identity is compared through `type_name`, whose comparison is
+// `std::is_same_v` — exactly as strict as the static_assert it replaces — so
+// a mismatch prints what was deduced next to what was wanted rather than the
+// bare word `false`.
 // =============================================================================
 
-static_assert(std::is_constructible_v<expected<int&, int>, int&>);
-static_assert(!std::is_default_constructible_v<expected<int&, int>>);
-static_assert(std::is_copy_constructible_v<expected<int&, int>>);
-static_assert(std::is_move_constructible_v<expected<int&, int>>);
+TEST_CASE("expected<T&>: special member availability", "[expected_ref]") {
+    using expected_t = expected<int&, int>;
+    CHECK((std::is_constructible_v<expected_t, int&>));
+    CHECK_FALSE(std::is_default_constructible_v<expected_t>);
+    CHECK(std::is_copy_constructible_v<expected_t>);
+    CHECK(std::is_move_constructible_v<expected_t>);
+}
 
-static_assert(std::is_same_v<decltype(std::declval<expected<int&, int>>().operator->()), int*>);
-static_assert(std::is_same_v<decltype(*std::declval<expected<int&, int>>()), int&>);
-static_assert(std::is_same_v<decltype(std::declval<expected<int&, int>>().value()), int&>);
+TEST_CASE("expected<T&>: observer return types", "[expected_ref]") {
+    using expected_t = expected<int&, int>;
+    CHECK(type_name<decltype(std::declval<expected_t>().operator->())>() == type_name<int*>());
+    CHECK(type_name<decltype(*std::declval<expected_t>())>() == type_name<int&>());
+    CHECK(type_name<decltype(std::declval<expected_t>().value())>() == type_name<int&>());
+}
 
-// const expected<T&, E> still returns T* / T& (shallow const)
-static_assert(std::is_same_v<decltype(std::declval<const expected<int&, int>>().operator->()), int*>);
-static_assert(std::is_same_v<decltype(*std::declval<const expected<int&, int>>()), int&>);
+TEST_CASE("expected<T&>: const expected<T&, E> still returns T* / T& (shallow const)", "[expected_ref]") {
+    using expected_t = expected<int&, int>;
+    CHECK(type_name<decltype(std::declval<const expected_t>().operator->())>() == type_name<int*>());
+    CHECK(type_name<decltype(*std::declval<const expected_t>())>() == type_name<int&>());
+}
 
-// Triviality: when E is trivial, copy/move/assign/destroy should be trivial
-static_assert(std::is_trivially_copy_constructible_v<expected<int&, int>>);
-static_assert(std::is_trivially_move_constructible_v<expected<int&, int>>);
-static_assert(std::is_trivially_copy_assignable_v<expected<int&, int>>);
-static_assert(std::is_trivially_move_assignable_v<expected<int&, int>>);
-static_assert(std::is_trivially_destructible_v<expected<int&, int>>);
+TEST_CASE("expected<T&>: triviality when E is trivial", "[expected_ref]") {
+    // When E is trivial, copy/move/assign/destroy should be trivial
+    using expected_t = expected<int&, int>;
+    CHECK(std::is_trivially_copy_constructible_v<expected_t>);
+    CHECK(std::is_trivially_move_constructible_v<expected_t>);
+    CHECK(std::is_trivially_copy_assignable_v<expected_t>);
+    CHECK(std::is_trivially_move_assignable_v<expected_t>);
+    CHECK(std::is_trivially_destructible_v<expected_t>);
+}
 
-// Non-trivial E: still constructible/assignable but not trivially
-static_assert(std::is_copy_constructible_v<expected<int&, std::string>>);
-static_assert(std::is_move_constructible_v<expected<int&, std::string>>);
-static_assert(!std::is_trivially_copy_constructible_v<expected<int&, std::string>>);
-static_assert(!std::is_trivially_move_constructible_v<expected<int&, std::string>>);
-static_assert(!std::is_trivially_destructible_v<expected<int&, std::string>>);
+TEST_CASE("expected<T&>: non-trivial E is still constructible, but not trivially", "[expected_ref]") {
+    using expected_t = expected<int&, std::string>;
+    CHECK(std::is_copy_constructible_v<expected_t>);
+    CHECK(std::is_move_constructible_v<expected_t>);
+    CHECK_FALSE(std::is_trivially_copy_constructible_v<expected_t>);
+    CHECK_FALSE(std::is_trivially_move_constructible_v<expected_t>);
+    CHECK_FALSE(std::is_trivially_destructible_v<expected_t>);
+}
 
 // =============================================================================
 // Construction
@@ -234,7 +259,7 @@ TEST_CASE("expected<T&>: shallow const allows mutation of referent", "[expected_
 TEST_CASE("expected<T&>: operator-> on const returns T*", "[expected_ref]") {
     int                       x = 5;
     const expected<int&, int> e(x);
-    static_assert(std::is_same_v<decltype(e.operator->()), int*>);
+    CHECK(type_name<decltype(e.operator->())>() == type_name<int*>());
     *e.operator->() = 99;
     CHECK(x == 99);
 }
@@ -246,7 +271,7 @@ TEST_CASE("expected<T&>: operator-> on const returns T*", "[expected_ref]") {
 TEST_CASE("expected<T&>: operator* returns T&", "[expected_ref]") {
     int                 x = 42;
     expected<int&, int> e(x);
-    static_assert(std::is_same_v<decltype(*e), int&>);
+    CHECK(type_name<decltype(*e)>() == type_name<int&>());
     *e = 99;
     CHECK(x == 99);
 }
@@ -265,7 +290,7 @@ TEST_CASE("expected<T&>: operator-> returns T*", "[expected_ref]") {
 TEST_CASE("expected<T&>: value() returns T& or throws", "[expected_ref]") {
     int                 x = 1;
     expected<int&, int> e(x);
-    static_assert(std::is_same_v<decltype(e.value()), int&>);
+    CHECK(type_name<decltype(e.value())>() == type_name<int&>());
     CHECK(e.value() == 1);
     e.value() = 2;
     CHECK(x == 2);

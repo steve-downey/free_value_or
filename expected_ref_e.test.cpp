@@ -6,6 +6,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <beman/expected/testing/type_name.hpp>
+
 #include "testing/types.hpp"
 
 #include <string>
@@ -13,82 +15,116 @@
 
 using namespace beman::expected;
 
+using beman::expected::testing::type_name;
+
 // =============================================================================
 // Finding 5: feature-test macro for the reference-E / reference-T extensions
 // =============================================================================
 
+// Presence of the macro is still a hard translation failure: without it there
+// is nothing for a test to inspect, and `#if` is the only tool that can ask.
 #ifndef __cpp_lib_expected_ref
     #error "__cpp_lib_expected_ref must be defined by <beman/expected/expected.hpp>"
 #endif
-static_assert(__cpp_lib_expected_ref > 0);
+
+TEST_CASE("expected<T,E&>: feature-test macro has a positive value", "[expected_ref_e]") {
+    CHECK(__cpp_lib_expected_ref > 0);
+}
 
 // =============================================================================
 // Finding 4: guarded delete-with-message macro (falls back to plain `delete`
 // pre-C++26; either way, the deleted overload stays deleted).
 // =============================================================================
 
-static_assert(!std::is_constructible_v<unexpected<int&>, int&&>,
-              "unexpected<E&> dangling-temporary ctor must stay deleted regardless of "
-              "BEMAN_EXPECTED_DELETE_MSG's expansion");
-static_assert(!std::is_default_constructible_v<expected<int&, int>>,
-              "expected<T&,E> must stay non-default-constructible regardless of "
-              "BEMAN_EXPECTED_DELETE_MSG's expansion");
+TEST_CASE("expected<T,E&>: BEMAN_EXPECTED_DELETE_MSG leaves deleted overloads deleted", "[expected_ref_e]") {
+    {
+        INFO("unexpected<E&> dangling-temporary ctor must stay deleted regardless of "
+             "BEMAN_EXPECTED_DELETE_MSG's expansion");
+        CHECK_FALSE(std::is_constructible_v<unexpected<int&>, int&&>);
+    }
+    {
+        INFO("expected<T&,E> must stay non-default-constructible regardless of "
+             "BEMAN_EXPECTED_DELETE_MSG's expansion");
+        CHECK_FALSE(std::is_default_constructible_v<expected<int&, int>>);
+    }
+}
 
 // =============================================================================
-// Type-level static assertions
+// Type-level properties
+//
+// These are checked at runtime rather than with static_assert so that a
+// violated property is reported by the test run, with the responsible type
+// named, instead of stopping the build at the first failure and reporting
+// nothing. Type identity is compared by `type_name`, which decides by
+// std::is_same_v and carries the compiler's spelling only so that a mismatch
+// prints what was deduced next to what was wanted rather than the bare word
+// `false`.
 // =============================================================================
 
-// expected<T, E&> is a valid specialization — default constructible (value side)
-static_assert(std::is_default_constructible_v<expected<int, int&>>);
-static_assert(std::is_constructible_v<expected<int, int&>, std::in_place_t, int>);
+TEST_CASE("expected<T,E&>: special member availability", "[expected_ref_e]") {
+    // expected<T, E&> is a valid specialization — default constructible (value side)
+    CHECK(std::is_default_constructible_v<expected<int, int&>>);
+    CHECK(std::is_constructible_v<expected<int, int&>, std::in_place_t, int>);
 
-// error() returns E& (shallow const — const expected still returns E&, not const E&)
-static_assert(std::is_same_v<decltype(std::declval<expected<int, int&>>().error()), int&>);
-static_assert(std::is_same_v<decltype(std::declval<const expected<int, int&>>().error()), int&>);
+    // Copy/move constructible
+    CHECK(std::is_copy_constructible_v<expected<int, int&>>);
+    CHECK(std::is_move_constructible_v<expected<int, int&>>);
+}
 
-// value() returns T& (non-const) / const T& (const)
-static_assert(std::is_same_v<decltype(std::declval<expected<int, int&>&>().value()), int&>);
-static_assert(std::is_same_v<decltype(std::declval<const expected<int, int&>&>().value()), const int&>);
+TEST_CASE("expected<T,E&>: observer return types", "[expected_ref_e]") {
+    using expected_t = expected<int, int&>;
 
-// operator-> returns T* / const T*
-static_assert(std::is_same_v<decltype(std::declval<expected<int, int&>>().operator->()), int*>);
-static_assert(std::is_same_v<decltype(std::declval<const expected<int, int&>>().operator->()), const int*>);
+    // error() returns E& (shallow const — const expected still returns E&, not const E&)
+    CHECK(type_name<decltype(std::declval<expected_t>().error())>() == type_name<int&>());
+    CHECK(type_name<decltype(std::declval<const expected_t>().error())>() == type_name<int&>());
 
-// Copy/move constructible
-static_assert(std::is_copy_constructible_v<expected<int, int&>>);
-static_assert(std::is_move_constructible_v<expected<int, int&>>);
+    // value() returns T& (non-const) / const T& (const)
+    CHECK(type_name<decltype(std::declval<expected_t&>().value())>() == type_name<int&>());
+    CHECK(type_name<decltype(std::declval<const expected_t&>().value())>() == type_name<const int&>());
+
+    // operator-> returns T* / const T*
+    CHECK(type_name<decltype(std::declval<expected_t>().operator->())>() == type_name<int*>());
+    CHECK(type_name<decltype(std::declval<const expected_t>().operator->())>() == type_name<const int*>());
+}
 
 // Finding 1: copy/move assignment must be available for reference E, including
 // const-reference E, where E itself is not assignable (is_copy_assignable_v<const
 // int&> is false) but the stored unexpected<E&> rebinds via pointer assignment.
-static_assert(std::is_copy_assignable_v<expected<int, int&>>);
-static_assert(std::is_move_assignable_v<expected<int, int&>>);
-static_assert(std::is_copy_assignable_v<expected<int, const int&>>);
-static_assert(std::is_move_assignable_v<expected<int, const int&>>);
+TEST_CASE("expected<T,E&>: copy/move assignment available for reference E", "[expected_ref_e]") {
+    CHECK(std::is_copy_assignable_v<expected<int, int&>>);
+    CHECK(std::is_move_assignable_v<expected<int, int&>>);
+    CHECK(std::is_copy_assignable_v<expected<int, const int&>>);
+    CHECK(std::is_move_assignable_v<expected<int, const int&>>);
+}
 
-// Triviality: when T is trivial, copy/move/assign/destroy should be trivial
-static_assert(std::is_trivially_copy_constructible_v<expected<int, int&>>);
-static_assert(std::is_trivially_move_constructible_v<expected<int, int&>>);
-static_assert(std::is_trivially_copy_assignable_v<expected<int, int&>>);
-static_assert(std::is_trivially_move_assignable_v<expected<int, int&>>);
-static_assert(std::is_trivially_destructible_v<expected<int, int&>>);
+TEST_CASE("expected<T,E&>: triviality follows T", "[expected_ref_e]") {
+    // Triviality: when T is trivial, copy/move/assign/destroy should be trivial
+    CHECK(std::is_trivially_copy_constructible_v<expected<int, int&>>);
+    CHECK(std::is_trivially_move_constructible_v<expected<int, int&>>);
+    CHECK(std::is_trivially_copy_assignable_v<expected<int, int&>>);
+    CHECK(std::is_trivially_move_assignable_v<expected<int, int&>>);
+    CHECK(std::is_trivially_destructible_v<expected<int, int&>>);
 
-// Non-trivial T: still constructible/assignable but not trivially
-static_assert(std::is_copy_constructible_v<expected<std::string, int&>>);
-static_assert(std::is_move_constructible_v<expected<std::string, int&>>);
-static_assert(!std::is_trivially_copy_constructible_v<expected<std::string, int&>>);
-static_assert(!std::is_trivially_move_constructible_v<expected<std::string, int&>>);
-static_assert(!std::is_trivially_destructible_v<expected<std::string, int&>>);
+    // Non-trivial T: still constructible/assignable but not trivially
+    CHECK(std::is_copy_constructible_v<expected<std::string, int&>>);
+    CHECK(std::is_move_constructible_v<expected<std::string, int&>>);
+    CHECK_FALSE(std::is_trivially_copy_constructible_v<expected<std::string, int&>>);
+    CHECK_FALSE(std::is_trivially_move_constructible_v<expected<std::string, int&>>);
+    CHECK_FALSE(std::is_trivially_destructible_v<expected<std::string, int&>>);
+}
 
-// Cannot construct from temporary error (rvalue deleted, or any type creating a temp E)
-static_assert(!std::is_constructible_v<expected<int, int&>, unexpect_t, int&&>);
-// Cross-type temporary: float would create a temp double when binding const double&
-static_assert(!std::is_constructible_v<expected<int, const double&>, unexpect_t, float>);
-// Lvalue of same type is fine
-static_assert(std::is_constructible_v<expected<int, const double&>, unexpect_t, const double&>);
+TEST_CASE("expected<T,E&>: error construction rejects temporaries", "[expected_ref_e]") {
+    // Cannot construct from temporary error (rvalue deleted, or any type creating a temp E)
+    CHECK_FALSE(std::is_constructible_v<expected<int, int&>, unexpect_t, int&&>);
+    // Cross-type temporary: float would create a temp double when binding const double&
+    CHECK_FALSE(std::is_constructible_v<expected<int, const double&>, unexpect_t, float>);
+    // Lvalue of same type is fine
+    CHECK(std::is_constructible_v<expected<int, const double&>, unexpect_t, const double&>);
+}
 
-// Converting construction from expected<U, G&>
-static_assert(std::is_constructible_v<expected<int, int&>, const expected<long, int&>&>);
+TEST_CASE("expected<T,E&>: converting construction from expected<U,G&> is available", "[expected_ref_e]") {
+    CHECK(std::is_constructible_v<expected<int, int&>, const expected<long, int&>&>);
+}
 
 // =============================================================================
 // Construction — value side (same as primary template)
@@ -236,7 +272,7 @@ TEST_CASE("expected<T,E&>: operator*() and operator->() work normally", "[expect
 
 TEST_CASE("expected<T,E&>: value() returns T& (owned)", "[expected_ref_e]") {
     expected<int, int&> e(42);
-    static_assert(std::is_same_v<decltype(e.value()), int&>);
+    CHECK(type_name<decltype(e.value())>() == type_name<int&>());
     e.value() = 99;
     CHECK(*e == 99);
 }
@@ -250,7 +286,7 @@ TEST_CASE("expected<T,E&>: value() throws on error", "[expected_ref_e]") {
 TEST_CASE("expected<T,E&>: error() returns E&", "[expected_ref_e]") {
     int                 err = 7;
     expected<int, int&> e(unexpect, err);
-    static_assert(std::is_same_v<decltype(e.error()), int&>);
+    CHECK(type_name<decltype(e.error())>() == type_name<int&>());
     CHECK(&e.error() == &err);
 }
 

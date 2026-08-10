@@ -2,6 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 // Beman-only: tests SFINAE behavior of constraints on expected<T&, E>.
+//
+// Every constraint below is checked at runtime rather than with static_assert
+// so that a violated constraint is reported by the test run, naming the
+// responsible type, instead of stopping the build at the first failure and
+// reporting nothing at all. Each check is a boolean trait or concept, so a
+// plain CHECK / CHECK_FALSE is exactly as strict as the static_assert it
+// replaces; the polarity of the original is preserved.
 
 #include <beman/expected/expected.hpp>
 #include <beman/expected/expected.hpp>
@@ -63,24 +70,47 @@ concept has_value_or = requires(X x, U u) { x.value_or(u); };
 // C2/C3: Copy/move constructors require E to be copy/move constructible
 // ===========================================================================
 
-static_assert(!std::is_copy_constructible_v<expected<int&, MoveOnly>>,
-              "expected<T&, MoveOnly> must not be copy-constructible");
-static_assert(std::is_move_constructible_v<expected<int&, MoveOnly>>,
-              "expected<T&, MoveOnly> must be move-constructible");
-
-static_assert(std::is_copy_constructible_v<expected<int&, int>>, "expected<T&, int> must be copy-constructible");
-static_assert(std::is_move_constructible_v<expected<int&, int>>, "expected<T&, int> must be move-constructible");
+TEST_CASE("ref constraint: copy/move ctor track E copy/move constructibility", "[ref_constraints]") {
+    {
+        INFO("expected<T&, MoveOnly> must not be copy-constructible");
+        CHECK_FALSE((std::is_copy_constructible_v<expected<int&, MoveOnly>>));
+    }
+    {
+        INFO("expected<T&, MoveOnly> must be move-constructible");
+        CHECK((std::is_move_constructible_v<expected<int&, MoveOnly>>));
+    }
+    {
+        INFO("expected<T&, int> must be copy-constructible");
+        CHECK((std::is_copy_constructible_v<expected<int&, int>>));
+    }
+    {
+        INFO("expected<T&, int> must be move-constructible");
+        CHECK((std::is_move_constructible_v<expected<int&, int>>));
+    }
+}
 
 // ===========================================================================
 // A1/A2: Copy/move assignment require E to be copy/move constructible+assignable
 // ===========================================================================
 
-static_assert(!std::is_copy_assignable_v<expected<int&, MoveOnly>>,
-              "expected<T&, MoveOnly> must not be copy-assignable");
-static_assert(std::is_move_assignable_v<expected<int&, MoveOnly>>, "expected<T&, MoveOnly> must be move-assignable");
-
-static_assert(std::is_copy_assignable_v<expected<int&, int>>, "expected<T&, int> must be copy-assignable");
-static_assert(std::is_move_assignable_v<expected<int&, int>>, "expected<T&, int> must be move-assignable");
+TEST_CASE("ref constraint: copy/move assignment track E copy/move assignability", "[ref_constraints]") {
+    {
+        INFO("expected<T&, MoveOnly> must not be copy-assignable");
+        CHECK_FALSE((std::is_copy_assignable_v<expected<int&, MoveOnly>>));
+    }
+    {
+        INFO("expected<T&, MoveOnly> must be move-assignable");
+        CHECK((std::is_move_assignable_v<expected<int&, MoveOnly>>));
+    }
+    {
+        INFO("expected<T&, int> must be copy-assignable");
+        CHECK((std::is_copy_assignable_v<expected<int&, int>>));
+    }
+    {
+        INFO("expected<T&, int> must be move-assignable");
+        CHECK((std::is_move_assignable_v<expected<int&, int>>));
+    }
+}
 
 // ===========================================================================
 // C5/C6: Value ctor excludes expected self-type and unexpected specializations
@@ -99,25 +129,23 @@ TEST_CASE("ref constraint: unexpected routes to unexpected ctor", "[ref_constrai
 // C7: Value ctor requires is_constructible_v<T&, U>
 // ===========================================================================
 
-// Cannot construct expected<int&, int> from a string — int& is not bindable to string
-static_assert(!std::is_constructible_v<expected<int&, int>, std::string&>,
-              "expected<int&, int> must not be constructible from string&");
-
-// Can construct expected<int&, int> from int&
-static_assert(std::is_constructible_v<expected<int&, int>, int&>,
-              "expected<int&, int> must be constructible from int&");
+TEST_CASE("ref constraint: value ctor requires is_constructible_v<T&, U>", "[ref_constraints]") {
+    // Cannot construct expected<int&, int> from a string — int& is not
+    // bindable to string
+    {
+        INFO("expected<int&, int> must not be constructible from string&");
+        CHECK_FALSE((std::is_constructible_v<expected<int&, int>, std::string&>));
+    }
+    // Can construct expected<int&, int> from int&
+    {
+        INFO("expected<int&, int> must be constructible from int&");
+        CHECK((std::is_constructible_v<expected<int&, int>, int&>));
+    }
+}
 
 // ===========================================================================
 // C9/C10: Converting ctor from expected<U&, G>
 // ===========================================================================
-
-// Cannot convert expected<string&, int> to expected<int&, int> (string& not bindable to int&)
-static_assert(!std::is_constructible_v<expected<int&, int>, const expected<std::string&, int>&>,
-              "expected<int&, int> must not be constructible from expected<string&, int>");
-
-// Can convert expected<int&, int> to expected<int&, int> (same types)
-static_assert(std::is_constructible_v<expected<int&, int>, const expected<int&, int>&>,
-              "expected<int&, int> must be constructible from expected<int&, int>");
 
 // Cannot convert when E is not constructible from G
 struct Unconstructible {
@@ -125,55 +153,94 @@ struct Unconstructible {
     Unconstructible(int) = delete;
 };
 
-static_assert(!std::is_constructible_v<expected<int&, Unconstructible>, const expected<int&, int>&>,
-              "expected<int&, Unconstructible> not constructible from expected<int&, int> — E(const G&) fails");
+TEST_CASE("ref constraint: converting ctor from expected<U&, G>", "[ref_constraints]") {
+    // Cannot convert expected<string&, int> to expected<int&, int> (string&
+    // not bindable to int&)
+    {
+        INFO("expected<int&, int> must not be constructible from expected<string&, int>");
+        CHECK_FALSE((std::is_constructible_v<expected<int&, int>, const expected<std::string&, int>&>));
+    }
+    // Can convert expected<int&, int> to expected<int&, int> (same types)
+    {
+        INFO("expected<int&, int> must be constructible from expected<int&, int>");
+        CHECK((std::is_constructible_v<expected<int&, int>, const expected<int&, int>&>));
+    }
+    {
+        INFO("expected<int&, Unconstructible> not constructible from expected<int&, int> — E(const G&) fails");
+        CHECK_FALSE((std::is_constructible_v<expected<int&, Unconstructible>, const expected<int&, int>&>));
+    }
+}
 
 // ===========================================================================
 // A3/A4/A5: Value assignment constraints
 // ===========================================================================
 
-// Value assignment from int& works
-static_assert(std::is_assignable_v<expected<int&, int>&, int&>, "expected<int&, int> must be assignable from int&");
-
-// Value assignment from unrelated type that can't bind to int& is blocked
-static_assert(!std::is_assignable_v<expected<int&, int>&, std::string&>,
-              "expected<int&, int> must not be assignable from string&");
+TEST_CASE("ref constraint: value assignment constraints", "[ref_constraints]") {
+    // Value assignment from int& works
+    {
+        INFO("expected<int&, int> must be assignable from int&");
+        CHECK((std::is_assignable_v<expected<int&, int>&, int&>));
+    }
+    // Value assignment from unrelated type that can't bind to int& is blocked
+    {
+        INFO("expected<int&, int> must not be assignable from string&");
+        CHECK_FALSE((std::is_assignable_v<expected<int&, int>&, std::string&>));
+    }
+}
 
 // ===========================================================================
 // A6: unexpected<G> assignment requires constructible+assignable E
 // ===========================================================================
 
-static_assert(std::is_assignable_v<expected<int&, int>&, unexpected<int>>,
-              "expected<int&, int> must be assignable from unexpected<int>");
+TEST_CASE("ref constraint: unexpected<G> assignment requires constructible+assignable E", "[ref_constraints]") {
+    INFO("expected<int&, int> must be assignable from unexpected<int>");
+    CHECK((std::is_assignable_v<expected<int&, int>&, unexpected<int>>));
+}
 
 // ===========================================================================
 // S1: swap requires E swappable and move-constructible
 // ===========================================================================
 
-static_assert(has_swap<expected<int&, int>>, "expected<int&, int> must be swappable");
-
-static_assert(!has_swap<expected<int&, NotSwappable>>, "expected<int&, NotSwappable> must not be swappable");
+TEST_CASE("ref constraint: swap requires E swappable and move-constructible", "[ref_constraints]") {
+    {
+        INFO("expected<int&, int> must be swappable");
+        CHECK((has_swap<expected<int&, int>>));
+    }
+    {
+        INFO("expected<int&, NotSwappable> must not be swappable");
+        CHECK_FALSE((has_swap<expected<int&, NotSwappable>>));
+    }
+}
 
 // ===========================================================================
 // E1: emplace requires constructible and no dangling
 // ===========================================================================
 
-static_assert(has_emplace<expected<int&, int>, int&>, "expected<int&, int> must support emplace from int&");
-
-// emplace from an rvalue int — should be blocked (can't bind int& to rvalue)
-static_assert(!has_emplace_from<expected<int&, int>, int>,
-              "expected<int&, int> must not support emplace from rvalue int");
+TEST_CASE("ref constraint: emplace requires constructible and no dangling", "[ref_constraints]") {
+    {
+        INFO("expected<int&, int> must support emplace from int&");
+        CHECK((has_emplace<expected<int&, int>, int&>));
+    }
+    // emplace from an rvalue int — should be blocked (can't bind int& to rvalue)
+    {
+        INFO("expected<int&, int> must not support emplace from rvalue int");
+        CHECK_FALSE((has_emplace_from<expected<int&, int>, int>));
+    }
+}
 
 // ===========================================================================
 // V1: value_or requires is_object_v<T> && !is_array_v<T> (LWG4304)
 // ===========================================================================
 
-static_assert(has_value_or<const expected<int&, int>, int>, "expected<int&, int> must support value_or");
+TEST_CASE("ref constraint: value_or requires object type (LWG4304)", "[ref_constraints]") {
+    INFO("expected<int&, int> must support value_or");
+    CHECK((has_value_or<const expected<int&, int>, int>));
 
-// Function type: int(int) is not an object type
-// Note: expected<int(&)(int), E> would require T = int(int), which is a function type.
-// We can't easily form expected<FuncRef, E> due to other constraints, so we verify
-// the positive case works and trust the requires clause.
+    // Function type: int(int) is not an object type
+    // Note: expected<int(&)(int), E> would require T = int(int), which is a function type.
+    // We can't easily form expected<FuncRef, E> due to other constraints, so we verify
+    // the positive case works and trust the requires clause.
+}
 
 // ===========================================================================
 // MC1/MC2: and_then/transform constrained by E constructibility
@@ -182,21 +249,34 @@ static_assert(has_value_or<const expected<int&, int>, int>, "expected<int&, int>
 using RefMoveOnlyErr                     = expected<int&, MoveOnly>;
 [[maybe_unused]] auto ref_dummy_and_then = [](int&) { return expected<int, MoveOnly>(); };
 
-static_assert(!has_and_then<RefMoveOnlyErr&, decltype(ref_dummy_and_then)>,
-              "and_then lvalue must be constrained out when E is move-only");
-static_assert(has_and_then<RefMoveOnlyErr&&, decltype(ref_dummy_and_then)>,
-              "and_then rvalue must be available when E is move-constructible");
-static_assert(!has_and_then<const RefMoveOnlyErr&, decltype(ref_dummy_and_then)>,
-              "and_then const lvalue must be constrained out when E is move-only");
-
 [[maybe_unused]] auto ref_dummy_transform = [](int&) { return 0; };
 
-static_assert(!has_transform<RefMoveOnlyErr&, decltype(ref_dummy_transform)>,
-              "transform lvalue must be constrained out when E is move-only");
-static_assert(has_transform<RefMoveOnlyErr&&, decltype(ref_dummy_transform)>,
-              "transform rvalue must be available when E is move-constructible");
-static_assert(!has_transform<const RefMoveOnlyErr&, decltype(ref_dummy_transform)>,
-              "transform const lvalue must be constrained out when E is move-only");
+TEST_CASE("ref constraint: and_then/transform constrained by E constructibility", "[ref_constraints]") {
+    {
+        INFO("and_then lvalue must be constrained out when E is move-only");
+        CHECK_FALSE((has_and_then<RefMoveOnlyErr&, decltype(ref_dummy_and_then)>));
+    }
+    {
+        INFO("and_then rvalue must be available when E is move-constructible");
+        CHECK((has_and_then<RefMoveOnlyErr&&, decltype(ref_dummy_and_then)>));
+    }
+    {
+        INFO("and_then const lvalue must be constrained out when E is move-only");
+        CHECK_FALSE((has_and_then<const RefMoveOnlyErr&, decltype(ref_dummy_and_then)>));
+    }
+    {
+        INFO("transform lvalue must be constrained out when E is move-only");
+        CHECK_FALSE((has_transform<RefMoveOnlyErr&, decltype(ref_dummy_transform)>));
+    }
+    {
+        INFO("transform rvalue must be available when E is move-constructible");
+        CHECK((has_transform<RefMoveOnlyErr&&, decltype(ref_dummy_transform)>));
+    }
+    {
+        INFO("transform const lvalue must be constrained out when E is move-only");
+        CHECK_FALSE((has_transform<const RefMoveOnlyErr&, decltype(ref_dummy_transform)>));
+    }
+}
 
 // ===========================================================================
 // MC3/MC4: or_else/transform_error have no constraints — always available
@@ -207,13 +287,18 @@ static_assert(!has_transform<const RefMoveOnlyErr&, decltype(ref_dummy_transform
     return expected<int&, int>(x);
 };
 
-static_assert(has_or_else<RefMoveOnlyErr&&, decltype(ref_dummy_or_else)>,
-              "or_else must be available — no constraints on value constructibility for T&");
-
 [[maybe_unused]] auto ref_dummy_transform_error = [](MoveOnly&&) { return 0; };
 
-static_assert(has_transform_error<RefMoveOnlyErr&&, decltype(ref_dummy_transform_error)>,
-              "transform_error must be available — no constraints for T& specialization");
+TEST_CASE("ref constraint: or_else/transform_error are unconstrained", "[ref_constraints]") {
+    {
+        INFO("or_else must be available — no constraints on value constructibility for T&");
+        CHECK((has_or_else<RefMoveOnlyErr&&, decltype(ref_dummy_or_else)>));
+    }
+    {
+        INFO("transform_error must be available — no constraints for T& specialization");
+        CHECK((has_transform_error<RefMoveOnlyErr&&, decltype(ref_dummy_transform_error)>));
+    }
+}
 
 // ===========================================================================
 // Positive: all operations available for normal types
@@ -229,14 +314,16 @@ using NormalRef = expected<int&, int>;
 [[maybe_unused]] auto ref_normal_transform     = [](int&) { return 42; };
 [[maybe_unused]] auto ref_normal_transform_err = [](int) { return 42; };
 
-static_assert(has_and_then<NormalRef&, decltype(ref_normal_and_then)>);
-static_assert(has_and_then<NormalRef&&, decltype(ref_normal_and_then)>);
-static_assert(has_and_then<const NormalRef&, decltype(ref_normal_and_then)>);
-static_assert(has_and_then<const NormalRef&&, decltype(ref_normal_and_then)>);
+TEST_CASE("ref constraint: all monadic operations available for normal types", "[ref_constraints]") {
+    CHECK((has_and_then<NormalRef&, decltype(ref_normal_and_then)>));
+    CHECK((has_and_then<NormalRef&&, decltype(ref_normal_and_then)>));
+    CHECK((has_and_then<const NormalRef&, decltype(ref_normal_and_then)>));
+    CHECK((has_and_then<const NormalRef&&, decltype(ref_normal_and_then)>));
 
-static_assert(has_or_else<NormalRef&, decltype(ref_normal_or_else)>);
-static_assert(has_transform<NormalRef&, decltype(ref_normal_transform)>);
-static_assert(has_transform_error<NormalRef&, decltype(ref_normal_transform_err)>);
+    CHECK((has_or_else<NormalRef&, decltype(ref_normal_or_else)>));
+    CHECK((has_transform<NormalRef&, decltype(ref_normal_transform)>));
+    CHECK((has_transform_error<NormalRef&, decltype(ref_normal_transform_err)>));
+}
 
 // ===========================================================================
 // Runtime tests for constraint-gated paths

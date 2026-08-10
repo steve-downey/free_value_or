@@ -9,6 +9,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
+#include <type_traits>
 
 using namespace beman::expected;
 
@@ -91,6 +92,12 @@ TEST_CASE("hardened: error() on error-state expected<void,int>", "[hardened]") {
 
 // ---------------------------------------------------------------------------
 // unexpected friend swap: constraint check (beman-only)
+//
+// The constraint is checked at runtime rather than with static_assert so that a
+// violation is reported by the test run, with the responsible type named,
+// instead of stopping the build and reporting nothing. Querying the trait at
+// all is still the point: an unconstrained hidden-friend swap would make
+// is_swappable_v a hard error rather than a well-formed `false`.
 // ---------------------------------------------------------------------------
 
 struct NonSwappable {
@@ -100,5 +107,8 @@ struct NonSwappable {
     NonSwappable& operator=(const NonSwappable&) = delete;
     NonSwappable& operator=(NonSwappable&&)      = delete;
 };
-static_assert(!std::is_swappable_v<NonSwappable>);
-static_assert(!std::is_swappable_v<unexpected<NonSwappable>>);
+
+TEST_CASE("hardened: unexpected<E> is not swappable when E is not", "[hardened]") {
+    CHECK_FALSE(std::is_swappable_v<NonSwappable>);
+    CHECK_FALSE(std::is_swappable_v<unexpected<NonSwappable>>);
+}

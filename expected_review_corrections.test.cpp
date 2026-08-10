@@ -22,26 +22,31 @@ using namespace beman::expected;
 // type (referent lives inside the wrapper) or would drop const.
 // =============================================================================
 
-// Allowed: reference G, across all three specializations.
-static_assert(std::is_constructible_v<expected<void, int&>, unexpected<int&>>);
-static_assert(std::is_constructible_v<expected<int, int&>, unexpected<int&>>);
-static_assert(std::is_constructible_v<expected<int&, int&>, unexpected<int&>>);
+// Checked at runtime rather than with static_assert so that a violated rule is
+// reported by the test run, with the offending specialization named, instead of
+// stopping the build at the first failure and reporting nothing.
+TEST_CASE("F6: construction from unexpected<G> is allowed only for reference G", "[ref][unexpected]") {
+    // Allowed: reference G, across all three specializations.
+    CHECK(std::is_constructible_v<expected<void, int&>, unexpected<int&>>);
+    CHECK(std::is_constructible_v<expected<int, int&>, unexpected<int&>>);
+    CHECK(std::is_constructible_v<expected<int&, int&>, unexpected<int&>>);
 
-// Allowed: binding a more-const reference (const int& <- int&).
-static_assert(std::is_constructible_v<expected<void, const int&>, unexpected<int&>>);
-static_assert(std::is_constructible_v<expected<int, const int&>, unexpected<int&>>);
+    // Allowed: binding a more-const reference (const int& <- int&).
+    CHECK(std::is_constructible_v<expected<void, const int&>, unexpected<int&>>);
+    CHECK(std::is_constructible_v<expected<int, const int&>, unexpected<int&>>);
 
-// Deleted: value G would dangle once a temporary unexpected is destroyed.
-static_assert(!std::is_constructible_v<expected<void, int&>, unexpected<int>>);
-static_assert(!std::is_constructible_v<expected<int, int&>, unexpected<int>>);
-static_assert(!std::is_constructible_v<expected<int&, int&>, unexpected<int>>);
+    // Deleted: value G would dangle once a temporary unexpected is destroyed.
+    CHECK_FALSE(std::is_constructible_v<expected<void, int&>, unexpected<int>>);
+    CHECK_FALSE(std::is_constructible_v<expected<int, int&>, unexpected<int>>);
+    CHECK_FALSE(std::is_constructible_v<expected<int&, int&>, unexpected<int>>);
 
-// Deleted: dropping const (int& <- const int&) is not constructible.
-static_assert(!std::is_constructible_v<expected<void, int&>, unexpected<const int&>>);
-static_assert(!std::is_constructible_v<expected<int, int&>, unexpected<const int&>>);
+    // Deleted: dropping const (int& <- const int&) is not constructible.
+    CHECK_FALSE(std::is_constructible_v<expected<void, int&>, unexpected<const int&>>);
+    CHECK_FALSE(std::is_constructible_v<expected<int, int&>, unexpected<const int&>>);
 
-// Value-E construction is unaffected.
-static_assert(std::is_constructible_v<expected<int, std::string>, unexpected<std::string>>);
+    // Value-E construction is unaffected.
+    CHECK(std::is_constructible_v<expected<int, std::string>, unexpected<std::string>>);
+}
 
 TEST_CASE("reference-error construction from unexpected<E&> binds an external object", "[ref][unexpected]") {
     int err = 41;
@@ -63,13 +68,15 @@ TEST_CASE("reference-error construction from unexpected<E&> binds an external ob
 
 // Rebinding assignment from unexpected<E&> — allowed for reference E only when G is a reference
 // (rebinds the error pointer to an external object; never dangles). Value G and const-drop are
-// statically rejected, mirroring construction.
-static_assert(std::is_assignable_v<expected<void, int&>&, unexpected<int&>>);
-static_assert(std::is_assignable_v<expected<int, int&>&, unexpected<int&>>);
-static_assert(std::is_assignable_v<expected<int&, int&>&, unexpected<int&>>);
-static_assert(std::is_assignable_v<expected<int, const int&>&, unexpected<int&>>);  // more-const OK
-static_assert(!std::is_assignable_v<expected<int, int&>&, unexpected<int>>);        // value G: deleted
-static_assert(!std::is_assignable_v<expected<int, int&>&, unexpected<const int&>>); // const drop: no overload
+// rejected at compile time, mirroring construction.
+TEST_CASE("F6: rebinding assignment from unexpected<G> is allowed only for reference G", "[ref][unexpected][assign]") {
+    CHECK(std::is_assignable_v<expected<void, int&>&, unexpected<int&>>);
+    CHECK(std::is_assignable_v<expected<int, int&>&, unexpected<int&>>);
+    CHECK(std::is_assignable_v<expected<int&, int&>&, unexpected<int&>>);
+    CHECK(std::is_assignable_v<expected<int, const int&>&, unexpected<int&>>);       // more-const OK
+    CHECK_FALSE(std::is_assignable_v<expected<int, int&>&, unexpected<int>>);        // value G: deleted
+    CHECK_FALSE(std::is_assignable_v<expected<int, int&>&, unexpected<const int&>>); // const drop: no overload
+}
 
 TEST_CASE("rebinding assignment from unexpected<E&> repoints the error reference", "[ref][unexpected][assign]") {
     int g1 = 1, g2 = 2;
@@ -114,8 +121,10 @@ struct ThrowingRef {
 };
 } // namespace
 
-static_assert(std::is_nothrow_constructible_v<expected<int&, int>, int&>);
-static_assert(!std::is_nothrow_constructible_v<expected<int&, int>, ThrowingRef>);
+TEST_CASE("F4/F5: value construction is noexcept only when the reference bind cannot throw", "[ref][noexcept]") {
+    CHECK(std::is_nothrow_constructible_v<expected<int&, int>, int&>);
+    CHECK_FALSE(std::is_nothrow_constructible_v<expected<int&, int>, ThrowingRef>);
+}
 
 TEST_CASE("value constructor propagates a throwing reference conversion", "[ref][noexcept]") {
     int caught = 0;
@@ -187,8 +196,10 @@ concept has_error_or = requires(Ex e, Arg a) { e.error_or(a); };
 struct NotConvertible {};
 } // namespace
 
-static_assert(has_error_or<expected<int&, std::string>&, const char*>);
-static_assert(!has_error_or<expected<int&, std::string>&, NotConvertible>);
+TEST_CASE("F7: error_or is SFINAE-friendly", "[ref][error_or]") {
+    CHECK(has_error_or<expected<int&, std::string>&, const char*>);
+    CHECK_FALSE(has_error_or<expected<int&, std::string>&, NotConvertible>);
+}
 
 // =============================================================================
 // Shallow conversion — converting from an rvalue reference-holding expected to a

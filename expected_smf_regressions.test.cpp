@@ -60,18 +60,31 @@ struct NoexceptNonTrivial {
 template <class Ex>
 inline constexpr bool swap_query_is_wellformed = (static_cast<void>(std::is_swappable_v<Ex>), true);
 
-static_assert(swap_query_is_wellformed<expected<int, DelMoveOkCopy>>);
-static_assert(swap_query_is_wellformed<expected<void, DelMoveOkCopy>>);
-
-// Bug 2: non-trivial-but-noexcept copy => nothrow copy construct/assign.
-static_assert(std::is_nothrow_copy_constructible_v<expected<int, NonTrivialDtor>>);
-static_assert(std::is_nothrow_copy_constructible_v<expected<int, NoexceptNonTrivial>>);
-static_assert(std::is_nothrow_copy_constructible_v<expected<void, NonTrivialDtor>>);
-static_assert(std::is_nothrow_copy_assignable_v<expected<int, NonTrivialDtor>>);
-static_assert(std::is_nothrow_copy_assignable_v<expected<int, NoexceptNonTrivial>>);
-static_assert(std::is_nothrow_copy_assignable_v<expected<void, NonTrivialDtor>>);
-
 } // namespace
+
+// The trait properties below are checked at runtime rather than with
+// static_assert so that a regression is reported by the test run, with the
+// responsible type named, instead of stopping the build at the first failure
+// and reporting nothing. Well-formedness is still a translation-time question:
+// naming `swap_query_is_wellformed<Ex>` instantiates it, so a hard error in
+// `is_swappable_v<Ex>` remains a build failure — what the CHECK adds is that a
+// *wrong answer* is reported instead.
+
+TEST_CASE("querying is_swappable on a move-restricted error type is well-formed") {
+    // Bug 1: previously a hard error via the unconstrained hidden-friend swap.
+    CHECK(swap_query_is_wellformed<expected<int, DelMoveOkCopy>>);
+    CHECK(swap_query_is_wellformed<expected<void, DelMoveOkCopy>>);
+}
+
+TEST_CASE("non-trivial but noexcept copy gives a nothrow copy constructor and assignment") {
+    // Bug 2: non-trivial-but-noexcept copy => nothrow copy construct/assign.
+    CHECK(std::is_nothrow_copy_constructible_v<expected<int, NonTrivialDtor>>);
+    CHECK(std::is_nothrow_copy_constructible_v<expected<int, NoexceptNonTrivial>>);
+    CHECK(std::is_nothrow_copy_constructible_v<expected<void, NonTrivialDtor>>);
+    CHECK(std::is_nothrow_copy_assignable_v<expected<int, NonTrivialDtor>>);
+    CHECK(std::is_nothrow_copy_assignable_v<expected<int, NoexceptNonTrivial>>);
+    CHECK(std::is_nothrow_copy_assignable_v<expected<void, NonTrivialDtor>>);
+}
 
 TEST_CASE("swap is well-formed and works for a move-restricted error type") {
     // Previously a hard error via the unconstrained hidden-friend swap.
