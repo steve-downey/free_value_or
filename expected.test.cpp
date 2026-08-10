@@ -717,10 +717,12 @@ TEST_CASE("expected: cross-type equality error", "[ExpectedTest]") {
 // =============================================================================
 // Constexpr usage
 //
-// Each of these builds an expected inside a self-contained probe lambda and
-// reduces its state to a literal aggregate. `constant_eval` runs the probe
-// during translation — so "is this usable in a constant expression?" is still
-// answered by the compiler — and hands back the result as an ordinary value,
+// Each of these declares the expected as a constexpr object inside a
+// self-contained probe lambda and reduces its state to a literal aggregate. The
+// constexpr declaration keeps "is this usable as a constexpr variable?" answered
+// by the compiler; `constant_eval` runs the probe during translation — so "is
+// this usable in a constant expression?" is answered too — and hands back the
+// result as an ordinary value,
 // so "did it produce the right state?" is answered by a reported CHECK.
 // Calling the same probe directly runs the identical body at runtime, which
 // is worth doing separately: constant evaluation and ordinary evaluation take
@@ -745,7 +747,7 @@ struct int_state {
 
 TEST_CASE("expected: constexpr default construction", "[ExpectedTest]") {
     constexpr auto probe = [] {
-        expt::expected<int, int> e;
+        constexpr expt::expected<int, int> e;
         return int_state{e.has_value(), *e};
     };
     CHECK(constant_eval(probe) == int_state{true, 0});
@@ -754,7 +756,7 @@ TEST_CASE("expected: constexpr default construction", "[ExpectedTest]") {
 
 TEST_CASE("expected: constexpr value construction", "[ExpectedTest]") {
     constexpr auto probe = [] {
-        expt::expected<int, int> e(42);
+        constexpr expt::expected<int, int> e(42);
         return int_state{e.has_value(), *e};
     };
     CHECK(constant_eval(probe) == int_state{true, 42});
@@ -763,7 +765,7 @@ TEST_CASE("expected: constexpr value construction", "[ExpectedTest]") {
 
 TEST_CASE("expected: constexpr error construction", "[ExpectedTest]") {
     constexpr auto probe = [] {
-        expt::expected<int, int> e(expt::unexpect, 7);
+        constexpr expt::expected<int, int> e(expt::unexpect, 7);
         return int_state{e.has_value(), e.error()};
     };
     CHECK(constant_eval(probe) == int_state{false, 7});
@@ -775,8 +777,8 @@ TEST_CASE("expected: constexpr equality", "[ExpectedTest]") {
     // the win is that a wrong answer is still a reported failure rather than
     // a build break, and the rest of the file still runs.
     constexpr auto probe = [] {
-        expt::expected<int, int> a(42);
-        expt::expected<int, int> b(42);
+        constexpr expt::expected<int, int> a(42);
+        constexpr expt::expected<int, int> b(42);
         return a == b;
     };
     CHECK(constant_eval(probe));

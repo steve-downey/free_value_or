@@ -67,8 +67,8 @@ TEST_CASE("reference-error construction from unexpected<E&> binds an external ob
 }
 
 // Rebinding assignment from unexpected<E&> — allowed for reference E only when G is a reference
-// (rebinds the error pointer to an external object; never dangles). Value G and const-drop are
-// rejected at compile time, mirroring construction.
+// (rebinds the error pointer to an external object; never dangles). Value G and const-drop make
+// the assignment ill-formed; that trait is checked at runtime here, mirroring construction.
 TEST_CASE("F6: rebinding assignment from unexpected<G> is allowed only for reference G", "[ref][unexpected][assign]") {
     CHECK(std::is_assignable_v<expected<void, int&>&, unexpected<int&>>);
     CHECK(std::is_assignable_v<expected<int, int&>&, unexpected<int&>>);
