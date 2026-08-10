@@ -80,6 +80,7 @@ TEST_CASE("expected: special member availability and noexcept", "[ExpectedTest]"
     CHECK(std::is_nothrow_move_assignable_v<expt::expected<int, int>>);
 }
 
+// 52697d22-633f-4e07-b364-5b5db41ca2a7
 TEST_CASE("expected: operator* ref-qualification return types", "[ExpectedTest]") {
     using expected_t = expt::expected<int, int>;
     CHECK(type_name<decltype(*std::declval<expected_t&>())>() == type_name<int&>());
@@ -87,6 +88,7 @@ TEST_CASE("expected: operator* ref-qualification return types", "[ExpectedTest]"
     CHECK(type_name<decltype(*std::declval<expected_t&&>())>() == type_name<int&&>());
     CHECK(type_name<decltype(*std::declval<const expected_t&&>())>() == type_name<const int&&>());
 }
+// 52697d22-633f-4e07-b364-5b5db41ca2a7 end
 
 TEST_CASE("expected: error() ref-qualification return types", "[ExpectedTest]") {
     using expected_t = expt::expected<int, int>;
@@ -745,6 +747,7 @@ struct int_state {
 };
 } // namespace
 
+// a525eae8-2bb0-4cae-aeaf-b134cbffef1c
 TEST_CASE("expected: constexpr default construction", "[ExpectedTest]") {
     constexpr auto probe = [] {
         constexpr expt::expected<int, int> e;
@@ -753,6 +756,7 @@ TEST_CASE("expected: constexpr default construction", "[ExpectedTest]") {
     CHECK(constant_eval(probe) == int_state{true, 0});
     CHECK(probe() == int_state{true, 0});
 }
+// a525eae8-2bb0-4cae-aeaf-b134cbffef1c end
 
 TEST_CASE("expected: constexpr value construction", "[ExpectedTest]") {
     constexpr auto probe = [] {

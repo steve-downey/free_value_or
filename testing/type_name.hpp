@@ -133,10 +133,12 @@ consteval type_name_t<T> type_name();
 
 } // namespace beman::expected::testing
 
+// d1c7602e-a42f-46ab-bd53-7adef5646545
 template <class T, class U>
 constexpr bool beman::expected::testing::operator==(type_name_t<T>, type_name_t<U>) {
     return std::is_same_v<T, U>;
 }
+// d1c7602e-a42f-46ab-bd53-7adef5646545 end
 
 template <class T>
 consteval beman::expected::testing::type_name_t<T> beman::expected::testing::type_name() {

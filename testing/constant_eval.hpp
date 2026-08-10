@@ -64,9 +64,11 @@ consteval auto constant_eval(Probe probe);
 
 } // namespace beman::expected::testing
 
+// f0b2e22a-6ab4-4112-b826-297a776f01f1
 template <class Probe>
 consteval auto beman::expected::testing::constant_eval(Probe probe) {
     return probe();
 }
+// f0b2e22a-6ab4-4112-b826-297a776f01f1 end
 
 #endif // BEMAN_EXPECTED_TESTING_CONSTANT_EVAL_HPP
