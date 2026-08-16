@@ -149,3 +149,20 @@ TEST_CASE("expected<T&,E> value_or_construct / value_or_else", "[expected][ref][
 
     static_assert(std::is_same_v<decltype(good.value_or_construct(0)), int>);
 }
+
+TEST_CASE("expected<T&,E> value_or_construct initializer_list overload",
+          "[expected][ref][value_or_construct]") {
+    using vector = std::vector<int>;
+
+    vector                         existing{9, 9};
+    expected<vector&, std::string> good = existing;
+    expected<vector&, std::string> bad  = unexpected(std::string("e"));
+
+    auto from_value = good.value_or_construct({1, 2, 3});
+    auto from_error = bad.value_or_construct({1, 2, 3});
+
+    CHECK(from_value == vector{9, 9});
+    CHECK(from_error == vector{1, 2, 3});
+
+    static_assert(std::is_same_v<decltype(good.value_or_construct(std::initializer_list<int>{})), vector>);
+}

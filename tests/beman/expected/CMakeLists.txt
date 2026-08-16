@@ -393,6 +393,24 @@ add_fail_test(expected_void_ref_e_assign_unexpected_fail
     "no assignment from unexpected|use of deleted function|call to deleted|invokes a deleted function|selected deleted operator|attempting to reference"
 )
 
+# P3413 — value_or_construct / value_or_else mandates
+add_fail_test(expected_value_or_construct_bad_args_fail
+    value_or_construct_bad_args_fail.test.cpp
+    "value_or_construct requires is_constructible_v<T, Args\\.\\.\\.>"
+)
+add_fail_test(expected_value_or_construct_bad_init_list_fail
+    value_or_construct_bad_init_list_fail.test.cpp
+    "value_or_construct requires is_constructible_v<T, initializer_list<U>&, Args\\.\\.\\.>"
+)
+add_fail_test(expected_value_or_else_bad_conversion_fail
+    value_or_else_bad_conversion_fail.test.cpp
+    "value_or_else requires is_convertible_v<invoke_result_t<F>, T>"
+)
+add_fail_test(expected_value_or_else_non_invocable_fail
+    value_or_else_non_invocable_fail.test.cpp
+    "invoke_result|no type named.*type|not invocable"
+)
+
 # =============================================================================
 # Hardened precondition tests (compiled with -DBEMAN_EXPECTED_HARDENED)
 # =============================================================================

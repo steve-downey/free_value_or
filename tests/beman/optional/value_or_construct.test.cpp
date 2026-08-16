@@ -161,6 +161,23 @@ TEST(OptionalRefValueOrConstruct, EngagedAndEmpty) {
     static_assert(std::is_same_v<decltype(engaged.value_or_construct(0)), int>);
 }
 
+TEST(OptionalRefValueOrConstruct, InitializerListOverload) {
+    using vector = std::vector<int>;
+
+    vector                           existing{9, 9};
+    beman::optional::optional<vector&> engaged{existing};
+    beman::optional::optional<vector&> empty;
+
+    auto from_engaged = engaged.value_or_construct({1, 2, 3});
+    auto from_empty   = empty.value_or_construct({1, 2, 3});
+
+    EXPECT_EQ(from_engaged, (vector{9, 9}));
+    EXPECT_EQ(from_empty, (vector{1, 2, 3}));
+
+    static_assert(
+        std::is_same_v<decltype(engaged.value_or_construct(std::initializer_list<int>{})), vector>);
+}
+
 TEST(OptionalRefValueOrElse, EngagedAndEmpty) {
     int                             x      = 3;
     beman::optional::optional<int&> engaged{x};
