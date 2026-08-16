@@ -74,7 +74,7 @@ template <smd::free_value_or::nullable T,
           class I,
           class R = std::common_type_t<std::iter_reference_t<T>, std::invoke_result_t<I>>>
 constexpr auto smd::free_value_or::or_invoke(T&& m, I&& invocable) -> R {
-    return bool(m) ? static_cast<R>(*m) : static_cast<R>(invocable());
+    return bool(m) ? static_cast<R>(*m) : static_cast<R>(std::forward<I>(invocable)());
 }
 
 template <class Ret = void,
