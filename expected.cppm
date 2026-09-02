@@ -1,3 +1,7 @@
+module;
+
+#include <version>
+
 export module beman.expected;
 
 import std;

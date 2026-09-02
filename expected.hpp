@@ -23,13 +23,6 @@
     #define BEMAN_EXPECTED_TRAP() std::abort()
 #endif
 
-// Feature-test macro for the reference-E / reference-T extensions (expected<T,E&>,
-// expected<void,E&>, expected<T&,E>) implemented by this header. Not yet a WG21-assigned
-// macro; the value below is a placeholder pending standardization.
-#ifndef __cpp_lib_expected_ref
-    #define __cpp_lib_expected_ref 202608L // placeholder value pending WG21 assignment
-#endif
-
 /***
 22.8.2 Header <expected> synopsis[expected.syn]
 
@@ -290,8 +283,13 @@ class expected {
 
     // In-place constructor for error with initializer_list
     template <class U, class... Args>
-        requires std::is_constructible_v<E, std::initializer_list<U>&, Args...>
+        requires(!std::is_reference_v<E> && std::is_constructible_v<E, std::initializer_list<U>&, Args...>)
     constexpr explicit expected(unexpect_t, std::initializer_list<U> il, Args&&... args);
+
+    template <class U, class... Args>
+        requires std::is_reference_v<E>
+    constexpr expected(unexpect_t, std::initializer_list<U>, Args&&...) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T,E&>: initializer-list error construction cannot bind a reference; pass an lvalue reference");
 
     // -------------------------------------------------------------------------
     // [expected.object.dtor] Destructor
@@ -701,7 +699,7 @@ constexpr expected<T, E>::expected(unexpect_t, Args&&... args) : has_val_(false)
 
 template <class T, class E>
 template <class U, class... Args>
-    requires std::is_constructible_v<E, std::initializer_list<U>&, Args...>
+    requires(!std::is_reference_v<E> && std::is_constructible_v<E, std::initializer_list<U>&, Args...>)
 constexpr expected<T, E>::expected(unexpect_t, std::initializer_list<U> il, Args&&... args) : has_val_(false) {
     std::construct_at(std::addressof(unex_), std::in_place, il, std::forward<Args>(args)...);
 }
@@ -1528,8 +1526,13 @@ class expected<void, E> {
 
     // In-place constructor for error with initializer_list
     template <class U, class... Args>
-        requires std::is_constructible_v<E, std::initializer_list<U>&, Args...>
+        requires(!std::is_reference_v<E> && std::is_constructible_v<E, std::initializer_list<U>&, Args...>)
     constexpr explicit expected(unexpect_t, std::initializer_list<U> il, Args&&... args);
+
+    template <class U, class... Args>
+        requires std::is_reference_v<E>
+    constexpr expected(unexpect_t, std::initializer_list<U>, Args&&...) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<void,E&>: initializer-list error construction cannot bind a reference; pass an lvalue reference");
 
     // Converting constructor from expected<void, G&> — reference-E path only. G is itself a
     // reference to an external object, so binding E& to it cannot dangle regardless of the
@@ -1833,7 +1836,7 @@ constexpr expected<void, E>::expected(unexpect_t, Args&&... args) : has_val_(fal
 
 template <class E>
 template <class U, class... Args>
-    requires std::is_constructible_v<E, std::initializer_list<U>&, Args...>
+    requires(!std::is_reference_v<E> && std::is_constructible_v<E, std::initializer_list<U>&, Args...>)
 constexpr expected<void, E>::expected(unexpect_t, std::initializer_list<U> il, Args&&... args) : has_val_(false) {
     std::construct_at(std::addressof(unex_), std::in_place, il, std::forward<Args>(args)...);
 }
@@ -2510,8 +2513,13 @@ class expected<T&, E> {
 
     // In-place constructor for error with initializer_list
     template <class U, class... Args>
-        requires std::is_constructible_v<E, std::initializer_list<U>&, Args...>
+        requires(!std::is_reference_v<E> && std::is_constructible_v<E, std::initializer_list<U>&, Args...>)
     constexpr explicit expected(unexpect_t, std::initializer_list<U> il, Args&&... args);
+
+    template <class U, class... Args>
+        requires std::is_reference_v<E>
+    constexpr expected(unexpect_t, std::initializer_list<U>, Args&&...) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T&,E&>: initializer-list error construction cannot bind a reference; pass an lvalue reference");
 
     // -------------------------------------------------------------------------
     // Destructor
@@ -2856,7 +2864,7 @@ constexpr expected<T&, E>::expected(unexpect_t, Args&&... args) : has_val_(false
 
 template <class T, class E>
 template <class U, class... Args>
-    requires std::is_constructible_v<E, std::initializer_list<U>&, Args...>
+    requires(!std::is_reference_v<E> && std::is_constructible_v<E, std::initializer_list<U>&, Args...>)
 constexpr expected<T&, E>::expected(unexpect_t, std::initializer_list<U> il, Args&&... args) : has_val_(false) {
     std::construct_at(std::addressof(unex_), std::in_place, il, std::forward<Args>(args)...);
 }

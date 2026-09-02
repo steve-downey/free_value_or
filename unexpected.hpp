@@ -3,6 +3,8 @@
 #ifndef BEMAN_EXPECTED_UNEXPECTED_HPP
 #define BEMAN_EXPECTED_UNEXPECTED_HPP
 
+#include <beman/expected/config.hpp>
+
 #ifndef BEMAN_EXPECTED_INCLUDED_FROM_INTERFACE_UNIT
     #include <initializer_list>
     #include <memory>
