@@ -11,8 +11,65 @@
 
 #include <string>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 using namespace beman::expected;
+
+namespace {
+template <class Ex>
+concept accepts_value_prvalue = requires { Ex(42); };
+
+template <class Ex>
+concept accepts_value_xvalue = requires(int& value) { Ex(std::move(value)); };
+
+template <class Ex>
+concept accepts_error_prvalue = requires { Ex(unexpect, 42); };
+
+template <class Ex>
+concept accepts_error_xvalue = requires(int& error) { Ex(unexpect, std::move(error)); };
+} // namespace
+
+// The type-level properties below are checked at runtime rather than with
+// static_assert so that a violated rule is reported by the test run, with the
+// offending specialization named, instead of stopping the build at the first
+// failure and reporting nothing.
+
+TEST_CASE("initializer-list error construction is unavailable for reference errors", "[ref][init-list]") {
+    // Available for object errors, in all three class templates.
+    CHECK(std::is_constructible_v<expected<int, std::vector<int>>, unexpect_t, std::initializer_list<int>>);
+    CHECK(std::is_constructible_v<expected<void, std::vector<int>>, unexpect_t, std::initializer_list<int>>);
+    CHECK(std::is_constructible_v<expected<int&, std::vector<int>>, unexpect_t, std::initializer_list<int>>);
+
+    // Unavailable for reference errors: a reference cannot bind to a list.
+    CHECK_FALSE(std::is_constructible_v<expected<int, const int&>, unexpect_t, std::initializer_list<int>>);
+    CHECK_FALSE(std::is_constructible_v<expected<void, const int&>, unexpect_t, std::initializer_list<int>>);
+    CHECK_FALSE(std::is_constructible_v<expected<int&, const int&>, unexpect_t, std::initializer_list<int>>);
+}
+
+TEST_CASE("dangling detection is type-based: prvalue and xvalue are both rejected", "[ref][dangling]") {
+    // A forwarding constructor sees the same deduced type for a prvalue and an
+    // xvalue, so rejecting one rejects the other.
+    CHECK_FALSE(accepts_value_prvalue<expected<const int&, int>>);
+    CHECK_FALSE(accepts_value_xvalue<expected<const int&, int>>);
+    CHECK_FALSE(accepts_error_prvalue<expected<int, const int&>>);
+    CHECK_FALSE(accepts_error_xvalue<expected<int, const int&>>);
+    CHECK_FALSE(accepts_error_prvalue<expected<void, const int&>>);
+    CHECK_FALSE(accepts_error_xvalue<expected<void, const int&>>);
+    CHECK_FALSE(accepts_error_prvalue<expected<int&, const int&>>);
+    CHECK_FALSE(accepts_error_xvalue<expected<int&, const int&>>);
+}
+
+TEST_CASE("reference-error assignment keeps conservative exception specifications", "[ref][noexcept][assign]") {
+    // Rebinding the stored pointer cannot throw, but the exception
+    // specifications deliberately stay conservative.
+    CHECK_FALSE(std::is_nothrow_copy_assignable_v<expected<std::string, const int&>>);
+    CHECK_FALSE(std::is_nothrow_move_assignable_v<expected<std::string, const int&>>);
+    CHECK_FALSE(std::is_nothrow_copy_assignable_v<expected<void, const int&>>);
+    CHECK_FALSE(std::is_nothrow_move_assignable_v<expected<void, const int&>>);
+    CHECK_FALSE(std::is_nothrow_copy_assignable_v<expected<std::string&, const int&>>);
+    CHECK_FALSE(std::is_nothrow_move_assignable_v<expected<std::string&, const int&>>);
+}
 
 // =============================================================================
 // F6 (Option B) — construction from unexpected<G> for reference E.

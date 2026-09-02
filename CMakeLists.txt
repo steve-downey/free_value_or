@@ -63,6 +63,22 @@ target_link_libraries(
 )
 catch_discover_tests(beman.expected.tests.expected)
 
+if(BEMAN_EXPECTED_USE_MODULES)
+    add_library(beman.expected.tests.module_parity OBJECT)
+    target_sources(
+        beman.expected.tests.module_parity
+        PRIVATE header_idempotence.test.cpp
+    )
+    target_compile_definitions(
+        beman.expected.tests.module_parity
+        PRIVATE BEMAN_EXPECTED_TEST_MODULE
+    )
+    target_link_libraries(
+        beman.expected.tests.module_parity
+        PRIVATE beman::expected
+    )
+endif()
+
 # --- std::expected parity gate ---------------------------------------------
 # Compile the behavioral tests against std::expected (requires C++23). No
 # behavioral difference from beman::expected is expected except those that
@@ -319,6 +335,10 @@ add_fail_test(expected_ref_e_t_unexpected_fail
     expected_ref_e_t_unexpected_fail.test.cpp
     "T must not be a specialization of unexpected"
 )
+add_fail_test(expected_ref_e_initializer_list_fail
+    expected_ref_e_initializer_list_fail.test.cpp
+    "initializer-list error construction cannot bind a reference|use of deleted function|call to deleted"
+)
 
 # Step 8 — expected<T, E&> monadic mandates
 add_fail_test(expected_ref_e_and_then_wrong_error_type_fail
@@ -359,6 +379,10 @@ add_fail_test(expected_ref_both_inplace_value_fail
     expected_ref_both_inplace_value_fail.test.cpp
     "no in_place value constructor|use of deleted function|call to deleted|attempting to reference"
 )
+add_fail_test(expected_ref_both_initializer_list_fail
+    expected_ref_both_initializer_list_fail.test.cpp
+    "initializer-list error construction cannot bind a reference|use of deleted function|call to deleted"
+)
 
 # Step 9 — expected<T&, E&> monadic mandates
 add_fail_test(expected_ref_both_and_then_wrong_error_type_fail
@@ -390,6 +414,10 @@ add_fail_test(expected_void_ref_e_construct_from_unexpected_fail
 add_fail_test(expected_void_ref_e_assign_unexpected_fail
     expected_void_ref_e_assign_unexpected_fail.test.cpp
     "no assignment from unexpected|use of deleted function|call to deleted|invokes a deleted function|selected deleted operator|attempting to reference"
+)
+add_fail_test(expected_void_ref_e_initializer_list_fail
+    expected_void_ref_e_initializer_list_fail.test.cpp
+    "initializer-list error construction cannot bind a reference|use of deleted function|call to deleted"
 )
 
 # =============================================================================

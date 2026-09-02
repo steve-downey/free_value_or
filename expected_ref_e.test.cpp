@@ -23,12 +23,12 @@ using beman::expected::testing::type_name;
 
 // Presence of the macro is still a hard translation failure: without it there
 // is nothing for a test to inspect, and `#if` is the only tool that can ask.
-#ifndef __cpp_lib_expected_ref
-    #error "__cpp_lib_expected_ref must be defined by <beman/expected/expected.hpp>"
+#ifndef BEMAN_EXPECTED_HAS_REFERENCES
+    #error "BEMAN_EXPECTED_HAS_REFERENCES must be defined by <beman/expected/expected.hpp>"
 #endif
 
-TEST_CASE("expected<T,E&>: feature-test macro has a positive value", "[expected_ref_e]") {
-    CHECK(__cpp_lib_expected_ref > 0);
+TEST_CASE("expected<T,E&>: feature-test macro has the expected value", "[expected_ref_e]") {
+    CHECK(BEMAN_EXPECTED_HAS_REFERENCES == 1);
 }
 
 // =============================================================================
