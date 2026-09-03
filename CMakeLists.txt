@@ -84,11 +84,30 @@ add_subdirectory(include/beman/free_value_or)
 beman_install_library(beman.free_value_or TARGETS beman.free_value_or)
 configure_build_telemetry()
 
-add_subdirectory(vendored)
+# Coverage
+configure_file("cmake/gcovr.cfg.in" gcovr.cfg @ONLY)
+
+add_custom_target(
+    process_coverage
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Running gcovr to process coverage results"
+    COMMAND mkdir -p coverage
+    COMMAND gcovr --config gcovr.cfg .
+)
+
+# Co-located, vendored-by-subtree proposal dependencies (beman::optional,
+# beman::expected). These live under include/beman/<lib> and tests/beman/<lib>
+# as non-squash git subtrees so their sources are edited in place here and
+# pushed back upstream (see scripts/vendor-*.sh). This is part of the proposal
+# surface, not test-only infrastructure.
+include(cmake/vendored-libs.cmake)
 
 if(BEMAN_FREE_VALUE_OR_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests/beman/free_value_or)
+    # Run the vendored beman::optional / beman::expected suites as project tests
+    # (they validate our in-place edits before push-back). See the file header.
+    include(cmake/vendored-tests.cmake)
 endif()
 
 if(BEMAN_FREE_VALUE_OR_BUILD_EXAMPLES)

@@ -78,6 +78,11 @@ fvo_add_test(beman.free_value_or.tests.value_or value_or.test.cpp)
 fvo_add_test(beman.free_value_or.tests.smoke smoke.test.cpp)
 
 # ---------------------------------------------------------------------------
+# Public header test: proves the documented umbrella include exposes the API.
+# ---------------------------------------------------------------------------
+fvo_add_test(beman.free_value_or.tests.public_header public_header.test.cpp)
+
+# ---------------------------------------------------------------------------
 # Step 01: nullable concept static_assert coverage
 # ---------------------------------------------------------------------------
 fvo_add_test(beman.free_value_or.tests.concept concept.test.cpp)

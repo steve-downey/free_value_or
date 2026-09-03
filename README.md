@@ -12,9 +12,12 @@ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 ![Standard Target](https://github.com/bemanproject/beman/blob/main/images/badges/cpp29.svg)
 <!-- markdownlint-restore -->
 
-`beman.free_value_or` is (... TODO: description).
+`beman.free_value_or` provides free function alternatives to member `value_or`
+operations for nullable types such as `std::optional`, `std::expected`, and
+pointers to objects.
 
-**Implements**: `std::todo` proposed in [TODO (PnnnnRr)](https://wg21.link/PnnnnRr).
+**Implements**: Free `value_or`, `reference_or`, `or_invoke`, and `or_construct`
+operations proposed by this project.
 
 **Status**: [Under development and not yet ready for production use.](https://github.com/bemanproject/beman/blob/main/docs/beman_library_maturity_model.md#under-development-and-not-yet-ready-for-production-use)
 
@@ -24,7 +27,8 @@ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 ## Usage
 
-TODO
+Include the public umbrella header and call the functions from
+`smd::free_value_or`.
 
 Full runnable examples can be found in [`examples/`](examples/).
 

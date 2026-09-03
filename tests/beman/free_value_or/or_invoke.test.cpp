@@ -10,6 +10,7 @@
 #include <optional>
 #include <string>
 #include <type_traits>
+#include <utility>
 
 // ==========================================================================
 // Return-type static_asserts
@@ -33,6 +34,20 @@ static_assert(
 // Contrast: reference_or uses common_reference_t which preserves references.
 static_assert(
     std::is_same_v<decltype(fvo::or_invoke(std::declval<std::optional<int>&>(), std::declval<int& (*)()>())), int>);
+
+struct rvalue_only_invocable {
+    bool* called;
+
+    int operator()() &       = delete;
+    int operator()() const&  = delete;
+    int operator()() && {
+        *called = true;
+        return 77;
+    }
+};
+
+static_assert(
+    std::is_same_v<decltype(fvo::or_invoke(std::declval<std::optional<int>&>(), rvalue_only_invocable{})), int>);
 
 // ==========================================================================
 // Runtime: engaged → *m, disengaged → f()
@@ -247,4 +262,20 @@ TEST_CASE("or_invoke: move-only invocable disengaged path", "[or_invoke]") {
 
     std::optional<int> disengaged{};
     CHECK(fvo::or_invoke(disengaged, std::move(f)) == 55);
+}
+
+TEST_CASE("or_invoke: forwards rvalue-only callable on disengaged path", "[or_invoke]") {
+    bool               called = false;
+    std::optional<int> disengaged{};
+
+    CHECK(fvo::or_invoke(disengaged, rvalue_only_invocable{&called}) == 77);
+    CHECK(called);
+}
+
+TEST_CASE("or_invoke: rvalue-only callable remains lazy on engaged path", "[or_invoke][laziness]") {
+    bool               called = false;
+    std::optional<int> engaged{42};
+
+    CHECK(fvo::or_invoke(engaged, rvalue_only_invocable{&called}) == 42);
+    CHECK_FALSE(called);
 }
