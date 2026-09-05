@@ -211,7 +211,7 @@ class expected {
     template <class U = std::remove_cv_t<T>>
         requires(!std::is_same_v<std::remove_cvref_t<U>, std::in_place_t> &&
                  !std::is_same_v<std::remove_cvref_t<U>, unexpect_t> &&
-                 !std::is_same_v<std::remove_cvref_t<U>, expected> && std::is_constructible_v<T, U> &&
+                 !std::is_same_v<std::remove_cvref_t<U>, expected<T, E>> && std::is_constructible_v<T, U> &&
                  !detail::is_unexpected_specialization<std::remove_cvref_t<U>>::value &&
                  (!std::is_same_v<bool, std::remove_cv_t<T>> ||
                   !detail::is_expected_specialization<std::remove_cvref_t<U>>::value))
@@ -337,7 +337,7 @@ class expected {
 
     // Assignment from value U&&
     template <class U = std::remove_cv_t<T>>
-        requires(!std::is_same_v<expected, std::remove_cvref_t<U>> &&
+        requires(!std::is_same_v<expected<T, E>, std::remove_cvref_t<U>> &&
                  !detail::is_unexpected_specialization<std::remove_cvref_t<U>>::value &&
                  std::is_constructible_v<T, U> && std::is_assignable_v<T&, U> &&
                  (std::is_nothrow_constructible_v<T, U> || std::is_nothrow_move_constructible_v<T> ||
@@ -457,12 +457,18 @@ class expected {
     template <class F>
     constexpr T value_or_else(F&& f) &&;
 
+    // Constraints spell error_value_type as its underlying trait expression rather than the
+    // member typedef: clang (through 22) fails to match an out-of-line constrained member when
+    // the requires-clause names a member typedef of the class. Same reason as the two
+    // specializations below.
     template <class G = error_value_type>
-        requires(std::is_copy_constructible_v<error_value_type> && std::is_convertible_v<G, error_value_type>)
+        requires(std::is_copy_constructible_v<std::remove_cv_t<std::remove_reference_t<E>>> &&
+                 std::is_convertible_v<G, std::remove_cv_t<std::remove_reference_t<E>>>)
     constexpr error_value_type error_or(G&& def) const&;
 
     template <class G = error_value_type>
-        requires(std::is_move_constructible_v<error_value_type> && std::is_convertible_v<G, error_value_type>)
+        requires(std::is_move_constructible_v<std::remove_cv_t<std::remove_reference_t<E>>> &&
+                 std::is_convertible_v<G, std::remove_cv_t<std::remove_reference_t<E>>>)
     constexpr error_value_type error_or(G&& def) &&;
 
     // -------------------------------------------------------------------------
@@ -1185,8 +1191,8 @@ constexpr T expected<T, E>::value_or_else(F&& f) && {
 
 template <class T, class E>
 template <class G>
-    requires(std::is_copy_constructible_v<typename expected<T, E>::error_value_type> &&
-             std::is_convertible_v<G, typename expected<T, E>::error_value_type>)
+    requires(std::is_copy_constructible_v<std::remove_cv_t<std::remove_reference_t<E>>> &&
+             std::is_convertible_v<G, std::remove_cv_t<std::remove_reference_t<E>>>)
 constexpr typename expected<T, E>::error_value_type expected<T, E>::error_or(G&& def) const& {
     if (!has_val_)
         return unex_.error();
@@ -1195,8 +1201,8 @@ constexpr typename expected<T, E>::error_value_type expected<T, E>::error_or(G&&
 
 template <class T, class E>
 template <class G>
-    requires(std::is_move_constructible_v<typename expected<T, E>::error_value_type> &&
-             std::is_convertible_v<G, typename expected<T, E>::error_value_type>)
+    requires(std::is_move_constructible_v<std::remove_cv_t<std::remove_reference_t<E>>> &&
+             std::is_convertible_v<G, std::remove_cv_t<std::remove_reference_t<E>>>)
 constexpr typename expected<T, E>::error_value_type expected<T, E>::error_or(G&& def) && {
     if (!has_val_)
         return std::move(unex_).error();
