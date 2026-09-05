@@ -39,6 +39,7 @@ repos:
     rev: v2.4.2
     hooks:
       - id: codespell
+        args: [--ignore-words-list=unexpect]
         exclude: ^(papers/wg21-latex/|papers/presentation/)
 
     # Beman Standard checking via beman-tidy.
