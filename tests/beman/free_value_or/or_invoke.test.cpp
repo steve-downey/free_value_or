@@ -38,8 +38,8 @@ static_assert(
 struct rvalue_only_invocable {
     bool* called;
 
-    int operator()() &       = delete;
-    int operator()() const&  = delete;
+    int operator()() &      = delete;
+    int operator()() const& = delete;
     int operator()() && {
         *called = true;
         return 77;

@@ -25,9 +25,7 @@ struct ctor_counter {
     int        value;
 
     explicit ctor_counter(int v) : value(v) { ++constructions; }
-    ctor_counter(std::initializer_list<int> il, int v) : value(static_cast<int>(il.size()) + v) {
-        ++constructions;
-    }
+    ctor_counter(std::initializer_list<int> il, int v) : value(static_cast<int>(il.size()) + v) { ++constructions; }
     ctor_counter(const ctor_counter&)            = default;
     ctor_counter(ctor_counter&&)                 = default;
     ctor_counter& operator=(const ctor_counter&) = default;
@@ -77,7 +75,7 @@ TEST_CASE("expected value_or_construct initializer_list overload", "[expected][v
     auto                                    v2 = good.value_or_construct({1, 2, 3});
     CHECK(v2.size() == 2u);
 
-    ctor_counter::constructions             = 0;
+    ctor_counter::constructions              = 0;
     expected<ctor_counter, std::string> bad2 = unexpected(std::string("e"));
     auto                                r    = bad2.value_or_construct({1, 2}, 10);
     CHECK(r.value == 12);
@@ -85,7 +83,7 @@ TEST_CASE("expected value_or_construct initializer_list overload", "[expected][v
 }
 
 TEST_CASE("expected value_or_else is lazy", "[expected][value_or_else]") {
-    expected<int, std::string> good = 5;
+    expected<int, std::string> good   = 5;
     bool                       called = false;
     CHECK(good.value_or_else([&] {
         called = true;
@@ -101,7 +99,8 @@ TEST_CASE("expected value_or_else is lazy", "[expected][value_or_else]") {
     CHECK(called);
 }
 
-TEST_CASE("expected rvalue value_or_construct/else moves out or produces alternate", "[expected][value_or_construct]") {
+TEST_CASE("expected rvalue value_or_construct/else moves out or produces alternate",
+          "[expected][value_or_construct]") {
     expected<std::string, int> good{std::in_place, "keep"};
     CHECK(std::move(good).value_or_construct(3, 'x') == "keep");
 
@@ -117,7 +116,8 @@ TEST_CASE("expected rvalue value_or_construct/else moves out or produces alterna
 
 static_assert(std::is_same_v<decltype(std::declval<expected<int, std::string>&>().value_or_construct(0)), int>);
 static_assert(
-    std::is_same_v<decltype(std::declval<expected<int, std::string>&>().value_or_else(std::declval<int (*)()>())), int>);
+    std::is_same_v<decltype(std::declval<expected<int, std::string>&>().value_or_else(std::declval<int (*)()>())),
+                   int>);
 
 constexpr int constexpr_probe() {
     expected<int, int> bad = unexpected(1);
@@ -132,7 +132,7 @@ static_assert(constexpr_probe() == 16);
 // ---------------------------------------------------------------------------
 
 TEST_CASE("expected<T&,E> value_or_construct / value_or_else", "[expected][ref][value_or_construct]") {
-    int                         x   = 3;
+    int                         x    = 3;
     expected<int&, std::string> good = x;
     expected<int&, std::string> bad  = unexpected(std::string("e"));
 
@@ -150,8 +150,7 @@ TEST_CASE("expected<T&,E> value_or_construct / value_or_else", "[expected][ref][
     static_assert(std::is_same_v<decltype(good.value_or_construct(0)), int>);
 }
 
-TEST_CASE("expected<T&,E> value_or_construct initializer_list overload",
-          "[expected][ref][value_or_construct]") {
+TEST_CASE("expected<T&,E> value_or_construct initializer_list overload", "[expected][ref][value_or_construct]") {
     using vector = std::vector<int>;
 
     vector                         existing{9, 9};

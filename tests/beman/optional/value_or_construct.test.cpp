@@ -19,9 +19,7 @@ struct ctor_counter {
     int        value;
 
     explicit ctor_counter(int v) : value(v) { ++constructions; }
-    ctor_counter(std::initializer_list<int> il, int v) : value(static_cast<int>(il.size()) + v) {
-        ++constructions;
-    }
+    ctor_counter(std::initializer_list<int> il, int v) : value(static_cast<int>(il.size()) + v) { ++constructions; }
     ctor_counter(const ctor_counter&)            = default;
     ctor_counter(ctor_counter&&)                 = default;
     ctor_counter& operator=(const ctor_counter&) = default;
@@ -98,7 +96,7 @@ TEST(OptionalValueOrConstruct, RvalueMovesOutOrConstructs) {
 TEST(OptionalValueOrElse, LazyWhenEngaged) {
     beman::optional::optional<int> engaged = 5;
     bool                           called  = false;
-    int                            r        = engaged.value_or_else([&] {
+    int                            r       = engaged.value_or_else([&] {
         called = true;
         return 42;
     });
@@ -134,9 +132,9 @@ TEST(OptionalValueOrElse, RvalueMovesOut) {
 static_assert(std::is_same_v<decltype(std::declval<beman::optional::optional<int>&>().value_or_construct(0)), int>);
 static_assert(
     std::is_same_v<decltype(std::declval<beman::optional::optional<const int>&>().value_or_construct(0)), int>);
-static_assert(std::is_same_v<decltype(std::declval<beman::optional::optional<int>&>().value_or_else(
-                                 std::declval<int (*)()>())),
-                             int>);
+static_assert(
+    std::is_same_v<decltype(std::declval<beman::optional::optional<int>&>().value_or_else(std::declval<int (*)()>())),
+                   int>);
 
 constexpr int constexpr_probe() {
     beman::optional::optional<int> empty;
@@ -164,7 +162,7 @@ TEST(OptionalRefValueOrConstruct, EngagedAndEmpty) {
 TEST(OptionalRefValueOrConstruct, InitializerListOverload) {
     using vector = std::vector<int>;
 
-    vector                           existing{9, 9};
+    vector                             existing{9, 9};
     beman::optional::optional<vector&> engaged{existing};
     beman::optional::optional<vector&> empty;
 
@@ -174,12 +172,11 @@ TEST(OptionalRefValueOrConstruct, InitializerListOverload) {
     EXPECT_EQ(from_engaged, (vector{9, 9}));
     EXPECT_EQ(from_empty, (vector{1, 2, 3}));
 
-    static_assert(
-        std::is_same_v<decltype(engaged.value_or_construct(std::initializer_list<int>{})), vector>);
+    static_assert(std::is_same_v<decltype(engaged.value_or_construct(std::initializer_list<int>{})), vector>);
 }
 
 TEST(OptionalRefValueOrElse, EngagedAndEmpty) {
-    int                             x      = 3;
+    int                             x = 3;
     beman::optional::optional<int&> engaged{x};
     beman::optional::optional<int&> empty;
     bool                            called = false;

@@ -19,9 +19,9 @@ TEST_CASE("public umbrella header exposes the free_value_or API", "[public_heade
 
     bool invoked = false;
     CHECK(fvo::or_invoke(empty, [&] {
-        invoked = true;
-        return 7;
-    }) == 7);
+              invoked = true;
+              return 7;
+          }) == 7);
     CHECK(invoked);
 
     std::optional<std::string> text;
