@@ -16,9 +16,11 @@ static_assert(fvo::value_or(std::optional<int>{7}, 0) == 7);
 // disengaged: returns fallback
 static_assert(fvo::value_or(std::optional<int>{}, 5) == 5);
 
+#if FVO_HAS_STD_EXPECTED
 // std::expected at C++23 is constexpr-capable
 static_assert(fvo::value_or(std::expected<int, int>{42}, 0) == 42);
 static_assert(fvo::value_or(std::expected<int, int>{std::unexpected(1)}, 99) == 99);
+#endif // FVO_HAS_STD_EXPECTED
 
 // raw pointer: constexpr int* pointing at a constexpr object
 static constexpr int ce_val = 3;
@@ -46,8 +48,10 @@ static_assert(fvo::or_invoke(std::optional<int>{9}, [] { return 0; }) == 9);
 // disengaged: invocable called, returns its result
 static_assert(fvo::or_invoke(std::optional<int>{}, [] { return 4; }) == 4);
 
+#if FVO_HAS_STD_EXPECTED
 // std::expected disengaged: invocable supplies the fallback
 static_assert(fvo::or_invoke(std::expected<int, int>{std::unexpected(0)}, [] { return 77; }) == 77);
+#endif // FVO_HAS_STD_EXPECTED
 
 // ---------------------------------------------------------------------------
 // Catch2 test case: the real proof is the static_asserts above; this gives

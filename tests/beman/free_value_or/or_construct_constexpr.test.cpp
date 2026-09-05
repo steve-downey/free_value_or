@@ -18,10 +18,12 @@ static_assert(fvo::or_construct(std::optional<int>{}, 5) == 5);
 // disengaged, zero args: default-constructs int{}
 static_assert(fvo::or_construct(std::optional<int>{}) == 0);
 
+#if FVO_HAS_STD_EXPECTED
 // std::expected — disengaged path
 static_assert(fvo::or_construct(std::expected<int, int>{std::unexpected(0)}, 9) == 9);
 // std::expected — engaged path
 static_assert(fvo::or_construct(std::expected<int, int>{42}, 0) == 42);
+#endif // FVO_HAS_STD_EXPECTED
 
 // raw pointer: constexpr int* pointing at a constexpr object
 static constexpr int ce_engaged = 3;

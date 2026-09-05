@@ -39,9 +39,11 @@ static_assert(
 static_assert(
     std::is_same_v<decltype(fvo::or_construct(std::declval<const std::optional<int>&>(), std::declval<int>())), int>);
 
+#if FVO_HAS_STD_EXPECTED
 // expected<int,int> + int → R = int
 static_assert(
     std::is_same_v<decltype(fvo::or_construct(std::declval<std::expected<int, int>&>(), std::declval<int>())), int>);
+#endif // FVO_HAS_STD_EXPECTED
 
 // int* + int → R = int
 static_assert(std::is_same_v<decltype(fvo::or_construct(std::declval<int*>(), std::declval<int>())), int>);

@@ -101,6 +101,7 @@ TEST_CASE("or_construct init-list: fallback constructed exactly once when diseng
 // Laziness across nullable types (pack overload)
 // ==========================================================================
 
+#if FVO_HAS_STD_EXPECTED
 TEST_CASE("or_construct laziness: expected<Tracked,int>", "[or_construct][laziness]") {
     SECTION("engaged — fallback NOT constructed") {
         std::expected<Tracked, int> m{std::in_place, 42};
@@ -118,6 +119,7 @@ TEST_CASE("or_construct laziness: expected<Tracked,int>", "[or_construct][lazine
         CHECK(r.v == 7);
     }
 }
+#endif // FVO_HAS_STD_EXPECTED
 
 TEST_CASE("or_construct laziness: raw pointer", "[or_construct][laziness]") {
     SECTION("non-null pointer — fallback NOT constructed") {
