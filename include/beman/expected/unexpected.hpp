@@ -35,9 +35,18 @@ struct is_unexpected_specialization<unexpected<E>> : std::true_type {};
 // __reference_constructs_from_temporary builtin.)
 #ifdef __cpp_lib_reference_from_temporary
 using std::reference_constructs_from_temporary_v;
-#elif __has_builtin(__reference_constructs_from_temporary)
+#elif defined(__has_builtin) && __has_builtin(__reference_constructs_from_temporary)
 template <class T, class U>
 inline constexpr bool reference_constructs_from_temporary_v = __reference_constructs_from_temporary(T, U);
+#elif defined(_MSC_VER)
+// MSVC has the intrinsic but does not report it through __has_builtin, which covers only a fixed
+// list; its own <type_traits> uses the intrinsic with no version guard, so keying on _MSC_VER
+// matches the STL shipped alongside. Without this branch MSVC below C++23 (where the standard
+// trait is not yet declared) leaves the name undeclared and fails far from here, at each use.
+template <class T, class U>
+inline constexpr bool reference_constructs_from_temporary_v = __reference_constructs_from_temporary(T, U);
+#else
+    #error "no std::reference_constructs_from_temporary_v and no __reference_constructs_from_temporary builtin"
 #endif
 
 } // namespace detail

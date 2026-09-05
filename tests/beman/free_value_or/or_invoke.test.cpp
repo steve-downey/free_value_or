@@ -250,7 +250,6 @@ TEST_CASE("or_invoke: move-only invocable (unique_ptr capture)", "[or_invoke]") 
     auto f   = [p = std::move(ptr)]() -> int { return *p; };
 
     std::optional<int> engaged{42};
-    std::optional<int> disengaged{};
 
     // Engaged: invocable NOT called → the unique_ptr inside f stays valid.
     CHECK(fvo::or_invoke(engaged, std::move(f)) == 42);

@@ -3,10 +3,12 @@
 #ifndef INCLUDED_BEMAN_FREE_VALUE_OR_VALUE_OR
 #define INCLUDED_BEMAN_FREE_VALUE_OR_VALUE_OR
 
-#include <initializer_list>
-#include <iterator>
-#include <type_traits>
-#include <utility>
+#ifndef BEMAN_FREE_VALUE_OR_INCLUDED_FROM_INTERFACE_UNIT
+    #include <initializer_list>
+    #include <iterator>
+    #include <type_traits>
+    #include <utility>
+#endif
 
 namespace smd {
 namespace free_value_or {
@@ -29,6 +31,11 @@ inline constexpr bool reference_constructs_from_temporary_v =
 #if defined(__cpp_lib_reference_from_temporary)
     std::reference_constructs_from_temporary_v<To, From>;
 #elif defined(__has_builtin) && __has_builtin(__reference_constructs_from_temporary)
+    __reference_constructs_from_temporary(To, From);
+#elif defined(_MSC_VER)
+    // MSVC has the intrinsic but does not report it through __has_builtin, which
+    // covers only a fixed list; its own <type_traits> uses the intrinsic with no
+    // version guard, so keying on _MSC_VER matches the STL shipped alongside.
     __reference_constructs_from_temporary(To, From);
 #else
     #error "no std::reference_constructs_from_temporary_v and no __reference_constructs_from_temporary builtin"
