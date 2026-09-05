@@ -32,6 +32,11 @@ inline constexpr bool reference_constructs_from_temporary_v =
     std::reference_constructs_from_temporary_v<To, From>;
 #elif defined(__has_builtin) && __has_builtin(__reference_constructs_from_temporary)
     __reference_constructs_from_temporary(To, From);
+#elif defined(_MSC_VER)
+    // MSVC has the intrinsic but does not report it through __has_builtin, which
+    // covers only a fixed list; its own <type_traits> uses the intrinsic with no
+    // version guard, so keying on _MSC_VER matches the STL shipped alongside.
+    __reference_constructs_from_temporary(To, From);
 #else
     #error "no std::reference_constructs_from_temporary_v and no __reference_constructs_from_temporary builtin"
 #endif
