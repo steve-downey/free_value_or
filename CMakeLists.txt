@@ -4,6 +4,26 @@ cmake_minimum_required(VERSION 3.30...4.3)
 
 include(infra/cmake/enable-experimental-import-std.cmake)
 
+# Supplement to the line above, not a fork of it. infra is a beman-submodule
+# pinned at bemanproject/infra@7b66b85, and its UUID table stops at CMake 4.3,
+# so 4.4 inherits 4.3's UUID, the experimental gate stays shut, and a
+# CXX_MODULE_STD target fails to configure with "Experimental `import std`
+# support not enabled when detecting toolchain". The vcpkg CI container ships
+# CMake 4.4.2. Editing the pinned file instead would fail the beman submodule
+# consistency check, so the override lives here.
+#
+# The upper bound is deliberate: it asserts nothing about a CMake release that
+# does not exist yet. Delete this block once the fix lands upstream in
+# bemanproject/infra and the submodule pin moves.
+if(
+    CMAKE_VERSION VERSION_GREATER_EQUAL "4.4.0"
+    AND CMAKE_VERSION VERSION_LESS "4.5.0"
+)
+    set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD
+        "f35a9ac6-8463-4d38-8eec-5d6008153e7d"
+    )
+endif()
+
 project(
     beman.free_value_or
     DESCRIPTION "Free Function constrained `value_or`"
