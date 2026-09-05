@@ -19,7 +19,7 @@
 #include <algorithm>
 #include <cstdlib>
 #if defined(__cpp_lib_format_ranges)
-#include <format>
+    #include <format>
 #endif
 #include <ranges>
 #include <tuple>
