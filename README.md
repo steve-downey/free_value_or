@@ -38,7 +38,11 @@ Full runnable examples can be found in [`examples/`](examples/).
 
 This project requires at least the following to build:
 
-* A C++ compiler that conforms to the C++20 standard or greater
+* A C++ compiler that conforms to the C++20 standard or greater, and that provides
+  either `std::reference_constructs_from_temporary_v` or the
+  `__reference_constructs_from_temporary` builtin — GCC 13, Clang 18, or MSVC and
+  later. The dangling-reference rejection in `reference_or` is a static_assert built
+  on that trait, so a compiler without it cannot build the library.
 * CMake 3.30 or later
 * (Test Only) Catch2
 
@@ -50,14 +54,16 @@ You can disable building tests by setting CMake option `BEMAN_FREE_VALUE_OR_BUIL
 | Compiler   | Version | C++ Standards | Standard Library  |
 |------------|---------|---------------|-------------------|
 | GCC        | 16-13   | C++26-C++17   | libstdc++         |
-| GCC        | 12-11   | C++23-C++17   | libstdc++         |
 | Clang      | 22-19   | C++26-C++17   | libstdc++, libc++ |
 | Clang      | 18      | C++26-C++17   | libc++            |
 | Clang      | 18      | C++23-C++17   | libstdc++         |
-| Clang      | 17      | C++26-C++17   | libc++            |
-| Clang      | 17      | C++20, C++17  | libstdc++         |
 | AppleClang | latest  | C++26-C++17   | libc++            |
 | MSVC       | latest  | C++23         | MSVC STL          |
+
+GCC 12 and earlier lack the `__reference_constructs_from_temporary` builtin. Clang 17
+is excluded by the vendored `beman::optional` test suite, which needs range adaptors
+(`std::views::join`) that libc++ 17 does not provide; nothing in `free_value_or` itself
+requires it.
 
 ## Development
 
