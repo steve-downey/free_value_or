@@ -6,6 +6,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <beman/expected/testing/type_name.hpp>
+
 #include "testing/types.hpp"
 
 #include <string>
@@ -13,55 +15,83 @@
 
 using namespace beman::expected;
 
+using beman::expected::testing::type_name;
+
 // =============================================================================
-// Type-level static assertions
+// Type-level properties
+//
+// These are checked at runtime rather than with static_assert so that a
+// violated property is reported by the test run, with the responsible type
+// named, instead of stopping the build at the first failure and reporting
+// nothing. Type identity is checked by comparing type_name, which compares by
+// std::is_same_v — exactly as strict as the original — with the compiler's
+// spellings used only to explain a failure.
 // =============================================================================
 
-// No default constructor — T& cannot be default-initialized
-static_assert(!std::is_default_constructible_v<expected<int&, int&>>);
+TEST_CASE("expected<T&,E&>: special member availability", "[expected_ref_both]") {
+    // No default constructor — T& cannot be default-initialized
+    CHECK_FALSE(std::is_default_constructible_v<expected<int&, int&>>);
 
-// Constructible from lvalue (value side)
-static_assert(std::is_constructible_v<expected<int&, int&>, int&>);
+    // Constructible from lvalue (value side)
+    CHECK(std::is_constructible_v<expected<int&, int&>, int&>);
 
-// Copy/move constructible
-static_assert(std::is_copy_constructible_v<expected<int&, int&>>);
-static_assert(std::is_move_constructible_v<expected<int&, int&>>);
+    // Copy/move constructible
+    CHECK(std::is_copy_constructible_v<expected<int&, int&>>);
+    CHECK(std::is_move_constructible_v<expected<int&, int&>>);
+}
 
-// Fully trivial: both sides are pointers — trivially copyable/movable/destructible
-static_assert(std::is_trivially_copy_constructible_v<expected<int&, int&>>);
-static_assert(std::is_trivially_move_constructible_v<expected<int&, int&>>);
-static_assert(std::is_trivially_copy_assignable_v<expected<int&, int&>>);
-static_assert(std::is_trivially_move_assignable_v<expected<int&, int&>>);
-static_assert(std::is_trivially_destructible_v<expected<int&, int&>>);
+TEST_CASE("expected<T&,E&>: fully trivial — both sides are pointers", "[expected_ref_both]") {
+    // Trivially copyable/movable/destructible
+    CHECK(std::is_trivially_copy_constructible_v<expected<int&, int&>>);
+    CHECK(std::is_trivially_move_constructible_v<expected<int&, int&>>);
+    CHECK(std::is_trivially_copy_assignable_v<expected<int&, int&>>);
+    CHECK(std::is_trivially_move_assignable_v<expected<int&, int&>>);
+    CHECK(std::is_trivially_destructible_v<expected<int&, int&>>);
+}
 
-// operator-> returns T* (shallow const)
-static_assert(std::is_same_v<decltype(std::declval<expected<int&, int&>>().operator->()), int*>);
-static_assert(std::is_same_v<decltype(std::declval<const expected<int&, int&>>().operator->()), int*>);
+TEST_CASE("expected<T&,const E&>: assignable even though const E& is not", "[expected_ref_both]") {
+    // Finding 1: copy/move assignment must be available for const-reference E, where E
+    // itself is not assignable (is_copy_assignable_v<const int&> is false) but the
+    // stored unexpected<E&> rebinds via pointer assignment.
+    CHECK(std::is_copy_assignable_v<expected<int&, const int&>>);
+    CHECK(std::is_move_assignable_v<expected<int&, const int&>>);
+}
 
-// operator* returns T& (shallow const)
-static_assert(std::is_same_v<decltype(*std::declval<expected<int&, int&>>()), int&>);
-static_assert(std::is_same_v<decltype(*std::declval<const expected<int&, int&>>()), int&>);
+TEST_CASE("expected<T&,E&>: observer return types are shallow-const", "[expected_ref_both]") {
+    using expected_t = expected<int&, int&>;
 
-// value() returns T& (shallow const)
-static_assert(std::is_same_v<decltype(std::declval<expected<int&, int&>>().value()), int&>);
-static_assert(std::is_same_v<decltype(std::declval<const expected<int&, int&>>().value()), int&>);
+    // operator-> returns T* (shallow const)
+    CHECK(type_name<decltype(std::declval<expected_t>().operator->())>() == type_name<int*>());
+    CHECK(type_name<decltype(std::declval<const expected_t>().operator->())>() == type_name<int*>());
 
-// error() returns E& (shallow const)
-static_assert(std::is_same_v<decltype(std::declval<expected<int&, int&>>().error()), int&>);
-static_assert(std::is_same_v<decltype(std::declval<const expected<int&, int&>>().error()), int&>);
+    // operator* returns T& (shallow const)
+    CHECK(type_name<decltype(*std::declval<expected_t>())>() == type_name<int&>());
+    CHECK(type_name<decltype(*std::declval<const expected_t>())>() == type_name<int&>());
 
-// Cannot construct from temporary value (T& rvalue deleted)
-static_assert(!std::is_constructible_v<expected<int&, int&>, int&&>);
+    // value() returns T& (shallow const)
+    CHECK(type_name<decltype(std::declval<expected_t>().value())>() == type_name<int&>());
+    CHECK(type_name<decltype(std::declval<const expected_t>().value())>() == type_name<int&>());
 
-// Cannot construct from temporary error (rvalue or any type creating a temp E)
-static_assert(!std::is_constructible_v<expected<int&, int&>, unexpect_t, int&&>);
-// Cross-type temporary: float would create a temp double when binding const double&
-static_assert(!std::is_constructible_v<expected<int&, const double&>, unexpect_t, float>);
-// Lvalue of same type is fine
-static_assert(std::is_constructible_v<expected<int&, const double&>, unexpect_t, const double&>);
+    // error() returns E& (shallow const)
+    CHECK(type_name<decltype(std::declval<expected_t>().error())>() == type_name<int&>());
+    CHECK(type_name<decltype(std::declval<const expected_t>().error())>() == type_name<int&>());
+}
 
-// Converting construction from expected<U&, G&>
-static_assert(std::is_constructible_v<expected<int&, int&>, const expected<int&, int&>&>);
+TEST_CASE("expected<T&,E&>: temporaries cannot be bound", "[expected_ref_both]") {
+    // Cannot construct from temporary value (T& rvalue deleted)
+    CHECK_FALSE(std::is_constructible_v<expected<int&, int&>, int&&>);
+
+    // Cannot construct from temporary error (rvalue or any type creating a temp E)
+    CHECK_FALSE(std::is_constructible_v<expected<int&, int&>, unexpect_t, int&&>);
+    // Cross-type temporary: float would create a temp double when binding const double&
+    CHECK_FALSE(std::is_constructible_v<expected<int&, const double&>, unexpect_t, float>);
+    // Lvalue of same type is fine
+    CHECK(std::is_constructible_v<expected<int&, const double&>, unexpect_t, const double&>);
+}
+
+TEST_CASE("expected<T&,E&>: converting construction from expected<U&,G&> is available", "[expected_ref_both]") {
+    CHECK(std::is_constructible_v<expected<int&, int&>, const expected<int&, int&>&>);
+}
 
 // =============================================================================
 // Construction — value side
@@ -196,6 +226,26 @@ TEST_CASE("expected<T&,E&>: transition from value to error via copy assignment",
     CHECK(&a.error() == &err);
 }
 
+TEST_CASE("expected<T&,const E&>: copy assignment rebinds error, does not assign through", "[expected_ref_both]") {
+    int                        e1 = 1, e2 = 2;
+    expected<int&, const int&> a(unexpect, e1);
+    expected<int&, const int&> b(unexpect, e2);
+    a = b;
+    REQUIRE(!a.has_value());
+    CHECK(&a.error() == &e2);
+    CHECK(e1 == 1);
+}
+
+TEST_CASE("expected<T&,const E&>: move assignment rebinds error, does not assign through", "[expected_ref_both]") {
+    int                        e1 = 1, e2 = 2;
+    expected<int&, const int&> a(unexpect, e1);
+    expected<int&, const int&> b(unexpect, e2);
+    a = std::move(b);
+    REQUIRE(!a.has_value());
+    CHECK(&a.error() == &e2);
+    CHECK(e1 == 1);
+}
+
 // Safe alternative to e = unexpected(err): move-assign from a named expected.
 // No operator=(unexpected<G>) exists for expected<T&, E&> — it would bind E&
 // to temporary storage creating a dangling reference.
@@ -261,7 +311,7 @@ TEST_CASE("expected<T&,E&>: operator*() returns T& (mutation visible)", "[expect
 TEST_CASE("expected<T&,E&>: value() returns T& (throws on error)", "[expected_ref_both]") {
     int                  x = 42;
     expected<int&, int&> e(x);
-    static_assert(std::is_same_v<decltype(e.value()), int&>);
+    CHECK(type_name<decltype(e.value())>() == type_name<int&>());
     CHECK(&e.value() == &x);
 }
 
@@ -274,7 +324,7 @@ TEST_CASE("expected<T&,E&>: value() throws bad_expected_access on error", "[expe
 TEST_CASE("expected<T&,E&>: error() returns E& (mutation visible)", "[expected_ref_both]") {
     int                  err = 7;
     expected<int&, int&> e(unexpect, err);
-    static_assert(std::is_same_v<decltype(e.error()), int&>);
+    CHECK(type_name<decltype(e.error())>() == type_name<int&>());
     e.error() = 99;
     CHECK(err == 99);
 }

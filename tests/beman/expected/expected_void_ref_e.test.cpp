@@ -4,6 +4,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <beman/expected/testing/type_name.hpp>
+
 #include "testing/types.hpp"
 
 #include <string>
@@ -11,24 +13,72 @@
 
 using namespace beman::expected;
 
+using beman::expected::testing::type_name;
+
 // ---------------------------------------------------------------------------
-// Type-level assertions
+// Type-level properties
+//
+// These are checked at runtime rather than with static_assert so that a
+// violated property is reported by the test run, with the responsible type
+// named, instead of stopping the build at the first failure and reporting
+// nothing. Type identity is compared by `type_name`, which decides by
+// std::is_same_v and carries the compiler's spelling only so that a mismatch
+// prints what was deduced next to what was wanted rather than the bare word
+// `false`.
 // ---------------------------------------------------------------------------
 
-static_assert(std::is_default_constructible_v<expected<void, int&>>);
-static_assert(std::is_nothrow_default_constructible_v<expected<void, int&>>);
+TEST_CASE("expected<void,E&>: special member availability and triviality", "[expected_void_ref_e]") {
+    CHECK(std::is_default_constructible_v<expected<void, int&>>);
+    CHECK(std::is_nothrow_default_constructible_v<expected<void, int&>>);
 
-static_assert(std::is_trivially_copy_constructible_v<expected<void, int&>>);
-static_assert(std::is_trivially_move_constructible_v<expected<void, int&>>);
-static_assert(std::is_trivially_destructible_v<expected<void, int&>>);
-static_assert(std::is_trivially_copyable_v<expected<void, int&>>);
+    CHECK(std::is_trivially_copy_constructible_v<expected<void, int&>>);
+    CHECK(std::is_trivially_move_constructible_v<expected<void, int&>>);
+    CHECK(std::is_trivially_destructible_v<expected<void, int&>>);
+    CHECK(std::is_trivially_copyable_v<expected<void, int&>>);
+}
 
-static_assert(std::is_same_v<decltype(std::declval<expected<void, int&>>().error()), int&>);
-static_assert(std::is_same_v<decltype(std::declval<const expected<void, int&>>().error()), int&>);
+TEST_CASE("expected<void,E&>: observer return types", "[expected_void_ref_e]") {
+    using expected_t = expected<void, int&>;
 
-static_assert(std::is_void_v<decltype(*std::declval<expected<void, int&>>())>);
+    // error() returns E& (shallow const — const expected still returns E&, not const E&)
+    CHECK(type_name<decltype(std::declval<expected_t>().error())>() == type_name<int&>());
+    CHECK(type_name<decltype(std::declval<const expected_t>().error())>() == type_name<int&>());
+
+    CHECK(std::is_void_v<decltype(*std::declval<expected_t>())>);
+}
 
 // absence of operator-> and value_or tested by _fail.cpp negative compile tests
+
+// Finding 1: copy/move assignment must be available for reference E, including
+// const-reference E, where E itself is not assignable (is_copy_assignable_v<const
+// int&> is false) but the stored unexpected<E&> rebinds via pointer assignment.
+TEST_CASE("expected<void,E&>: copy/move assignment available for reference E", "[expected_void_ref_e]") {
+    CHECK(std::is_copy_assignable_v<expected<void, int&>>);
+    CHECK(std::is_move_assignable_v<expected<void, int&>>);
+    CHECK(std::is_copy_assignable_v<expected<void, const int&>>);
+    CHECK(std::is_move_assignable_v<expected<void, const int&>>);
+}
+
+// Finding 2: the general (value-G) void converting constructors must be gated on
+// !is_reference_v<E> — for reference E they are unsound: the lvalue form would bind into
+// the source's owned error (dangling once the source is gone), and the rvalue form hard-errors
+// by selecting a deleted unexpected<E&> constructor deep in the body instead of being excluded
+// from overload resolution. is_constructible_v must report false for both, matching reality.
+TEST_CASE("expected<void,E&>: value-G converting constructors excluded for reference E", "[expected_void_ref_e]") {
+    CHECK_FALSE(std::is_constructible_v<expected<void, const int&>, const expected<void, int>&>);
+    CHECK_FALSE(std::is_constructible_v<expected<void, const int&>, expected<void, int>&&>);
+    CHECK_FALSE(std::is_constructible_v<expected<void, int&>, const expected<void, int>&>);
+    CHECK_FALSE(std::is_constructible_v<expected<void, int&>, expected<void, int>&&>);
+}
+
+// The dedicated reference-E path (source error type is itself a reference) remains available,
+// for both lvalue and rvalue sources.
+TEST_CASE("expected<void,E&>: reference-G converting constructors remain available", "[expected_void_ref_e]") {
+    CHECK(std::is_constructible_v<expected<void, int&>, const expected<void, int&>&>);
+    CHECK(std::is_constructible_v<expected<void, int&>, expected<void, int&>&&>);
+    CHECK(std::is_constructible_v<expected<void, const int&>, const expected<void, int&>&>);
+    CHECK(std::is_constructible_v<expected<void, const int&>, expected<void, int&>&&>);
+}
 
 // ---------------------------------------------------------------------------
 // Construction
@@ -37,7 +87,7 @@ static_assert(std::is_void_v<decltype(*std::declval<expected<void, int&>>())>);
 TEST_CASE("expected<void,E&>: default construct has value", "[expected_void_ref_e]") {
     expected<void, int&> e;
     REQUIRE(e.has_value());
-    static_assert(std::is_nothrow_default_constructible_v<expected<void, int&>>);
+    CHECK(std::is_nothrow_default_constructible_v<expected<void, int&>>);
 }
 
 TEST_CASE("expected<void,E&>: construct from unexpect+ref binds E&", "[expected_void_ref_e]") {
@@ -51,7 +101,7 @@ TEST_CASE("expected<void,E&>: construct from unexpect+ref binds E&", "[expected_
 TEST_CASE("expected<void,E&>: in_place_t constructor", "[expected_void_ref_e]") {
     expected<void, int&> e(std::in_place);
     CHECK(e.has_value());
-    static_assert(noexcept(expected<void, int&>(std::in_place)));
+    CHECK(noexcept(expected<void, int&>(std::in_place)));
 }
 
 TEST_CASE("expected<void,E&>: copy construct from value state", "[expected_void_ref_e]") {
@@ -82,6 +132,30 @@ TEST_CASE("expected<void,E&>: convert from expected<void, G&>", "[expected_void_
     expected<void, int&> dst(src);
     REQUIRE(!dst.has_value());
     CHECK(&dst.error() == &err);
+}
+
+// Finding 2: the rvalue overload of the reference-E converting constructor was missing;
+// only the const& form existed. Verify the && form works and still binds the external
+// referent (never dangles — G is itself a reference to the caller's object).
+TEST_CASE("expected<void,E&>: convert from expected<void, G&>&& binds external referent", "[expected_void_ref_e]") {
+    int                  err = 9;
+    expected<void, int&> src(unexpect, err);
+    expected<void, int&> dst(std::move(src));
+    REQUIRE(!dst.has_value());
+    CHECK(&dst.error() == &err);
+}
+
+TEST_CASE("expected<void,const E&>: convert from expected<void, G&> (lvalue and rvalue)", "[expected_void_ref_e]") {
+    int                        err = 11;
+    expected<void, int&>       src1(unexpect, err);
+    expected<void, const int&> dst1(src1);
+    REQUIRE(!dst1.has_value());
+    CHECK(&dst1.error() == &err);
+
+    expected<void, int&>       src2(unexpect, err);
+    expected<void, const int&> dst2(std::move(src2));
+    REQUIRE(!dst2.has_value());
+    CHECK(&dst2.error() == &err);
 }
 
 // ---------------------------------------------------------------------------
@@ -122,6 +196,26 @@ TEST_CASE("expected<void,E&>: assign error state to value state", "[expected_voi
     CHECK(e.has_value());
 }
 
+TEST_CASE("expected<void,const E&>: copy assignment rebinds, does not assign through", "[expected_void_ref_e]") {
+    int                        a = 1, b = 2;
+    expected<void, const int&> e(unexpect, a);
+    expected<void, const int&> f(unexpect, b);
+    e = f;
+    REQUIRE(!e.has_value());
+    CHECK(&e.error() == &b);
+    CHECK(a == 1);
+}
+
+TEST_CASE("expected<void,const E&>: move assignment rebinds, does not assign through", "[expected_void_ref_e]") {
+    int                        a = 1, b = 2;
+    expected<void, const int&> e(unexpect, a);
+    expected<void, const int&> f(unexpect, b);
+    e = std::move(f);
+    REQUIRE(!e.has_value());
+    CHECK(&e.error() == &b);
+    CHECK(a == 1);
+}
+
 // ---------------------------------------------------------------------------
 // Shallow const on error
 // ---------------------------------------------------------------------------
@@ -142,7 +236,7 @@ TEST_CASE("expected<void,E&>: emplace from error state sets has_value", "[expect
     expected<void, int&> e(unexpect, err);
     e.emplace();
     CHECK(e.has_value());
-    static_assert(noexcept(e.emplace()));
+    CHECK(noexcept(e.emplace()));
 }
 
 TEST_CASE("expected<void,E&>: emplace from value state is no-op", "[expected_void_ref_e]") {
@@ -167,7 +261,7 @@ TEST_CASE("expected<void,E&>: operator bool and has_value", "[expected_void_ref_
 
 TEST_CASE("expected<void,E&>: operator*() is void no-op", "[expected_void_ref_e]") {
     expected<void, int&> e;
-    static_assert(std::is_void_v<decltype(*e)>);
+    CHECK(std::is_void_v<decltype(*e)>);
     *e;
 }
 
@@ -191,7 +285,7 @@ TEST_CASE("expected<void,E&>: rvalue value() throws on error", "[expected_void_r
 TEST_CASE("expected<void,E&>: error() returns E& with correct address", "[expected_void_ref_e]") {
     int                  err = 99;
     expected<void, int&> e(unexpect, err);
-    static_assert(std::is_same_v<decltype(e.error()), int&>);
+    CHECK(type_name<decltype(e.error())>() == type_name<int&>());
     CHECK(&e.error() == &err);
 }
 
@@ -338,7 +432,7 @@ TEST_CASE("expected<void,E&>: or_else short-circuits on success", "[expected_voi
 TEST_CASE("expected<void,E&>: transform calls F with no args", "[expected_void_ref_e]") {
     expected<void, int&> e;
     auto                 r = e.transform([]() { return 42; });
-    static_assert(std::is_same_v<decltype(r), expected<int, int&>>);
+    CHECK(type_name<decltype(r)>() == type_name<expected<int, int&>>());
     REQUIRE(r.has_value());
     CHECK(*r == 42);
 }
@@ -347,7 +441,7 @@ TEST_CASE("expected<void,E&>: transform with void-returning F", "[expected_void_
     expected<void, int&> e;
     int                  count = 0;
     auto                 r     = e.transform([&]() { ++count; });
-    static_assert(std::is_same_v<decltype(r), expected<void, int&>>);
+    CHECK(type_name<decltype(r)>() == type_name<expected<void, int&>>());
     CHECK(r.has_value());
     CHECK(count == 1);
 }
@@ -369,7 +463,7 @@ TEST_CASE("expected<void,E&>: transform_error transforms E& to new type", "[expe
     int                  err = 3;
     expected<void, int&> e(unexpect, err);
     auto                 r = e.transform_error([](int& v) -> std::string { return std::to_string(v); });
-    static_assert(std::is_same_v<decltype(r), expected<void, std::string>>);
+    CHECK(type_name<decltype(r)>() == type_name<expected<void, std::string>>());
     REQUIRE(!r.has_value());
     CHECK(r.error() == "3");
 }
@@ -410,8 +504,8 @@ TEST_CASE("expected<void,E&>: monadic chaining error path", "[expected_void_ref_
 // ---------------------------------------------------------------------------
 
 TEST_CASE("expected<void,E&>: trivial operations", "[expected_void_ref_e]") {
-    static_assert(std::is_trivially_copyable_v<expected<void, int&>>);
-    static_assert(std::is_trivially_destructible_v<expected<void, int&>>);
+    CHECK(std::is_trivially_copyable_v<expected<void, int&>>);
+    CHECK(std::is_trivially_destructible_v<expected<void, int&>>);
 }
 
 // =============================================================================
