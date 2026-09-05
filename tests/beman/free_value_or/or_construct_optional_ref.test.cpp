@@ -149,7 +149,7 @@ TEST_CASE("or_construct: const optional<int&> engaged", "[or_construct][optional
     CHECK(fvo::or_construct(o, 0) == 10);
 }
 
-TEST_CASE("or_construct: rebind optional<int&> — or_construct follows new referent", "[or_construct][optional_ref]") {
+TEST_CASE("or_construct: rebind optional<int&> - or_construct follows new referent", "[or_construct][optional_ref]") {
     int                     a = 10, b = 20;
     fvo_opt::optional<int&> o(a);
     CHECK(fvo::or_construct(o, 0) == 10);

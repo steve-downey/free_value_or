@@ -40,7 +40,7 @@ TEST_CASE("expected<T&,E&>: special member availability", "[expected_ref_both]")
     CHECK(std::is_move_constructible_v<expected<int&, int&>>);
 }
 
-TEST_CASE("expected<T&,E&>: fully trivial — both sides are pointers", "[expected_ref_both]") {
+TEST_CASE("expected<T&,E&>: fully trivial - both sides are pointers", "[expected_ref_both]") {
     // Trivially copyable/movable/destructible
     CHECK(std::is_trivially_copy_constructible_v<expected<int&, int&>>);
     CHECK(std::is_trivially_move_constructible_v<expected<int&, int&>>);

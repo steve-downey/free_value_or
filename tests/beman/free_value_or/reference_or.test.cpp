@@ -103,7 +103,7 @@ TEST_CASE("reference_or: return type is a reference, not a prvalue", "[reference
 // Case 4: const propagation
 // ==========================================================================
 
-TEST_CASE("reference_or: const optional yields const int& — no mutation through it", "[reference_or]") {
+TEST_CASE("reference_or: const optional yields const int& - no mutation through it", "[reference_or]") {
     const std::optional<int> m{42};
     const int                fallback = 0;
     // R = common_reference_t<const int&, const int&> = const int&

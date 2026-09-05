@@ -338,7 +338,7 @@ add_fail_test(expected_ref_e_t_unexpected_fail
 )
 add_fail_test(expected_ref_e_initializer_list_fail
     expected_ref_e_initializer_list_fail.test.cpp
-    "initializer-list error construction cannot bind a reference|use of deleted function|call to deleted"
+    "initializer-list error construction cannot bind a reference|use of deleted function|call to deleted|attempting to reference"
 )
 
 # Step 8 — expected<T, E&> monadic mandates
@@ -382,7 +382,7 @@ add_fail_test(expected_ref_both_inplace_value_fail
 )
 add_fail_test(expected_ref_both_initializer_list_fail
     expected_ref_both_initializer_list_fail.test.cpp
-    "initializer-list error construction cannot bind a reference|use of deleted function|call to deleted"
+    "initializer-list error construction cannot bind a reference|use of deleted function|call to deleted|attempting to reference"
 )
 
 # Step 9 — expected<T&, E&> monadic mandates
@@ -418,7 +418,7 @@ add_fail_test(expected_void_ref_e_assign_unexpected_fail
 )
 add_fail_test(expected_void_ref_e_initializer_list_fail
     expected_void_ref_e_initializer_list_fail.test.cpp
-    "initializer-list error construction cannot bind a reference|use of deleted function|call to deleted"
+    "initializer-list error construction cannot bind a reference|use of deleted function|call to deleted|attempting to reference"
 )
 
 # P3413 — value_or_construct / value_or_else mandates

@@ -154,7 +154,7 @@ TEST_CASE("value_or: value categories of fallback u", "[value_or]") {
 // Type mismatch — common_type promotion
 // ==========================================================================
 
-TEST_CASE("value_or: type mismatch — common_type promotion", "[value_or]") {
+TEST_CASE("value_or: type mismatch - common_type promotion", "[value_or]") {
     std::optional<int> engaged{42};
     std::optional<int> disengaged{};
 

@@ -100,7 +100,7 @@ TEST_CASE("or_invoke: unique_ptr<int> engaged and disengaged", "[or_invoke]") {
 // Laziness (headline property): invocable called ONLY when disengaged
 // ==========================================================================
 
-TEST_CASE("or_invoke: laziness — invocable not called when engaged", "[or_invoke][laziness]") {
+TEST_CASE("or_invoke: laziness - invocable not called when engaged", "[or_invoke][laziness]") {
     int  call_count = 0;
     auto f          = [&] {
         ++call_count;
@@ -112,7 +112,7 @@ TEST_CASE("or_invoke: laziness — invocable not called when engaged", "[or_invo
     CHECK(call_count == 0); // NOT invoked when engaged
 }
 
-TEST_CASE("or_invoke: laziness — invocable called exactly once when disengaged", "[or_invoke][laziness]") {
+TEST_CASE("or_invoke: laziness - invocable called exactly once when disengaged", "[or_invoke][laziness]") {
     int  call_count = 0;
     auto f          = [&] {
         ++call_count;
@@ -124,7 +124,7 @@ TEST_CASE("or_invoke: laziness — invocable called exactly once when disengaged
     CHECK(call_count == 1); // invoked exactly once
 }
 
-TEST_CASE("or_invoke: laziness — contrast with value_or eagerness", "[or_invoke][laziness]") {
+TEST_CASE("or_invoke: laziness - contrast with value_or eagerness", "[or_invoke][laziness]") {
     // value_or evaluates its fallback eagerly (argument evaluation).
     // or_invoke evaluates its invocable lazily (called only when disengaged).
     int or_invoke_count = 0;
