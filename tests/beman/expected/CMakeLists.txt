@@ -14,6 +14,30 @@ list(APPEND CMAKE_MODULE_PATH "${Catch2_SOURCE_DIR}/extras")
 include(CheckCXXSymbolExists)
 check_cxx_symbol_exists(_LIBCPP_VERSION "version" BEMAN_EXPECTED_USING_LIBCXX)
 
+# std::expected is not guaranteed by a C++23 toolchain: the libstdc++ paired
+# with Clang 18 in the CI images declares neither std::expected nor
+# std::bad_expected_access at any -std level. Both std-parity targets below
+# need the real type, so probe for it rather than infer it from the language
+# level. The probe compiles at C++23 because that is what those targets use.
+include(CheckCXXSourceCompiles)
+set(beman_expected_saved_cxx_standard "${CMAKE_CXX_STANDARD}")
+set(CMAKE_CXX_STANDARD 23)
+check_cxx_source_compiles(
+    "#include <expected>
+     int main() { std::expected<int, int> e{1}; return *e - 1; }"
+    BEMAN_EXPECTED_HAS_STD_EXPECTED
+)
+set(CMAKE_CXX_STANDARD "${beman_expected_saved_cxx_standard}")
+
+# Below C++23, MSVC still declares the pre-C++17 ::unexpected() terminate
+# handler in <eh.h>. It is ambiguous with beman::expected::unexpected in every
+# test file that says `using namespace beman::expected;`, which is most of
+# them. _HAS_UNEXPECTED is the STL's documented opt-out. At C++23 the STL
+# retires the handler itself, so this only bites the C++20 presets.
+if(MSVC)
+    add_compile_definitions(_HAS_UNEXPECTED=0)
+endif()
+
 # Portable behavioral tests: run against every implementation under test.
 # Parameterized over the implementation via test_expected.hpp (see that header).
 set(beman_expected_behavioral_tests
@@ -86,7 +110,7 @@ endif()
 # involve reference specializations, which are not yet parameterized. Any
 # beman-specific assertion is guarded with #ifndef BEMAN_EXPECTED_TEST_STD.
 # Skipped on libc++ — see docs/std-parity.md.
-if(NOT BEMAN_EXPECTED_USING_LIBCXX)
+if(NOT BEMAN_EXPECTED_USING_LIBCXX AND BEMAN_EXPECTED_HAS_STD_EXPECTED)
     add_executable(beman.expected.tests.expected.std)
     target_sources(
         beman.expected.tests.expected.std
@@ -122,7 +146,7 @@ endif()
 # adversarial error types -- i.e. the unexpected<E> member is behaviourally
 # inert against a T/E rendering. Requires C++23; skipped on libc++ for the same
 # reason as the std parity gate above (see docs/std-parity.md).
-if(NOT BEMAN_EXPECTED_USING_LIBCXX)
+if(NOT BEMAN_EXPECTED_USING_LIBCXX AND BEMAN_EXPECTED_HAS_STD_EXPECTED)
     add_executable(beman.expected.tests.equivalence)
     target_sources(
         beman.expected.tests.equivalence
