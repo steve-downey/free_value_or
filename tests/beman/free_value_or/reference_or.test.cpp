@@ -124,6 +124,7 @@ TEST_CASE("reference_or: optional<int>& + const int& yields const int&", "[refer
 // Case 5: All confirmed nullable types (int payload, lvalue + lvalue)
 // ==========================================================================
 
+#if FVO_HAS_STD_EXPECTED
 TEST_CASE("reference_or: expected<int,int> engaged and disengaged", "[reference_or]") {
     auto engaged    = NullableFixture<int>::exp_engaged(42);
     auto disengaged = NullableFixture<int>::exp_disengaged();
@@ -137,6 +138,7 @@ TEST_CASE("reference_or: expected<int,int> engaged and disengaged", "[reference_
     CHECK(&r_dis == &fallback);
     CHECK(r_dis == 99);
 }
+#endif // FVO_HAS_STD_EXPECTED
 
 TEST_CASE("reference_or: int* engaged and disengaged", "[reference_or]") {
     int  obj        = 42;

@@ -74,6 +74,7 @@ TEST_CASE("value_or: optional<int> engaged and disengaged", "[value_or]") {
     CHECK(fvo::value_or(disengaged, 0) == 0);
 }
 
+#if FVO_HAS_STD_EXPECTED
 TEST_CASE("value_or: expected<int,int> engaged and disengaged", "[value_or]") {
     auto engaged    = NullableFixture<int>::exp_engaged(42);
     auto disengaged = NullableFixture<int>::exp_disengaged();
@@ -81,6 +82,7 @@ TEST_CASE("value_or: expected<int,int> engaged and disengaged", "[value_or]") {
     CHECK(fvo::value_or(engaged, 0) == 42);
     CHECK(fvo::value_or(disengaged, 0) == 0);
 }
+#endif // FVO_HAS_STD_EXPECTED
 
 TEST_CASE("value_or: int* engaged and disengaged", "[value_or]") {
     int  obj        = 42;

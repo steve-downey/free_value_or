@@ -61,6 +61,7 @@ TEST_CASE("or_invoke: optional<int> engaged and disengaged", "[or_invoke]") {
     CHECK(fvo::or_invoke(disengaged, [] { return 7; }) == 7);
 }
 
+#if FVO_HAS_STD_EXPECTED
 TEST_CASE("or_invoke: expected<int,int> engaged and disengaged", "[or_invoke]") {
     auto engaged    = NullableFixture<int>::exp_engaged(42);
     auto disengaged = NullableFixture<int>::exp_disengaged();
@@ -68,6 +69,7 @@ TEST_CASE("or_invoke: expected<int,int> engaged and disengaged", "[or_invoke]") 
     CHECK(fvo::or_invoke(engaged, [] { return 0; }) == 42);
     CHECK(fvo::or_invoke(disengaged, [] { return 7; }) == 7);
 }
+#endif // FVO_HAS_STD_EXPECTED
 
 TEST_CASE("or_invoke: int* engaged and disengaged", "[or_invoke]") {
     int  obj        = 42;

@@ -89,6 +89,7 @@ TEST_CASE("or_construct behavior: optional<int> engaged and disengaged", "[or_co
     CHECK(fvo::or_construct(disengaged, 99) == 99); // constructs int(99)
 }
 
+#if FVO_HAS_STD_EXPECTED
 TEST_CASE("or_construct behavior: expected<int,int> engaged and disengaged", "[or_construct]") {
     auto engaged    = NullableFixture<int>::exp_engaged(42);
     auto disengaged = NullableFixture<int>::exp_disengaged();
@@ -96,6 +97,7 @@ TEST_CASE("or_construct behavior: expected<int,int> engaged and disengaged", "[o
     CHECK(fvo::or_construct(engaged, 99) == 42);
     CHECK(fvo::or_construct(disengaged, 99) == 99);
 }
+#endif // FVO_HAS_STD_EXPECTED
 
 TEST_CASE("or_construct behavior: int* engaged and disengaged", "[or_construct]") {
     int  obj        = 42;

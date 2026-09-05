@@ -4,9 +4,9 @@
 
 #include <beman/free_value_or/value_or.hpp>
 
-#include <expected>
 #include <memory>
 #include <optional>
+#include <version>
 
 // Rename-proofing alias: all tests use fvo:: rather than smd:: inline.
 // When the library is renamed to beman::free_value_or, only this line changes.
@@ -27,6 +27,26 @@ namespace fvo = smd::free_value_or; // rename point: smd:: -> beman::
     #endif
 #endif // FVO_HAS_OPTIONAL_REF
 
+// ---------------------------------------------------------------------------
+// Feature detection for std::expected (P0323).
+//
+// Not every toolchain in the support matrix declares std::expected -- the
+// libstdc++ paired with Clang 18 in the CI images does not, at any -std level.
+// The expected-based fixtures and the cases that use them are gated on it
+// rather than assumed; the rest of the nullable models still get covered.
+// ---------------------------------------------------------------------------
+#ifndef FVO_HAS_STD_EXPECTED
+    #if defined(__cpp_lib_expected) && __cpp_lib_expected >= 202202L
+        #define FVO_HAS_STD_EXPECTED 1
+    #else
+        #define FVO_HAS_STD_EXPECTED 0
+    #endif
+#endif // FVO_HAS_STD_EXPECTED
+
+#if FVO_HAS_STD_EXPECTED
+    #include <expected>
+#endif
+
 #if FVO_HAS_OPTIONAL_REF
     #include <beman/optional/optional.hpp>
 // fvo_opt::optional<T&> is optional-with-reference-support, usable in Step 07.
@@ -43,9 +63,11 @@ struct NullableFixture {
     static std::optional<T> opt_engaged(T val) { return val; }
     static std::optional<T> opt_disengaged() { return std::nullopt; }
 
+#if FVO_HAS_STD_EXPECTED
     // expected<T, int>
     static std::expected<T, int> exp_engaged(T val) { return val; }
     static std::expected<T, int> exp_disengaged() { return std::unexpected(0); }
+#endif
 
     // shared_ptr<T>
     static std::shared_ptr<T> sptr_engaged(T val) { return std::make_shared<T>(val); }
