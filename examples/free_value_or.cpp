@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-#include <beman/free_value_or/free_value_or.hpp>
-
+// Standard headers come before the umbrella header on purpose. In a modules
+// build the umbrella resolves to `import beman.free_value_or;`, and GCC cannot
+// merge textually-included standard library declarations that follow an import
+// of a module that already imported them. Including them first avoids that.
 #include <iostream>
 #include <optional>
 #include <string>
+
+#include <beman/free_value_or/free_value_or.hpp>
 
 int main() {
     namespace fvo = smd::free_value_or;

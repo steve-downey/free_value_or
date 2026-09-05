@@ -3,10 +3,12 @@
 #ifndef INCLUDED_BEMAN_FREE_VALUE_OR_VALUE_OR
 #define INCLUDED_BEMAN_FREE_VALUE_OR_VALUE_OR
 
-#include <initializer_list>
-#include <iterator>
-#include <type_traits>
-#include <utility>
+#ifndef BEMAN_FREE_VALUE_OR_INCLUDED_FROM_INTERFACE_UNIT
+    #include <initializer_list>
+    #include <iterator>
+    #include <type_traits>
+    #include <utility>
+#endif
 
 namespace smd {
 namespace free_value_or {
