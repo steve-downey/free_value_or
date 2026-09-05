@@ -3,6 +3,8 @@
 #ifndef BEMAN_EXPECTED_CONFIG_HPP
 #define BEMAN_EXPECTED_CONFIG_HPP
 
+#define BEMAN_EXPECTED_HAS_REFERENCES 1
+
 #if !defined(__has_include) || __has_include(<beman/expected/config_generated.hpp>)
     #include <beman/expected/config_generated.hpp>
 #else
