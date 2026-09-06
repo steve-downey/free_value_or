@@ -29,15 +29,6 @@ check_cxx_source_compiles(
 )
 set(CMAKE_CXX_STANDARD "${beman_expected_saved_cxx_standard}")
 
-# Below C++23, MSVC still declares the pre-C++17 ::unexpected() terminate
-# handler in <eh.h>. It is ambiguous with beman::expected::unexpected in every
-# test file that says `using namespace beman::expected;`, which is most of
-# them. _HAS_UNEXPECTED is the STL's documented opt-out. At C++23 the STL
-# retires the handler itself, so this only bites the C++20 presets.
-if(MSVC)
-    add_compile_definitions(_HAS_UNEXPECTED=0)
-endif()
-
 # Portable behavioral tests: run against every implementation under test.
 # Parameterized over the implementation via test_expected.hpp (see that header).
 set(beman_expected_behavioral_tests

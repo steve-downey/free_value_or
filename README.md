@@ -65,6 +65,12 @@ is excluded by the vendored `beman::optional` test suite, which needs range adap
 (`std::views::join`) that libc++ 17 does not provide; nothing in `free_value_or` itself
 requires it.
 
+The MSVC row is C++23 only, and the `msvc-debug` / `msvc-release` presets configure at
+C++23 rather than inheriting the C++20 default the other presets use. Below C++23 the
+MSVC CRT still declares the pre-C++17 `::unexpected()` terminate handler in `<eh.h>`,
+which is ambiguous with `beman::expected::unexpected` throughout the vendored
+`beman::expected` test suite. `free_value_or`'s own headers are C++20-clean on MSVC.
+
 ## Development
 
 See the [Contributing Guidelines](CONTRIBUTING.md).
