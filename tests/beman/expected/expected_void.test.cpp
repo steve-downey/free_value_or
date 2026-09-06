@@ -5,6 +5,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <beman/expected/testing/type_name.hpp>
+
 #include "testing/types.hpp"
 
 #include <string>
@@ -17,6 +19,8 @@ using test_ns::expected;
 using test_ns::unexpect;
 using test_ns::unexpected;
 
+using beman::expected::testing::type_name;
+
 // =============================================================================
 // [expected.void.general] Ill-formed instantiation constraints
 // =============================================================================
@@ -24,6 +28,13 @@ using test_ns::unexpected;
 // not a reference, not an array, not cv-qualified, not unexpected<X>.
 // These are enforced by static_asserts inside the class body; verified by
 // negative compile tests (expected_void_ref_fail.cpp, expected_void_array_fail.cpp).
+//
+// The type-level properties below are checked at runtime rather than with
+// static_assert so that a violated property is reported by the test run, with
+// the responsible type named, instead of stopping the build at the first
+// failure and reporting nothing. Type identity is checked by comparing the
+// compiler's spelling of the two types, so a mismatch prints what was deduced
+// next to what was wanted rather than the bare word `false`.
 
 // =============================================================================
 // [expected.void.cons] Constructors
@@ -34,7 +45,7 @@ using test_ns::unexpected;
 TEST_CASE("expected<void>: default construct", "[expected_void]") {
     expected<void, int> e;
     CHECK(e.has_value());
-    static_assert(std::is_nothrow_default_constructible_v<expected<void, int>>);
+    CHECK(std::is_nothrow_default_constructible_v<expected<void, int>>);
 }
 
 // --- Copy constructor ---
@@ -44,8 +55,10 @@ struct NoCopyE {
     NoCopyE()               = default;
 };
 
-static_assert(!std::is_copy_constructible_v<expected<void, NoCopyE>>);
-static_assert(std::is_trivially_copy_constructible_v<expected<void, int>>);
+TEST_CASE("expected<void>: copy constructor availability and triviality", "[expected_void]") {
+    CHECK_FALSE(std::is_copy_constructible_v<expected<void, NoCopyE>>);
+    CHECK(std::is_trivially_copy_constructible_v<expected<void, int>>);
+}
 
 TEST_CASE("expected<void>: copy construct with value", "[expected_void]") {
     expected<void, int> a;
@@ -62,7 +75,9 @@ TEST_CASE("expected<void>: copy construct with error", "[expected_void]") {
 
 // --- Move constructor ---
 
-static_assert(std::is_nothrow_move_constructible_v<expected<void, int>>);
+TEST_CASE("expected<void>: move constructor is noexcept", "[expected_void]") {
+    CHECK(std::is_nothrow_move_constructible_v<expected<void, int>>);
+}
 
 TEST_CASE("expected<void>: move construct with error", "[expected_void]") {
     expected<void, std::string> a(unexpect, "err");
@@ -73,8 +88,10 @@ TEST_CASE("expected<void>: move construct with error", "[expected_void]") {
 
 // --- Converting constructor from expected<U, G> where is_void_v<U> ---
 
-// Constraint: U must be void — cannot convert from expected<int, G>
-static_assert(!std::is_constructible_v<expected<void, int>, expected<int, int>>);
+TEST_CASE("expected<void>: converting constructor requires void U", "[expected_void]") {
+    // Constraint: U must be void — cannot convert from expected<int, G>
+    CHECK_FALSE(std::is_constructible_v<expected<void, int>, expected<int, int>>);
+}
 
 TEST_CASE("expected<void>: convert from expected<void, G> with value", "[expected_void]") {
     expected<void, int>  src;
@@ -108,7 +125,7 @@ TEST_CASE("expected<void>: construct from unexpected&&", "[expected_void]") {
 TEST_CASE("expected<void>: in_place_t constructor", "[expected_void]") {
     expected<void, int> e(std::in_place);
     CHECK(e.has_value());
-    static_assert(noexcept(expected<void, int>(std::in_place)));
+    CHECK(noexcept(expected<void, int>(std::in_place)));
 }
 
 // --- unexpect_t constructors ---
@@ -129,7 +146,9 @@ TEST_CASE("expected<void>: unexpect_t ilist constructor", "[expected_void]") {
 // [expected.void.dtor] Destructor
 // =============================================================================
 
-static_assert(std::is_trivially_destructible_v<expected<void, int>>);
+TEST_CASE("expected<void>: trivially destructible when E is", "[expected_void]") {
+    CHECK(std::is_trivially_destructible_v<expected<void, int>>);
+}
 
 TEST_CASE("expected<void>: destructor destroys error", "[expected_void]") {
     int destroyed = 0;
@@ -178,7 +197,9 @@ TEST_CASE("expected<void>: copy assign error-to-error", "[expected_void]") {
 
 // --- Move assignment ---
 
-static_assert(std::is_nothrow_move_assignable_v<expected<void, int>>);
+TEST_CASE("expected<void>: move assignment is noexcept", "[expected_void]") {
+    CHECK(std::is_nothrow_move_assignable_v<expected<void, int>>);
+}
 
 TEST_CASE("expected<void>: move assign value-to-error", "[expected_void]") {
     expected<void, std::string> a, b(unexpect, "err");
@@ -208,7 +229,7 @@ TEST_CASE("expected<void>: emplace from error state", "[expected_void]") {
     expected<void, int> e(unexpect, 5);
     e.emplace();
     CHECK(e.has_value());
-    static_assert(noexcept(e.emplace()));
+    CHECK(noexcept(e.emplace()));
 }
 
 TEST_CASE("expected<void>: emplace from value state (no-op)", "[expected_void]") {
@@ -269,7 +290,7 @@ TEST_CASE("expected<void>: has_value and bool", "[expected_void]") {
 
 TEST_CASE("expected<void>: operator* is void", "[expected_void]") {
     expected<void, int> e;
-    static_assert(std::is_same_v<decltype(*e), void>);
+    CHECK(type_name<decltype(*e)>() == type_name<void>());
     *e; // compiles and does nothing
 }
 
@@ -296,9 +317,9 @@ TEST_CASE("expected<void>: rvalue value() throws on error", "[expected_void]") {
 
 TEST_CASE("expected<void>: error() all ref qualifications", "[expected_void]") {
     expected<void, int> e(unexpect, 99);
-    static_assert(std::is_same_v<decltype(e.error()), int&>);
-    static_assert(std::is_same_v<decltype(std::as_const(e).error()), const int&>);
-    static_assert(std::is_same_v<decltype(std::move(e).error()), int&&>);
+    CHECK(type_name<decltype(e.error())>() == type_name<int&>());
+    CHECK(type_name<decltype(std::as_const(e).error())>() == type_name<const int&>());
+    CHECK(type_name<decltype(std::move(e).error())>() == type_name<int&&>());
     CHECK(e.error() == 99);
 }
 

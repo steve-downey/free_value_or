@@ -13,6 +13,19 @@
 
 using namespace beman::expected;
 
+// =============================================================================
+// How these constraints are checked
+//
+// Every check below is the satisfaction of a detector concept, so it is a
+// plain bool. They are checked at runtime rather than with static_assert so
+// that a constraint that has drifted is reported by the test run, naming the
+// operation and the value category responsible, instead of stopping the build
+// at the first failure and reporting nothing about the rest.
+//
+// The polarity matters as much as the value: an operation that must be
+// constrained *out* is checked with CHECK_FALSE.
+// =============================================================================
+
 // A type that is not constructible from lvalue ref (only move-constructible)
 struct MoveOnly {
     MoveOnly()                           = default;
@@ -41,65 +54,77 @@ concept has_transform_error = requires(F f) { std::declval<X>().transform_error(
 
 // MoveOnly as E: lvalue overloads (&, const&) are constrained out because
 // E is not copy-constructible, so is_constructible_v<E, E&> is false.
-using MoveOnlyErr                    = expected<int, MoveOnly>;
-[[maybe_unused]] auto dummy_and_then = [](int) { return expected<int, MoveOnly>(); };
-
-static_assert(!has_and_then<MoveOnlyErr&, decltype(dummy_and_then)>);
-static_assert(has_and_then<MoveOnlyErr&&, decltype(dummy_and_then)>);
-static_assert(!has_and_then<const MoveOnlyErr&, decltype(dummy_and_then)>);
-
+//
+// The aliases and callables stay at namespace scope, next to the section they
+// belong to: naming them there keeps each detector-concept argument short
+// enough to read, and each case is then a list of the constraints alone.
+using MoveOnlyErr                     = expected<int, MoveOnly>;
+[[maybe_unused]] auto dummy_and_then  = [](int) { return expected<int, MoveOnly>(); };
 [[maybe_unused]] auto dummy_transform = [](int) { return 0; };
 
-static_assert(!has_transform<MoveOnlyErr&, decltype(dummy_transform)>);
-static_assert(has_transform<MoveOnlyErr&&, decltype(dummy_transform)>);
-static_assert(!has_transform<const MoveOnlyErr&, decltype(dummy_transform)>);
+TEST_CASE("monadic constraints: and_then / transform on expected<int, MoveOnly>", "[monadic][constraints]") {
+    // Lvalue overloads require is_constructible_v<E, E&>, which fails for a
+    // move-only E, so only the rvalue overload survives.
+    CHECK_FALSE(has_and_then<MoveOnlyErr&, decltype(dummy_and_then)>);
+    CHECK(has_and_then<MoveOnlyErr&&, decltype(dummy_and_then)>);
+    CHECK_FALSE(has_and_then<const MoveOnlyErr&, decltype(dummy_and_then)>);
+
+    CHECK_FALSE(has_transform<MoveOnlyErr&, decltype(dummy_transform)>);
+    CHECK(has_transform<MoveOnlyErr&&, decltype(dummy_transform)>);
+    CHECK_FALSE(has_transform<const MoveOnlyErr&, decltype(dummy_transform)>);
+}
 
 // ---------------------------------------------------------------------------
 // Primary template: or_else / transform_error need T constructible from *this
 // ---------------------------------------------------------------------------
 
-using MoveOnlyVal                   = expected<MoveOnly, int>;
-[[maybe_unused]] auto dummy_or_else = [](int) { return expected<MoveOnly, int>(); };
-
-static_assert(!has_or_else<MoveOnlyVal&, decltype(dummy_or_else)>);
-static_assert(has_or_else<MoveOnlyVal&&, decltype(dummy_or_else)>);
-static_assert(!has_or_else<const MoveOnlyVal&, decltype(dummy_or_else)>);
-
+using MoveOnlyVal                           = expected<MoveOnly, int>;
+[[maybe_unused]] auto dummy_or_else         = [](int) { return expected<MoveOnly, int>(); };
 [[maybe_unused]] auto dummy_transform_error = [](int) { return 0; };
 
-static_assert(!has_transform_error<MoveOnlyVal&, decltype(dummy_transform_error)>);
-static_assert(has_transform_error<MoveOnlyVal&&, decltype(dummy_transform_error)>);
-static_assert(!has_transform_error<const MoveOnlyVal&, decltype(dummy_transform_error)>);
+TEST_CASE("monadic constraints: or_else / transform_error on expected<MoveOnly, int>", "[monadic][constraints]") {
+    // Lvalue overloads require is_constructible_v<T, T&>, which fails for a
+    // move-only T, so only the rvalue overload survives.
+    CHECK_FALSE(has_or_else<MoveOnlyVal&, decltype(dummy_or_else)>);
+    CHECK(has_or_else<MoveOnlyVal&&, decltype(dummy_or_else)>);
+    CHECK_FALSE(has_or_else<const MoveOnlyVal&, decltype(dummy_or_else)>);
+
+    CHECK_FALSE(has_transform_error<MoveOnlyVal&, decltype(dummy_transform_error)>);
+    CHECK(has_transform_error<MoveOnlyVal&&, decltype(dummy_transform_error)>);
+    CHECK_FALSE(has_transform_error<const MoveOnlyVal&, decltype(dummy_transform_error)>);
+}
 
 // ---------------------------------------------------------------------------
 // Void specialization: and_then / transform need E constructible from error()
 // ---------------------------------------------------------------------------
 
-using VoidMoveOnlyErr                     = expected<void, MoveOnly>;
-[[maybe_unused]] auto void_dummy_and_then = []() { return expected<void, MoveOnly>(); };
-
-static_assert(!has_and_then<VoidMoveOnlyErr&, decltype(void_dummy_and_then)>);
-static_assert(has_and_then<VoidMoveOnlyErr&&, decltype(void_dummy_and_then)>);
-static_assert(!has_and_then<const VoidMoveOnlyErr&, decltype(void_dummy_and_then)>);
-
+using VoidMoveOnlyErr                      = expected<void, MoveOnly>;
+[[maybe_unused]] auto void_dummy_and_then  = []() { return expected<void, MoveOnly>(); };
 [[maybe_unused]] auto void_dummy_transform = []() { return 0; };
 
-static_assert(!has_transform<VoidMoveOnlyErr&, decltype(void_dummy_transform)>);
-static_assert(has_transform<VoidMoveOnlyErr&&, decltype(void_dummy_transform)>);
-static_assert(!has_transform<const VoidMoveOnlyErr&, decltype(void_dummy_transform)>);
+TEST_CASE("monadic constraints: and_then / transform on expected<void, MoveOnly>", "[monadic][constraints]") {
+    CHECK_FALSE(has_and_then<VoidMoveOnlyErr&, decltype(void_dummy_and_then)>);
+    CHECK(has_and_then<VoidMoveOnlyErr&&, decltype(void_dummy_and_then)>);
+    CHECK_FALSE(has_and_then<const VoidMoveOnlyErr&, decltype(void_dummy_and_then)>);
+
+    CHECK_FALSE(has_transform<VoidMoveOnlyErr&, decltype(void_dummy_transform)>);
+    CHECK(has_transform<VoidMoveOnlyErr&&, decltype(void_dummy_transform)>);
+    CHECK_FALSE(has_transform<const VoidMoveOnlyErr&, decltype(void_dummy_transform)>);
+}
 
 // ---------------------------------------------------------------------------
 // Void specialization: or_else / transform_error have NO constraints
 // ---------------------------------------------------------------------------
 
-// or_else and transform_error on void specialization should always be available
-[[maybe_unused]] auto void_dummy_or_else = [](MoveOnly&&) { return expected<void, int>(); };
-
-static_assert(has_or_else<VoidMoveOnlyErr&&, decltype(void_dummy_or_else)>);
-
+[[maybe_unused]] auto void_dummy_or_else         = [](MoveOnly&&) { return expected<void, int>(); };
 [[maybe_unused]] auto void_dummy_transform_error = [](MoveOnly&&) { return 0; };
 
-static_assert(has_transform_error<VoidMoveOnlyErr&&, decltype(void_dummy_transform_error)>);
+TEST_CASE("monadic constraints: void or_else / transform_error are unconstrained", "[monadic][constraints]") {
+    // Nothing is required of T, because there is no T to reconstruct, so these
+    // are available even for an error type that is only move-constructible.
+    CHECK(has_or_else<VoidMoveOnlyErr&&, decltype(void_dummy_or_else)>);
+    CHECK(has_transform_error<VoidMoveOnlyErr&&, decltype(void_dummy_transform_error)>);
+}
 
 // ---------------------------------------------------------------------------
 // Normal types: all operations remain available
@@ -111,14 +136,16 @@ using NormalExpected                       = expected<int, int>;
 [[maybe_unused]] auto normal_transform     = [](int) { return 42; };
 [[maybe_unused]] auto normal_transform_err = [](int) { return 42; };
 
-static_assert(has_and_then<NormalExpected&, decltype(normal_and_then)>);
-static_assert(has_and_then<NormalExpected&&, decltype(normal_and_then)>);
-static_assert(has_and_then<const NormalExpected&, decltype(normal_and_then)>);
-static_assert(has_and_then<const NormalExpected&&, decltype(normal_and_then)>);
+TEST_CASE("monadic constraints: every operation available for expected<int, int>", "[monadic][constraints]") {
+    CHECK(has_and_then<NormalExpected&, decltype(normal_and_then)>);
+    CHECK(has_and_then<NormalExpected&&, decltype(normal_and_then)>);
+    CHECK(has_and_then<const NormalExpected&, decltype(normal_and_then)>);
+    CHECK(has_and_then<const NormalExpected&&, decltype(normal_and_then)>);
 
-static_assert(has_or_else<NormalExpected&, decltype(normal_or_else)>);
-static_assert(has_transform<NormalExpected&, decltype(normal_transform)>);
-static_assert(has_transform_error<NormalExpected&, decltype(normal_transform_err)>);
+    CHECK(has_or_else<NormalExpected&, decltype(normal_or_else)>);
+    CHECK(has_transform<NormalExpected&, decltype(normal_transform)>);
+    CHECK(has_transform_error<NormalExpected&, decltype(normal_transform_err)>);
+}
 
 TEST_CASE("monadic constraints: rvalue and_then works with move-only error", "[monadic][constraints]") {
     expected<int, MoveOnly> e(42);

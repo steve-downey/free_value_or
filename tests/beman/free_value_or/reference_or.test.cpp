@@ -46,9 +46,11 @@ static_assert(
     std::is_same_v<decltype(fvo::reference_or(std::declval<const std::optional<int>&>(), std::declval<int&>())),
                    const int&>);
 
+#if FVO_HAS_STD_EXPECTED
 // expected<int,int>& + int& → int&
 static_assert(
     std::is_same_v<decltype(fvo::reference_or(std::declval<std::expected<int, int>&>(), std::declval<int&>())), int&>);
+#endif // FVO_HAS_STD_EXPECTED
 
 // int* + int& → int&
 static_assert(std::is_same_v<decltype(fvo::reference_or(std::declval<int*>(), std::declval<int&>())), int&>);
@@ -101,7 +103,7 @@ TEST_CASE("reference_or: return type is a reference, not a prvalue", "[reference
 // Case 4: const propagation
 // ==========================================================================
 
-TEST_CASE("reference_or: const optional yields const int& — no mutation through it", "[reference_or]") {
+TEST_CASE("reference_or: const optional yields const int& - no mutation through it", "[reference_or]") {
     const std::optional<int> m{42};
     const int                fallback = 0;
     // R = common_reference_t<const int&, const int&> = const int&
@@ -124,6 +126,7 @@ TEST_CASE("reference_or: optional<int>& + const int& yields const int&", "[refer
 // Case 5: All confirmed nullable types (int payload, lvalue + lvalue)
 // ==========================================================================
 
+#if FVO_HAS_STD_EXPECTED
 TEST_CASE("reference_or: expected<int,int> engaged and disengaged", "[reference_or]") {
     auto engaged    = NullableFixture<int>::exp_engaged(42);
     auto disengaged = NullableFixture<int>::exp_disengaged();
@@ -137,6 +140,7 @@ TEST_CASE("reference_or: expected<int,int> engaged and disengaged", "[reference_
     CHECK(&r_dis == &fallback);
     CHECK(r_dis == 99);
 }
+#endif // FVO_HAS_STD_EXPECTED
 
 TEST_CASE("reference_or: int* engaged and disengaged", "[reference_or]") {
     int  obj        = 42;

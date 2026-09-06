@@ -61,6 +61,7 @@ TEST_CASE("or_invoke: optional<int> engaged and disengaged", "[or_invoke]") {
     CHECK(fvo::or_invoke(disengaged, [] { return 7; }) == 7);
 }
 
+#if FVO_HAS_STD_EXPECTED
 TEST_CASE("or_invoke: expected<int,int> engaged and disengaged", "[or_invoke]") {
     auto engaged    = NullableFixture<int>::exp_engaged(42);
     auto disengaged = NullableFixture<int>::exp_disengaged();
@@ -68,6 +69,7 @@ TEST_CASE("or_invoke: expected<int,int> engaged and disengaged", "[or_invoke]") 
     CHECK(fvo::or_invoke(engaged, [] { return 0; }) == 42);
     CHECK(fvo::or_invoke(disengaged, [] { return 7; }) == 7);
 }
+#endif // FVO_HAS_STD_EXPECTED
 
 TEST_CASE("or_invoke: int* engaged and disengaged", "[or_invoke]") {
     int  obj        = 42;
@@ -98,7 +100,7 @@ TEST_CASE("or_invoke: unique_ptr<int> engaged and disengaged", "[or_invoke]") {
 // Laziness (headline property): invocable called ONLY when disengaged
 // ==========================================================================
 
-TEST_CASE("or_invoke: laziness — invocable not called when engaged", "[or_invoke][laziness]") {
+TEST_CASE("or_invoke: laziness - invocable not called when engaged", "[or_invoke][laziness]") {
     int  call_count = 0;
     auto f          = [&] {
         ++call_count;
@@ -110,7 +112,7 @@ TEST_CASE("or_invoke: laziness — invocable not called when engaged", "[or_invo
     CHECK(call_count == 0); // NOT invoked when engaged
 }
 
-TEST_CASE("or_invoke: laziness — invocable called exactly once when disengaged", "[or_invoke][laziness]") {
+TEST_CASE("or_invoke: laziness - invocable called exactly once when disengaged", "[or_invoke][laziness]") {
     int  call_count = 0;
     auto f          = [&] {
         ++call_count;
@@ -122,7 +124,7 @@ TEST_CASE("or_invoke: laziness — invocable called exactly once when disengaged
     CHECK(call_count == 1); // invoked exactly once
 }
 
-TEST_CASE("or_invoke: laziness — contrast with value_or eagerness", "[or_invoke][laziness]") {
+TEST_CASE("or_invoke: laziness - contrast with value_or eagerness", "[or_invoke][laziness]") {
     // value_or evaluates its fallback eagerly (argument evaluation).
     // or_invoke evaluates its invocable lazily (called only when disengaged).
     int or_invoke_count = 0;

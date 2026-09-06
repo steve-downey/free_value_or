@@ -1,12 +1,15 @@
 // beman/expected/expected.test.cpp                                 -*-C++-*-
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-#include "test_expected.hpp"
+#include <beman/expected/test_expected.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "testing/types.hpp"
+#include <beman/expected/testing/constant_eval.hpp>
+#include <beman/expected/testing/type_name.hpp>
+#include <beman/expected/testing/types.hpp>
 
+#include <ostream>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -15,8 +18,11 @@
 
 namespace expt = test_ns;
 
+using beman::expected::testing::constant_eval;
+using beman::expected::testing::type_name;
+
 // =============================================================================
-// Helper types at namespace scope (needed for static_assert outside functions)
+// Helper types, at namespace scope because more than one test case uses them
 // =============================================================================
 
 struct NoDefault {
@@ -42,51 +48,66 @@ struct MightThrow {
 };
 
 // =============================================================================
-// [expected.object.general] para 2-3 — type-level static assertions
+// [expected.object.general] para 2-3 — type-level properties
+//
+// These are checked at runtime rather than with static_assert so that a
+// violated property is reported by the test run, with the responsible type
+// named, instead of stopping the build at the first failure and reporting
+// nothing. Type identity is checked by comparing the compiler's spelling of
+// the two types, so a mismatch prints what was deduced next to what was
+// wanted rather than the bare word `false`.
 // =============================================================================
 
 // Ill-formed T: reference type — tested via negative compile file expected_t_ref_fail.cpp
 // Ill-formed E: reference type — tested via negative compile file expected_e_ref_fail.cpp
 // Ill-formed T: array type   — tested via negative compile file expected_t_array_fail.cpp
 
-// Default constructor: requires is_default_constructible_v<T>
-static_assert(!std::is_default_constructible_v<expt::expected<NoDefault, int>>);
+TEST_CASE("expected: special member availability and noexcept", "[ExpectedTest]") {
+    // Default constructor: requires is_default_constructible_v<T>
+    CHECK_FALSE(std::is_default_constructible_v<expt::expected<NoDefault, int>>);
 
-// Copy constructor: not present when T is not copy-constructible
-static_assert(!std::is_copy_constructible_v<expt::expected<NoCopy, int>>);
+    // Copy constructor: not present when T is not copy-constructible
+    CHECK_FALSE(std::is_copy_constructible_v<expt::expected<NoCopy, int>>);
 
-// Destructor: trivially destructible when T and E are
-static_assert(std::is_trivially_destructible_v<expt::expected<int, int>>);
+    // Destructor: trivially destructible when T and E are
+    CHECK(std::is_trivially_destructible_v<expt::expected<int, int>>);
 
-// Move constructor: noexcept when T and E are nothrow-move-constructible
-static_assert(std::is_nothrow_move_constructible_v<expt::expected<int, int>>);
-static_assert(!std::is_nothrow_move_constructible_v<expt::expected<ThrowingMove, int>>);
+    // Move constructor: noexcept when T and E are nothrow-move-constructible
+    CHECK(std::is_nothrow_move_constructible_v<expt::expected<int, int>>);
+    CHECK_FALSE(std::is_nothrow_move_constructible_v<expt::expected<ThrowingMove, int>>);
 
-// Move assignment: noexcept when all four noexcept conditions hold
-static_assert(std::is_nothrow_move_assignable_v<expt::expected<int, int>>);
+    // Move assignment: noexcept when all four noexcept conditions hold
+    CHECK(std::is_nothrow_move_assignable_v<expt::expected<int, int>>);
+}
 
-// operator* ref-qualification return types
-static_assert(std::is_same_v<decltype(*std::declval<expt::expected<int, int>&>()), int&>);
-static_assert(std::is_same_v<decltype(*std::declval<const expt::expected<int, int>&>()), const int&>);
-static_assert(std::is_same_v<decltype(*std::declval<expt::expected<int, int>&&>()), int&&>);
-static_assert(std::is_same_v<decltype(*std::declval<const expt::expected<int, int>&&>()), const int&&>);
+// 52697d22-633f-4e07-b364-5b5db41ca2a7
+TEST_CASE("expected: operator* ref-qualification return types", "[ExpectedTest]") {
+    using expected_t = expt::expected<int, int>;
+    CHECK(type_name<decltype(*std::declval<expected_t&>())>() == type_name<int&>());
+    CHECK(type_name<decltype(*std::declval<const expected_t&>())>() == type_name<const int&>());
+    CHECK(type_name<decltype(*std::declval<expected_t&&>())>() == type_name<int&&>());
+    CHECK(type_name<decltype(*std::declval<const expected_t&&>())>() == type_name<const int&&>());
+}
+// 52697d22-633f-4e07-b364-5b5db41ca2a7 end
 
-// error() ref-qualification return types
-static_assert(std::is_same_v<decltype(std::declval<expt::expected<int, int>&>().error()), int&>);
-static_assert(std::is_same_v<decltype(std::declval<const expt::expected<int, int>&>().error()), const int&>);
-static_assert(std::is_same_v<decltype(std::declval<expt::expected<int, int>&&>().error()), int&&>);
-static_assert(std::is_same_v<decltype(std::declval<const expt::expected<int, int>&&>().error()), const int&&>);
+TEST_CASE("expected: error() ref-qualification return types", "[ExpectedTest]") {
+    using expected_t = expt::expected<int, int>;
+    CHECK(type_name<decltype(std::declval<expected_t&>().error())>() == type_name<int&>());
+    CHECK(type_name<decltype(std::declval<const expected_t&>().error())>() == type_name<const int&>());
+    CHECK(type_name<decltype(std::declval<expected_t&&>().error())>() == type_name<int&&>());
+    CHECK(type_name<decltype(std::declval<const expected_t&&>().error())>() == type_name<const int&&>());
+}
 
 // =============================================================================
 // Type aliases
 // =============================================================================
 
 TEST_CASE("expected: type aliases", "[ExpectedTest]") {
-    static_assert(std::is_same_v<expt::expected<int, std::string>::value_type, int>);
-    static_assert(std::is_same_v<expt::expected<int, std::string>::error_type, std::string>);
-    static_assert(std::is_same_v<expt::expected<int, std::string>::unexpected_type, expt::unexpected<std::string>>);
-    static_assert(
-        std::is_same_v<expt::expected<int, std::string>::rebind<double>, expt::expected<double, std::string>>);
+    using expected_t = expt::expected<int, std::string>;
+    CHECK(type_name<expected_t::value_type>() == type_name<int>());
+    CHECK(type_name<expected_t::error_type>() == type_name<std::string>());
+    CHECK(type_name<expected_t::unexpected_type>() == type_name<expt::unexpected<std::string>>());
+    CHECK(type_name<expected_t::rebind<double>>() == type_name<expt::expected<double, std::string>>());
 }
 
 // =============================================================================
@@ -697,30 +718,75 @@ TEST_CASE("expected: cross-type equality error", "[ExpectedTest]") {
 
 // =============================================================================
 // Constexpr usage
+//
+// Each of these declares the expected as a constexpr object inside a
+// self-contained probe lambda and reduces its state to a literal aggregate. The
+// constexpr declaration keeps "is this usable as a constexpr variable?" answered
+// by the compiler; `constant_eval` runs the probe during translation — so "is
+// this usable in a constant expression?" is answered too — and hands back the
+// result as an ordinary value,
+// so "did it produce the right state?" is answered by a reported CHECK.
+// Calling the same probe directly runs the identical body at runtime, which
+// is worth doing separately: constant evaluation and ordinary evaluation take
+// different paths through a union-based type.
 // =============================================================================
 
+namespace {
+// The observable state of an expected<int, int>, reduced to literal types.
+// Streamable so that a mismatch prints both states; without an inserter
+// Catch2 reports `{?} == {?}` and the reporting benefit is lost.
+struct int_state {
+    bool has_value;
+    int  observed; // *e when has_value is true, e.error() otherwise
+
+    // HIDDEN FRIENDS
+    friend constexpr bool operator==(const int_state&, const int_state&) = default;
+    friend std::ostream&  operator<<(std::ostream& os, const int_state& s) {
+        return os << (s.has_value ? "{ value " : "{ error ") << s.observed << " }";
+    }
+};
+} // namespace
+
+// a525eae8-2bb0-4cae-aeaf-b134cbffef1c
 TEST_CASE("expected: constexpr default construction", "[ExpectedTest]") {
-    constexpr expt::expected<int, int> e;
-    static_assert(e.has_value());
-    static_assert(*e == 0);
+    constexpr auto probe = [] {
+        constexpr expt::expected<int, int> e;
+        return int_state{e.has_value(), *e};
+    };
+    CHECK(constant_eval(probe) == int_state{true, 0});
+    CHECK(probe() == int_state{true, 0});
 }
+// a525eae8-2bb0-4cae-aeaf-b134cbffef1c end
 
 TEST_CASE("expected: constexpr value construction", "[ExpectedTest]") {
-    constexpr expt::expected<int, int> e(42);
-    static_assert(e.has_value());
-    static_assert(*e == 42);
+    constexpr auto probe = [] {
+        constexpr expt::expected<int, int> e(42);
+        return int_state{e.has_value(), *e};
+    };
+    CHECK(constant_eval(probe) == int_state{true, 42});
+    CHECK(probe() == int_state{true, 42});
 }
 
 TEST_CASE("expected: constexpr error construction", "[ExpectedTest]") {
-    constexpr expt::expected<int, int> e(expt::unexpect, 7);
-    static_assert(!e.has_value());
-    static_assert(e.error() == 7);
+    constexpr auto probe = [] {
+        constexpr expt::expected<int, int> e(expt::unexpect, 7);
+        return int_state{e.has_value(), e.error()};
+    };
+    CHECK(constant_eval(probe) == int_state{false, 7});
+    CHECK(probe() == int_state{false, 7});
 }
 
 TEST_CASE("expected: constexpr equality", "[ExpectedTest]") {
-    constexpr expt::expected<int, int> a(42);
-    constexpr expt::expected<int, int> b(42);
-    static_assert(a == b);
+    // The answer here is a bare bool, so there is no richer value to report;
+    // the win is that a wrong answer is still a reported failure rather than
+    // a build break, and the rest of the file still runs.
+    constexpr auto probe = [] {
+        constexpr expt::expected<int, int> a(42);
+        constexpr expt::expected<int, int> b(42);
+        return a == b;
+    };
+    CHECK(constant_eval(probe));
+    CHECK(probe());
 }
 
 // =============================================================================
@@ -796,7 +862,7 @@ TEST_CASE("expected: operator-> returns address of value", "[ExpectedTest]") {
 
 TEST_CASE("expected: emplace with nothrow-constructible type", "[ExpectedTest]") {
     // int is nothrow constructible — emplace must be available
-    static_assert(std::is_nothrow_constructible_v<int, int>);
+    CHECK(std::is_nothrow_constructible_v<int, int>);
     expt::expected<int, std::string> e(expt::unexpect, "err");
     int&                             r = e.emplace(99);
     CHECK(r == 99);
@@ -809,10 +875,11 @@ TEST_CASE("expected: emplace with nothrow-constructible type", "[ExpectedTest]")
 // =============================================================================
 
 TEST_CASE("expected: value() ref-qualification return types", "[ExpectedTest]") {
-    static_assert(std::is_same_v<decltype(std::declval<expt::expected<int, int>&>().value()), int&>);
-    static_assert(std::is_same_v<decltype(std::declval<const expt::expected<int, int>&>().value()), const int&>);
-    static_assert(std::is_same_v<decltype(std::declval<expt::expected<int, int>&&>().value()), int&&>);
-    static_assert(std::is_same_v<decltype(std::declval<const expt::expected<int, int>&&>().value()), const int&&>);
+    using expected_t = expt::expected<int, int>;
+    CHECK(type_name<decltype(std::declval<expected_t&>().value())>() == type_name<int&>());
+    CHECK(type_name<decltype(std::declval<const expected_t&>().value())>() == type_name<const int&>());
+    CHECK(type_name<decltype(std::declval<expected_t&&>().value())>() == type_name<int&&>());
+    CHECK(type_name<decltype(std::declval<const expected_t&&>().value())>() == type_name<const int&&>());
 }
 
 // =============================================================================
@@ -1120,14 +1187,14 @@ TEST_CASE("cross-eq: expected<int,eq_a> == expected<int,eq_b>", "[ExpectedTest][
 // ---------------------------------------------------------------------------
 
 TEST_CASE("constraint: from_expected is derived from expected", "[ExpectedTest][constraint]") {
-    static_assert(std::is_base_of_v<expected<int, int>, from_expected>);
+    CHECK(std::is_base_of_v<expected<int, int>, from_expected>);
     from_expected fe(42);
     CHECK(fe.has_value());
     CHECK(*fe == 42);
 }
 
 TEST_CASE("constraint: from_unexpected is derived from unexpected", "[ExpectedTest][constraint]") {
-    static_assert(std::is_base_of_v<unexpected<int>, from_unexpected>);
+    CHECK(std::is_base_of_v<unexpected<int>, from_unexpected>);
     from_unexpected fu(7);
     CHECK(fu.error() == 7);
 }

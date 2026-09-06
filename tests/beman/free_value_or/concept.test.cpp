@@ -25,9 +25,11 @@ static_assert(fvo::nullable<std::optional<std::string>>);
 // type being const should still satisfy it)
 static_assert(fvo::nullable<const std::optional<int>>);
 
+#if FVO_HAS_STD_EXPECTED
 // std::expected<T,E>: bool(e) and *e are both valid on a const expected
 static_assert(fvo::nullable<std::expected<int, int>>);
 static_assert(fvo::nullable<std::expected<std::string, int>>);
+#endif // FVO_HAS_STD_EXPECTED
 
 // Raw pointers
 static_assert(fvo::nullable<int*>);

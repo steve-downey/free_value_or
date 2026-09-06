@@ -14,6 +14,21 @@ list(APPEND CMAKE_MODULE_PATH "${Catch2_SOURCE_DIR}/extras")
 include(CheckCXXSymbolExists)
 check_cxx_symbol_exists(_LIBCPP_VERSION "version" BEMAN_EXPECTED_USING_LIBCXX)
 
+# std::expected is not guaranteed by a C++23 toolchain: the libstdc++ paired
+# with Clang 18 in the CI images declares neither std::expected nor
+# std::bad_expected_access at any -std level. Both std-parity targets below
+# need the real type, so probe for it rather than infer it from the language
+# level. The probe compiles at C++23 because that is what those targets use.
+include(CheckCXXSourceCompiles)
+set(beman_expected_saved_cxx_standard "${CMAKE_CXX_STANDARD}")
+set(CMAKE_CXX_STANDARD 23)
+check_cxx_source_compiles(
+    "#include <expected>
+     int main() { std::expected<int, int> e{1}; return *e - 1; }"
+    BEMAN_EXPECTED_HAS_STD_EXPECTED
+)
+set(CMAKE_CXX_STANDARD "${beman_expected_saved_cxx_standard}")
+
 # Portable behavioral tests: run against every implementation under test.
 # Parameterized over the implementation via test_expected.hpp (see that header).
 set(beman_expected_behavioral_tests
@@ -64,13 +79,29 @@ target_link_libraries(
 )
 catch_discover_tests(beman.expected.tests.expected)
 
+if(BEMAN_EXPECTED_USE_MODULES)
+    add_library(beman.expected.tests.module_parity OBJECT)
+    target_sources(
+        beman.expected.tests.module_parity
+        PRIVATE header_idempotence.test.cpp
+    )
+    target_compile_definitions(
+        beman.expected.tests.module_parity
+        PRIVATE BEMAN_EXPECTED_TEST_MODULE
+    )
+    target_link_libraries(
+        beman.expected.tests.module_parity
+        PRIVATE beman::expected
+    )
+endif()
+
 # --- std::expected parity gate ---------------------------------------------
 # Compile the behavioral tests against std::expected (requires C++23). No
 # behavioral difference from beman::expected is expected except those that
 # involve reference specializations, which are not yet parameterized. Any
 # beman-specific assertion is guarded with #ifndef BEMAN_EXPECTED_TEST_STD.
 # Skipped on libc++ — see docs/std-parity.md.
-if(NOT BEMAN_EXPECTED_USING_LIBCXX)
+if(NOT BEMAN_EXPECTED_USING_LIBCXX AND BEMAN_EXPECTED_HAS_STD_EXPECTED)
     add_executable(beman.expected.tests.expected.std)
     target_sources(
         beman.expected.tests.expected.std
@@ -106,7 +137,7 @@ endif()
 # adversarial error types -- i.e. the unexpected<E> member is behaviourally
 # inert against a T/E rendering. Requires C++23; skipped on libc++ for the same
 # reason as the std parity gate above (see docs/std-parity.md).
-if(NOT BEMAN_EXPECTED_USING_LIBCXX)
+if(NOT BEMAN_EXPECTED_USING_LIBCXX AND BEMAN_EXPECTED_HAS_STD_EXPECTED)
     add_executable(beman.expected.tests.equivalence)
     target_sources(
         beman.expected.tests.equivalence
@@ -320,6 +351,10 @@ add_fail_test(expected_ref_e_t_unexpected_fail
     expected_ref_e_t_unexpected_fail.test.cpp
     "T must not be a specialization of unexpected"
 )
+add_fail_test(expected_ref_e_initializer_list_fail
+    expected_ref_e_initializer_list_fail.test.cpp
+    "initializer-list error construction cannot bind a reference|use of deleted function|call to deleted|attempting to reference"
+)
 
 # Step 8 — expected<T, E&> monadic mandates
 add_fail_test(expected_ref_e_and_then_wrong_error_type_fail
@@ -360,6 +395,10 @@ add_fail_test(expected_ref_both_inplace_value_fail
     expected_ref_both_inplace_value_fail.test.cpp
     "no in_place value constructor|use of deleted function|call to deleted|attempting to reference"
 )
+add_fail_test(expected_ref_both_initializer_list_fail
+    expected_ref_both_initializer_list_fail.test.cpp
+    "initializer-list error construction cannot bind a reference|use of deleted function|call to deleted|attempting to reference"
+)
 
 # Step 9 — expected<T&, E&> monadic mandates
 add_fail_test(expected_ref_both_and_then_wrong_error_type_fail
@@ -391,6 +430,10 @@ add_fail_test(expected_void_ref_e_construct_from_unexpected_fail
 add_fail_test(expected_void_ref_e_assign_unexpected_fail
     expected_void_ref_e_assign_unexpected_fail.test.cpp
     "no assignment from unexpected|use of deleted function|call to deleted|invokes a deleted function|selected deleted operator|attempting to reference"
+)
+add_fail_test(expected_void_ref_e_initializer_list_fail
+    expected_void_ref_e_initializer_list_fail.test.cpp
+    "initializer-list error construction cannot bind a reference|use of deleted function|call to deleted|attempting to reference"
 )
 
 # P3413 — value_or_construct / value_or_else mandates

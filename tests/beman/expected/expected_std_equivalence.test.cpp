@@ -3,7 +3,7 @@
 
 // Observable-equivalence gate: beman::expected holds the exposition-only member
 // unexpected<E>, but every observable special-member property is keyed on E.
-// This asserts, across a battery of adversarial error types, that the resulting
+// This checks, across a battery of adversarial error types, that the resulting
 // type traits match std::expected exactly -- i.e. that the unexpected<E> member
 // is behaviourally inert against a T/E rendering. See D4280: ABI stability for
 // existing implementations is a design goal, and any divergence found here is a
@@ -14,6 +14,12 @@
 // non-trivial assignment is a specification accident). Those traits are checked
 // as "beman is at least as trivial as std".
 //
+// The comparisons are made at runtime rather than with static_assert so that a
+// divergence is reported by the test run -- naming the trait and the pair of
+// types it disagreed on, and reporting *every* divergence -- instead of
+// stopping the build at the first one and reporting nothing. The traits
+// themselves are still compile-time facts; only the verdict is reported.
+//
 // Compiled against std::expected requires C++23. Skipped on libc++, whose
 // std::expected has its own quirks for pathological types -- see the std-parity
 // gate in CMakeLists.txt and docs/std-parity.md.
@@ -22,11 +28,15 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <beman/expected/testing/type_name.hpp>
+
 #include <expected>
 #include <string>
 #include <type_traits>
 
 namespace bx = beman::expected;
+
+using beman::expected::testing::display_name;
 
 namespace {
 
@@ -99,11 +109,25 @@ inline constexpr bool skip_trivial_parity = false;
 template <>
 inline constexpr bool skip_trivial_parity<Immovable> = true;
 
+// Every trait parity for one (E, T) pair, each one reported. `Bm` and `St` are
+// named in the failure output so a divergence says which pair of types it was
+// found on; the trait's own name is carried by the CHECK expression and by the
+// scoped message, which is what the static_assert message used to say.
 template <class E, class T>
-constexpr bool parity() {
+void check_parity() {
     using Bm = bx::expected<T, E>;
     using St = std::expected<T, E>;
-#define BEMAN_PARITY(TRAIT) static_assert(std::TRAIT##_v<Bm> == std::TRAIT##_v<St>, #TRAIT " parity")
+
+    constexpr auto bm_name = display_name<Bm>();
+    constexpr auto st_name = display_name<St>();
+    INFO("beman: " << bm_name);
+    INFO("std:   " << st_name);
+
+#define BEMAN_PARITY(TRAIT)                              \
+    do {                                                 \
+        INFO(#TRAIT " parity");                          \
+        CHECK(std::TRAIT##_v<Bm> == std::TRAIT##_v<St>); \
+    } while (false)
     BEMAN_PARITY(is_copy_constructible);
     BEMAN_PARITY(is_move_constructible);
     BEMAN_PARITY(is_nothrow_copy_constructible);
@@ -121,34 +145,41 @@ constexpr bool parity() {
     BEMAN_PARITY(is_swappable);
     BEMAN_PARITY(is_nothrow_swappable);
 #undef BEMAN_PARITY
+
     // Drive-by fix: beman is at least as trivially copyable/assignable as std.
+    // Each is an implication, so it is one bool rather than a comparison; the
+    // extra parentheses keep Catch2 from trying to decompose the `||`.
     if constexpr (!skip_trivial_parity<E>) {
-        static_assert(!std::is_trivially_copy_assignable_v<St> || std::is_trivially_copy_assignable_v<Bm>);
-        static_assert(!std::is_trivially_move_assignable_v<St> || std::is_trivially_move_assignable_v<Bm>);
-        static_assert(!std::is_trivially_copyable_v<St> || std::is_trivially_copyable_v<Bm>);
+        INFO("beman is at least as trivial as std");
+        CHECK((!std::is_trivially_copy_assignable_v<St> || std::is_trivially_copy_assignable_v<Bm>));
+        CHECK((!std::is_trivially_move_assignable_v<St> || std::is_trivially_move_assignable_v<Bm>));
+        CHECK((!std::is_trivially_copyable_v<St> || std::is_trivially_copyable_v<Bm>));
     }
-    return true;
 }
-
-#define BEMAN_RUN(E) static_assert(parity<E, int>() && parity<E, void>())
-BEMAN_RUN(Plain);
-BEMAN_RUN(DelMoveOkCopy);
-BEMAN_RUN(MoveOnly);
-BEMAN_RUN(ThrowMoveNoexceptCopy);
-BEMAN_RUN(NonTrivialDtor);
-BEMAN_RUN(NoexceptMoveOnly);
-BEMAN_RUN(Immovable);
-BEMAN_RUN(NoexceptNonTrivial);
-BEMAN_RUN(int);
-BEMAN_RUN(std::string);
-#undef BEMAN_RUN
-
-// Lock in the drive-by fix itself: beman is trivially copyable for trivial T,E
-// (std::expected is not, by specification accident).
-static_assert(std::is_trivially_copyable_v<bx::expected<int, int>>);
 
 } // namespace
 
 TEST_CASE("beman::expected type traits match std::expected") {
-    SUCCEED("all parity checks are static_asserts evaluated at compile time");
+#define BEMAN_RUN(E)             \
+    do {                         \
+        check_parity<E, int>();  \
+        check_parity<E, void>(); \
+    } while (false)
+    BEMAN_RUN(Plain);
+    BEMAN_RUN(DelMoveOkCopy);
+    BEMAN_RUN(MoveOnly);
+    BEMAN_RUN(ThrowMoveNoexceptCopy);
+    BEMAN_RUN(NonTrivialDtor);
+    BEMAN_RUN(NoexceptMoveOnly);
+    BEMAN_RUN(Immovable);
+    BEMAN_RUN(NoexceptNonTrivial);
+    BEMAN_RUN(int);
+    BEMAN_RUN(std::string);
+#undef BEMAN_RUN
+}
+
+TEST_CASE("beman::expected<int,int> is trivially copyable") {
+    // Lock in the drive-by fix itself: beman is trivially copyable for trivial
+    // T,E (std::expected is not, by specification accident).
+    CHECK(std::is_trivially_copyable_v<bx::expected<int, int>>);
 }

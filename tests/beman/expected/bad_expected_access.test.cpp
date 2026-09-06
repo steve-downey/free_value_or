@@ -5,26 +5,41 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <beman/expected/testing/type_name.hpp>
+
 #include <exception>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 namespace expt = test_ns;
 
+using beman::expected::testing::type_name;
+
 // =============================================================================
-// [expected.bad.void] and [expected.bad] — type-level assertions
+// [expected.bad.void] and [expected.bad] — type-level properties
+//
+// These are checked at runtime rather than with static_assert so that a
+// violated property is reported by the test run, with the responsible type
+// named, instead of stopping the build at the first failure and reporting
+// nothing. Type identity is checked by comparing the compiler's spelling of
+// the two types, so a mismatch prints what was deduced next to what was
+// wanted rather than the bare word `false`.
 // =============================================================================
 
-// Inheritance chain
-static_assert(std::is_base_of_v<std::exception, expt::bad_expected_access<void>>);
-static_assert(std::is_base_of_v<expt::bad_expected_access<void>, expt::bad_expected_access<int>>);
-static_assert(std::is_base_of_v<std::exception, expt::bad_expected_access<int>>);
+TEST_CASE("bad_expected_access: inheritance chain", "[BadExpectedAccessTest]") {
+    CHECK(std::is_base_of_v<std::exception, expt::bad_expected_access<void>>);
+    CHECK(std::is_base_of_v<expt::bad_expected_access<void>, expt::bad_expected_access<int>>);
+    CHECK(std::is_base_of_v<std::exception, expt::bad_expected_access<int>>);
+}
 
-// error() ref-qualification return types
-static_assert(std::is_same_v<decltype(std::declval<expt::bad_expected_access<int>&>().error()), int&>);
-static_assert(std::is_same_v<decltype(std::declval<const expt::bad_expected_access<int>&>().error()), const int&>);
-static_assert(std::is_same_v<decltype(std::declval<expt::bad_expected_access<int>&&>().error()), int&&>);
-static_assert(std::is_same_v<decltype(std::declval<const expt::bad_expected_access<int>&&>().error()), const int&&>);
+TEST_CASE("bad_expected_access: error() ref-qualification return types", "[BadExpectedAccessTest]") {
+    using bad_access_t = expt::bad_expected_access<int>;
+    CHECK(type_name<decltype(std::declval<bad_access_t&>().error())>() == type_name<int&>());
+    CHECK(type_name<decltype(std::declval<const bad_access_t&>().error())>() == type_name<const int&>());
+    CHECK(type_name<decltype(std::declval<bad_access_t&&>().error())>() == type_name<int&&>());
+    CHECK(type_name<decltype(std::declval<const bad_access_t&&>().error())>() == type_name<const int&&>());
+}
 
 TEST_CASE("bad_expected_access: breathing", "[BadExpectedAccessTest]") {}
 

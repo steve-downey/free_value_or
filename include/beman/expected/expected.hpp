@@ -244,11 +244,13 @@ class expected {
     // an unexpected<E&> holding an external object, instead.
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected(const unexpected<G>&) = delete;
+    constexpr expected(const unexpected<G>&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T,E&>: cannot construct from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected(unexpected<G>&&) = delete;
+    constexpr expected(unexpected<G>&&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T,E&>: cannot construct from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     // In-place constructor for value
     template <class... Args>
@@ -268,19 +270,26 @@ class expected {
     // Deleted: single argument would bind E& to a temporary — dangling prevention
     template <class... Args>
         requires(detail::unexpect_dangles_v<E, Args...>)
-    constexpr expected(unexpect_t, Args&&...) = delete;
+    constexpr expected(unexpect_t, Args&&...) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T,E&>: unexpect argument would bind a temporary that dangles; pass an lvalue reference");
 
     // Deleted catch-all: reference E, argument neither constructible nor a dangling case
     // (e.g. binding a non-const E& from a const lvalue).
     template <class... Args>
         requires(std::is_reference_v<E> && !std::is_constructible_v<E, Args...> &&
                  !detail::unexpect_dangles_v<E, Args...>)
-    constexpr expected(unexpect_t, Args&&...) = delete;
+    constexpr expected(unexpect_t, Args&&...) =
+        BEMAN_EXPECTED_DELETE_MSG("expected<T,E&>: no viable conversion from the given argument(s) to E&");
 
     // In-place constructor for error with initializer_list
     template <class U, class... Args>
-        requires std::is_constructible_v<E, std::initializer_list<U>&, Args...>
+        requires(!std::is_reference_v<E> && std::is_constructible_v<E, std::initializer_list<U>&, Args...>)
     constexpr explicit expected(unexpect_t, std::initializer_list<U> il, Args&&... args);
+
+    template <class U, class... Args>
+        requires std::is_reference_v<E>
+    constexpr expected(unexpect_t, std::initializer_list<U>, Args&&...) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T,E&>: initializer-list error construction cannot bind a reference; pass an lvalue reference");
 
     // -------------------------------------------------------------------------
     // [expected.object.dtor] Destructor
@@ -309,8 +318,8 @@ class expected {
                                                                 std::is_nothrow_copy_assignable_v<T> &&
                                                                 std::is_nothrow_copy_constructible_v<E> &&
                                                                 std::is_nothrow_copy_assignable_v<E>)
-        requires(std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T> && std::is_copy_constructible_v<E> &&
-                 std::is_copy_assignable_v<E> &&
+        requires(std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T> &&
+                 (std::is_reference_v<E> || (std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E>)) &&
                  (std::is_nothrow_move_constructible_v<T> || std::is_nothrow_move_constructible_v<E>) &&
                  !(std::is_trivially_copy_constructible_v<T> && std::is_trivially_copy_assignable_v<T> &&
                    std::is_trivially_destructible_v<T> && std::is_trivially_copy_constructible_v<E> &&
@@ -328,8 +337,8 @@ class expected {
                                                            std::is_nothrow_move_assignable_v<T> &&
                                                            std::is_nothrow_move_constructible_v<E> &&
                                                            std::is_nothrow_move_assignable_v<E>)
-        requires(std::is_move_constructible_v<T> && std::is_move_assignable_v<T> && std::is_move_constructible_v<E> &&
-                 std::is_move_assignable_v<E> &&
+        requires(std::is_move_constructible_v<T> && std::is_move_assignable_v<T> &&
+                 (std::is_reference_v<E> || (std::is_move_constructible_v<E> && std::is_move_assignable_v<E>)) &&
                  (std::is_nothrow_move_constructible_v<T> || std::is_nothrow_move_constructible_v<E>) &&
                  !(std::is_trivially_move_constructible_v<T> && std::is_trivially_move_assignable_v<T> &&
                    std::is_trivially_destructible_v<T> && std::is_trivially_move_constructible_v<E> &&
@@ -373,11 +382,13 @@ class expected {
     // Deleted for reference E with value G: would rebind E& to unexpected<G>'s temporary storage.
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected& operator=(const unexpected<G>&) = delete;
+    constexpr expected& operator=(const unexpected<G>&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T,E&>: cannot assign from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected& operator=(unexpected<G>&&) = delete;
+    constexpr expected& operator=(unexpected<G>&&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T,E&>: cannot assign from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     // Emplace: destroy current value/error, construct value in-place
     template <class... Args>
@@ -712,7 +723,7 @@ constexpr expected<T, E>::expected(unexpect_t, Args&&... args) : has_val_(false)
 
 template <class T, class E>
 template <class U, class... Args>
-    requires std::is_constructible_v<E, std::initializer_list<U>&, Args...>
+    requires(!std::is_reference_v<E> && std::is_constructible_v<E, std::initializer_list<U>&, Args...>)
 constexpr expected<T, E>::expected(unexpect_t, std::initializer_list<U> il, Args&&... args) : has_val_(false) {
     std::construct_at(std::addressof(unex_), std::in_place, il, std::forward<Args>(args)...);
 }
@@ -739,8 +750,8 @@ template <class T, class E>
 constexpr expected<T, E>& expected<T, E>::operator=(const expected& rhs) noexcept(
     std::is_nothrow_copy_constructible_v<T> && std::is_nothrow_copy_assignable_v<T> &&
     std::is_nothrow_copy_constructible_v<E> && std::is_nothrow_copy_assignable_v<E>)
-    requires(std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T> && std::is_copy_constructible_v<E> &&
-             std::is_copy_assignable_v<E> &&
+    requires(std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T> &&
+             (std::is_reference_v<E> || (std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E>)) &&
              (std::is_nothrow_move_constructible_v<T> || std::is_nothrow_move_constructible_v<E>) &&
              !(std::is_trivially_copy_constructible_v<T> && std::is_trivially_copy_assignable_v<T> &&
                std::is_trivially_destructible_v<T> && std::is_trivially_copy_constructible_v<E> &&
@@ -767,8 +778,8 @@ constexpr expected<T, E>& expected<T, E>::operator=(expected&& rhs) noexcept(std
                                                                              std::is_nothrow_move_assignable_v<T> &&
                                                                              std::is_nothrow_move_constructible_v<E> &&
                                                                              std::is_nothrow_move_assignable_v<E>)
-    requires(std::is_move_constructible_v<T> && std::is_move_assignable_v<T> && std::is_move_constructible_v<E> &&
-             std::is_move_assignable_v<E> &&
+    requires(std::is_move_constructible_v<T> && std::is_move_assignable_v<T> &&
+             (std::is_reference_v<E> || (std::is_move_constructible_v<E> && std::is_move_assignable_v<E>)) &&
              (std::is_nothrow_move_constructible_v<T> || std::is_nothrow_move_constructible_v<E>) &&
              !(std::is_trivially_move_constructible_v<T> && std::is_trivially_move_assignable_v<T> &&
                std::is_trivially_destructible_v<T> && std::is_trivially_move_constructible_v<E> &&
@@ -1532,16 +1543,16 @@ class expected<void, E> {
     // unexpected<E>'s constructibility from this very class, which some standard library
     // implementations of reference_constructs_from_temporary_v resolve as a circular constraint.
     template <class U, class G>
-        requires(std::is_void_v<U> && !std::is_same_v<G, E> && std::is_constructible_v<E, const G&> &&
-                 !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
+        requires(std::is_void_v<U> && !std::is_reference_v<E> && !std::is_same_v<G, E> &&
+                 std::is_constructible_v<E, const G&> && !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
                  !std::is_constructible_v<unexpected<E>, expected<U, G> &&> &&
                  !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
                  !std::is_constructible_v<unexpected<E>, const expected<U, G> &&>)
     constexpr explicit(!std::is_convertible_v<const G&, E>) expected(const expected<U, G>& rhs);
 
     template <class U, class G>
-        requires(std::is_void_v<U> && !std::is_same_v<G, E> && std::is_constructible_v<E, G> &&
-                 !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
+        requires(std::is_void_v<U> && !std::is_reference_v<E> && !std::is_same_v<G, E> &&
+                 std::is_constructible_v<E, G> && !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
                  !std::is_constructible_v<unexpected<E>, expected<U, G> &&> &&
                  !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
                  !std::is_constructible_v<unexpected<E>, const expected<U, G> &&>)
@@ -1572,11 +1583,13 @@ class expected<void, E> {
     // binding E& to it would dangle once the source is destroyed. Use (unexpect, lvalue) instead.
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected(const unexpected<G>&) = delete;
+    constexpr expected(const unexpected<G>&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<void,E&>: cannot construct from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected(unexpected<G>&&) = delete;
+    constexpr expected(unexpected<G>&&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<void,E&>: cannot construct from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     // In-place constructor for value (no args, just marks has-value)
     constexpr explicit expected(std::in_place_t) noexcept;
@@ -1589,24 +1602,41 @@ class expected<void, E> {
     // Deleted: single argument would bind E& to a temporary — dangling prevention
     template <class... Args>
         requires(detail::unexpect_dangles_v<E, Args...>)
-    constexpr expected(unexpect_t, Args&&...) = delete;
+    constexpr expected(unexpect_t, Args&&...) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<void,E&>: unexpect argument would bind a temporary that dangles; pass an lvalue reference");
 
     // Deleted catch-all: reference E, argument neither constructible nor a dangling case
     // (e.g. binding a non-const E& from a const lvalue).
     template <class... Args>
         requires(std::is_reference_v<E> && !std::is_constructible_v<E, Args...> &&
                  !detail::unexpect_dangles_v<E, Args...>)
-    constexpr expected(unexpect_t, Args&&...) = delete;
+    constexpr expected(unexpect_t, Args&&...) =
+        BEMAN_EXPECTED_DELETE_MSG("expected<void,E&>: no viable conversion from the given argument(s) to E&");
 
     // In-place constructor for error with initializer_list
     template <class U, class... Args>
-        requires std::is_constructible_v<E, std::initializer_list<U>&, Args...>
+        requires(!std::is_reference_v<E> && std::is_constructible_v<E, std::initializer_list<U>&, Args...>)
     constexpr explicit expected(unexpect_t, std::initializer_list<U> il, Args&&... args);
 
-    // Converting constructor from expected<void, G&> — reference-E path only
+    template <class U, class... Args>
+        requires std::is_reference_v<E>
+    constexpr expected(unexpect_t, std::initializer_list<U>, Args&&...) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<void,E&>: initializer-list error construction cannot bind a reference; pass an lvalue reference");
+
+    // Converting constructor from expected<void, G&> — reference-E path only. G is itself a
+    // reference to an external object, so binding E& to it cannot dangle regardless of the
+    // source's value category, provided the reference conversion itself does not materialize a
+    // temporary (e.g. a base-from-derived or qualification conversion is fine; a user-defined
+    // conversion that returns by value is not). Mirrors the unexpected<G> reference-E path above.
     template <class G>
-        requires(std::is_reference_v<E> && std::is_convertible_v<G&, E>)
+        requires(std::is_reference_v<E> && std::is_convertible_v<G&, E> &&
+                 !detail::reference_constructs_from_temporary_v<E, G&>)
     constexpr explicit(!std::is_convertible_v<G&, E>) expected(const expected<void, G&>& rhs);
+
+    template <class G>
+        requires(std::is_reference_v<E> && std::is_convertible_v<G&, E> &&
+                 !detail::reference_constructs_from_temporary_v<E, G&>)
+    constexpr explicit(!std::is_convertible_v<G&, E>) expected(expected<void, G&>&& rhs);
 
     // -------------------------------------------------------------------------
     // [expected.void.dtor] Destructor
@@ -1632,7 +1662,7 @@ class expected<void, E> {
     // Copy assignment (non-trivial path)
     constexpr expected& operator=(const expected& rhs) noexcept(std::is_nothrow_copy_constructible_v<E> &&
                                                                 std::is_nothrow_copy_assignable_v<E>)
-        requires(std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E> &&
+        requires((std::is_reference_v<E> || (std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E>)) &&
                  !(std::is_trivially_copy_constructible_v<E> && std::is_trivially_copy_assignable_v<E> &&
                    std::is_trivially_destructible_v<E>));
 
@@ -1645,7 +1675,7 @@ class expected<void, E> {
     // Move assignment (non-trivial path)
     constexpr expected& operator=(expected&& rhs) noexcept(std::is_nothrow_move_constructible_v<E> &&
                                                            std::is_nothrow_move_assignable_v<E>)
-        requires(std::is_move_constructible_v<E> && std::is_move_assignable_v<E> &&
+        requires((std::is_reference_v<E> || (std::is_move_constructible_v<E> && std::is_move_assignable_v<E>)) &&
                  !(std::is_trivially_move_constructible_v<E> && std::is_trivially_move_assignable_v<E> &&
                    std::is_trivially_destructible_v<E>));
 
@@ -1672,11 +1702,13 @@ class expected<void, E> {
     // Deleted for reference E with value G: would bind E& to storage inside the temporary unexpected.
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected& operator=(const unexpected<G>&) = delete;
+    constexpr expected& operator=(const unexpected<G>&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<void,E&>: cannot assign from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected& operator=(unexpected<G>&&) = delete;
+    constexpr expected& operator=(unexpected<G>&&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<void,E&>: cannot assign from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     constexpr void emplace() noexcept;
 
@@ -1726,7 +1758,9 @@ class expected<void, E> {
     // for value E, no value_or overload is declared at all (there is nothing to delete against).
     template <class U>
         requires std::is_reference_v<E>
-    constexpr void value_or(U&&) const = delete;
+    constexpr void value_or(U&&) const =
+        BEMAN_EXPECTED_DELETE_MSG("expected<void,E>: value_or is not defined for void value_type; there is no "
+                                  "value to fall back from — use has_value()/error()");
 
     // -------------------------------------------------------------------------
     // [expected.void.monadic] Monadic operations
@@ -1830,8 +1864,8 @@ constexpr expected<void, E>::expected(expected&& rhs) noexcept(std::is_nothrow_m
 
 template <class E>
 template <class U, class G>
-    requires(std::is_void_v<U> && !std::is_same_v<G, E> && std::is_constructible_v<E, const G&> &&
-             !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
+    requires(std::is_void_v<U> && !std::is_reference_v<E> && !std::is_same_v<G, E> &&
+             std::is_constructible_v<E, const G&> && !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
              !std::is_constructible_v<unexpected<E>, expected<U, G> &&> &&
              !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
              !std::is_constructible_v<unexpected<E>, const expected<U, G> &&>)
@@ -1842,7 +1876,7 @@ constexpr expected<void, E>::expected(const expected<U, G>& rhs) : has_val_(rhs.
 
 template <class E>
 template <class U, class G>
-    requires(std::is_void_v<U> && !std::is_same_v<G, E> && std::is_constructible_v<E, G> &&
+    requires(std::is_void_v<U> && !std::is_reference_v<E> && !std::is_same_v<G, E> && std::is_constructible_v<E, G> &&
              !std::is_constructible_v<unexpected<E>, expected<U, G>&> &&
              !std::is_constructible_v<unexpected<E>, expected<U, G> &&> &&
              !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
@@ -1891,15 +1925,25 @@ constexpr expected<void, E>::expected(unexpect_t, Args&&... args) : has_val_(fal
 
 template <class E>
 template <class U, class... Args>
-    requires std::is_constructible_v<E, std::initializer_list<U>&, Args...>
+    requires(!std::is_reference_v<E> && std::is_constructible_v<E, std::initializer_list<U>&, Args...>)
 constexpr expected<void, E>::expected(unexpect_t, std::initializer_list<U> il, Args&&... args) : has_val_(false) {
     std::construct_at(std::addressof(unex_), std::in_place, il, std::forward<Args>(args)...);
 }
 
 template <class E>
 template <class G>
-    requires(std::is_reference_v<E> && std::is_convertible_v<G&, E>)
+    requires(std::is_reference_v<E> && std::is_convertible_v<G&, E> &&
+             !detail::reference_constructs_from_temporary_v<E, G&>)
 constexpr expected<void, E>::expected(const expected<void, G&>& rhs) : has_val_(rhs.has_value()) {
+    if (!has_val_)
+        std::construct_at(std::addressof(unex_), rhs.error());
+}
+
+template <class E>
+template <class G>
+    requires(std::is_reference_v<E> && std::is_convertible_v<G&, E> &&
+             !detail::reference_constructs_from_temporary_v<E, G&>)
+constexpr expected<void, E>::expected(expected<void, G&>&& rhs) : has_val_(rhs.has_value()) {
     if (!has_val_)
         std::construct_at(std::addressof(unex_), rhs.error());
 }
@@ -1924,7 +1968,7 @@ template <class E>
 constexpr expected<void, E>&
 expected<void, E>::operator=(const expected& rhs) noexcept(std::is_nothrow_copy_constructible_v<E> &&
                                                            std::is_nothrow_copy_assignable_v<E>)
-    requires(std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E> &&
+    requires((std::is_reference_v<E> || (std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E>)) &&
              !(std::is_trivially_copy_constructible_v<E> && std::is_trivially_copy_assignable_v<E> &&
                std::is_trivially_destructible_v<E>))
 {
@@ -1946,7 +1990,7 @@ template <class E>
 constexpr expected<void, E>&
 expected<void, E>::operator=(expected&& rhs) noexcept(std::is_nothrow_move_constructible_v<E> &&
                                                       std::is_nothrow_move_assignable_v<E>)
-    requires(std::is_move_constructible_v<E> && std::is_move_assignable_v<E> &&
+    requires((std::is_reference_v<E> || (std::is_move_constructible_v<E> && std::is_move_assignable_v<E>)) &&
              !(std::is_trivially_move_constructible_v<E> && std::is_trivially_move_assignable_v<E> &&
                std::is_trivially_destructible_v<E>))
 {
@@ -2436,7 +2480,7 @@ class expected<T&, E> {
     // Constructors
     // -------------------------------------------------------------------------
 
-    expected() = delete;
+    expected() = BEMAN_EXPECTED_DELETE_MSG("expected<T&,E>: no default constructor; T& cannot be null");
 
     // Copy constructor (trivial path). Unconstrained; see the primary
     // template's copy constructor for why.
@@ -2455,7 +2499,9 @@ class expected<T&, E> {
 
     // Deleted: no in-place value constructor — T& cannot be constructed in-place
     template <class... Args>
-    constexpr expected(std::in_place_t, Args&&...) = delete;
+    constexpr expected(std::in_place_t, Args&&...) =
+        BEMAN_EXPECTED_DELETE_MSG("expected<T&,E>: no in-place value constructor; T& cannot be constructed "
+                                  "in-place — pass a U convertible to T&");
 
     // Value constructor — takes U that can bind to T&
     template <class U = T>
@@ -2472,7 +2518,8 @@ class expected<T&, E> {
     // Deleted: binding a temporary to T& creates a dangling reference
     template <class U>
         requires(detail::reference_constructs_from_temporary_v<T&, U>)
-    constexpr expected(U&&) = delete;
+    constexpr expected(U&&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T&,E>: argument would bind a temporary that dangles; pass an lvalue reference");
 
     // Converting constructor from expected<U&, G> (copy) — value-E path
     template <class U, class G>
@@ -2527,11 +2574,13 @@ class expected<T&, E> {
     // an unexpected<E&> holding an external object, instead.
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected(const unexpected<G>&) = delete;
+    constexpr expected(const unexpected<G>&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T&,E&>: cannot construct from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected(unexpected<G>&&) = delete;
+    constexpr expected(unexpected<G>&&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T&,E&>: cannot construct from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     // In-place constructor for error
     template <class... Args>
@@ -2541,18 +2590,25 @@ class expected<T&, E> {
     // Deleted: single argument would bind E& to a temporary — dangling prevention
     template <class... Args>
         requires(detail::unexpect_dangles_v<E, Args...>)
-    constexpr expected(unexpect_t, Args&&...) = delete;
+    constexpr expected(unexpect_t, Args&&...) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T&,E&>: unexpect argument would bind a temporary that dangles; pass an lvalue reference");
 
     // Deleted catch-all: reference E, argument neither constructible nor a dangling case
     template <class... Args>
         requires(std::is_reference_v<E> && !std::is_constructible_v<E, Args...> &&
                  !detail::unexpect_dangles_v<E, Args...>)
-    constexpr expected(unexpect_t, Args&&...) = delete;
+    constexpr expected(unexpect_t, Args&&...) =
+        BEMAN_EXPECTED_DELETE_MSG("expected<T&,E&>: no viable conversion from the given argument(s) to E&");
 
     // In-place constructor for error with initializer_list
     template <class U, class... Args>
-        requires std::is_constructible_v<E, std::initializer_list<U>&, Args...>
+        requires(!std::is_reference_v<E> && std::is_constructible_v<E, std::initializer_list<U>&, Args...>)
     constexpr explicit expected(unexpect_t, std::initializer_list<U> il, Args&&... args);
+
+    template <class U, class... Args>
+        requires std::is_reference_v<E>
+    constexpr expected(unexpect_t, std::initializer_list<U>, Args&&...) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T&,E&>: initializer-list error construction cannot bind a reference; pass an lvalue reference");
 
     // -------------------------------------------------------------------------
     // Destructor
@@ -2578,7 +2634,7 @@ class expected<T&, E> {
     // Copy assignment (non-trivial path)
     constexpr expected& operator=(const expected& rhs) noexcept(std::is_nothrow_copy_constructible_v<E> &&
                                                                 std::is_nothrow_copy_assignable_v<E>)
-        requires(std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E> &&
+        requires((std::is_reference_v<E> || (std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E>)) &&
                  !(std::is_trivially_copy_constructible_v<E> && std::is_trivially_copy_assignable_v<E> &&
                    std::is_trivially_destructible_v<E>));
 
@@ -2591,7 +2647,7 @@ class expected<T&, E> {
     // Move assignment (non-trivial path)
     constexpr expected& operator=(expected&& rhs) noexcept(std::is_nothrow_move_constructible_v<E> &&
                                                            std::is_nothrow_move_assignable_v<E>)
-        requires(std::is_move_constructible_v<E> && std::is_move_assignable_v<E> &&
+        requires((std::is_reference_v<E> || (std::is_move_constructible_v<E> && std::is_move_assignable_v<E>)) &&
                  !(std::is_trivially_move_constructible_v<E> && std::is_trivially_move_assignable_v<E> &&
                    std::is_trivially_destructible_v<E>));
 
@@ -2636,11 +2692,13 @@ class expected<T&, E> {
     // Deleted for reference E with value G: would rebind E& to unexpected<G>'s temporary storage.
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected& operator=(const unexpected<G>&) = delete;
+    constexpr expected& operator=(const unexpected<G>&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T&,E&>: cannot assign from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     template <class G>
         requires(std::is_reference_v<E> && !std::is_reference_v<G>)
-    constexpr expected& operator=(unexpected<G>&&) = delete;
+    constexpr expected& operator=(unexpected<G>&&) = BEMAN_EXPECTED_DELETE_MSG(
+        "expected<T&,E&>: cannot assign from unexpected<value>; the value would dangle — use unexpected<E&>");
 
     // emplace — rebind the reference
     template <class U = T>
@@ -2909,7 +2967,7 @@ constexpr expected<T&, E>::expected(unexpect_t, Args&&... args) : has_val_(false
 
 template <class T, class E>
 template <class U, class... Args>
-    requires std::is_constructible_v<E, std::initializer_list<U>&, Args...>
+    requires(!std::is_reference_v<E> && std::is_constructible_v<E, std::initializer_list<U>&, Args...>)
 constexpr expected<T&, E>::expected(unexpect_t, std::initializer_list<U> il, Args&&... args) : has_val_(false) {
     std::construct_at(std::addressof(unex_), std::in_place, il, std::forward<Args>(args)...);
 }
@@ -2934,7 +2992,7 @@ template <class T, class E>
 constexpr expected<T&, E>&
 expected<T&, E>::operator=(const expected& rhs) noexcept(std::is_nothrow_copy_constructible_v<E> &&
                                                          std::is_nothrow_copy_assignable_v<E>)
-    requires(std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E> &&
+    requires((std::is_reference_v<E> || (std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E>)) &&
              !(std::is_trivially_copy_constructible_v<E> && std::is_trivially_copy_assignable_v<E> &&
                std::is_trivially_destructible_v<E>))
 {
@@ -2957,7 +3015,7 @@ template <class T, class E>
 constexpr expected<T&, E>&
 expected<T&, E>::operator=(expected&& rhs) noexcept(std::is_nothrow_move_constructible_v<E> &&
                                                     std::is_nothrow_move_assignable_v<E>)
-    requires(std::is_move_constructible_v<E> && std::is_move_assignable_v<E> &&
+    requires((std::is_reference_v<E> || (std::is_move_constructible_v<E> && std::is_move_assignable_v<E>)) &&
              !(std::is_trivially_move_constructible_v<E> && std::is_trivially_move_assignable_v<E> &&
                std::is_trivially_destructible_v<E>))
 {

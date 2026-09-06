@@ -35,9 +35,11 @@ static_assert(std::is_same_v<decltype(fvo::value_or(std::declval<std::optional<i
 static_assert(
     std::is_same_v<decltype(fvo::value_or(std::declval<const std::optional<int>&>(), std::declval<int>())), int>);
 
+#if FVO_HAS_STD_EXPECTED
 // expected<int,int> + int → iter_ref=int& → int
 static_assert(
     std::is_same_v<decltype(fvo::value_or(std::declval<std::expected<int, int>&>(), std::declval<int>())), int>);
+#endif // FVO_HAS_STD_EXPECTED
 
 // int* + int → iter_ref(*ptr) = int& → int
 static_assert(std::is_same_v<decltype(fvo::value_or(std::declval<int*>(), std::declval<int>())), int>);
@@ -74,6 +76,7 @@ TEST_CASE("value_or: optional<int> engaged and disengaged", "[value_or]") {
     CHECK(fvo::value_or(disengaged, 0) == 0);
 }
 
+#if FVO_HAS_STD_EXPECTED
 TEST_CASE("value_or: expected<int,int> engaged and disengaged", "[value_or]") {
     auto engaged    = NullableFixture<int>::exp_engaged(42);
     auto disengaged = NullableFixture<int>::exp_disengaged();
@@ -81,6 +84,7 @@ TEST_CASE("value_or: expected<int,int> engaged and disengaged", "[value_or]") {
     CHECK(fvo::value_or(engaged, 0) == 42);
     CHECK(fvo::value_or(disengaged, 0) == 0);
 }
+#endif // FVO_HAS_STD_EXPECTED
 
 TEST_CASE("value_or: int* engaged and disengaged", "[value_or]") {
     int  obj        = 42;
@@ -150,7 +154,7 @@ TEST_CASE("value_or: value categories of fallback u", "[value_or]") {
 // Type mismatch — common_type promotion
 // ==========================================================================
 
-TEST_CASE("value_or: type mismatch — common_type promotion", "[value_or]") {
+TEST_CASE("value_or: type mismatch - common_type promotion", "[value_or]") {
     std::optional<int> engaged{42};
     std::optional<int> disengaged{};
 

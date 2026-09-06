@@ -5,6 +5,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <beman/expected/testing/type_name.hpp>
+
 #include "testing/types.hpp"
 
 #include <functional>
@@ -12,6 +14,8 @@
 #include <utility>
 
 using namespace test_ns;
+
+using beman::expected::testing::type_name;
 
 // ---------------------------------------------------------------------------
 // and_then
@@ -144,7 +148,7 @@ TEST_CASE("or_else: value passes through chain", "[expected_monadic]") {
 TEST_CASE("transform: has value - transforms", "[expected_monadic]") {
     expected<int, std::string> e(6);
     auto                       r = e.transform([](int v) { return v * 7; });
-    static_assert(std::is_same_v<decltype(r), expected<int, std::string>>);
+    CHECK(type_name<decltype(r)>() == type_name<expected<int, std::string>>());
     REQUIRE(r.has_value());
     CHECK(*r == 42);
 }
@@ -165,7 +169,7 @@ TEST_CASE("transform: void return type", "[expected_monadic]") {
     expected<int, std::string> e(1);
     int                        count = 0;
     auto                       r     = e.transform([&](int) { ++count; });
-    static_assert(std::is_same_v<decltype(r), expected<void, std::string>>);
+    CHECK(type_name<decltype(r)>() == type_name<expected<void, std::string>>());
     REQUIRE(r.has_value());
     CHECK(count == 1);
 }
@@ -174,7 +178,7 @@ TEST_CASE("transform: void return - error state does not call F", "[expected_mon
     expected<int, std::string> e(unexpect, "no");
     int                        count = 0;
     auto                       r     = e.transform([&](int) { ++count; });
-    static_assert(std::is_same_v<decltype(r), expected<void, std::string>>);
+    CHECK(type_name<decltype(r)>() == type_name<expected<void, std::string>>());
     REQUIRE(!r.has_value());
     CHECK(count == 0);
     CHECK(r.error() == "no");
@@ -183,7 +187,7 @@ TEST_CASE("transform: void return - error state does not call F", "[expected_mon
 TEST_CASE("transform: type change", "[expected_monadic]") {
     expected<int, int> e(42);
     auto               r = e.transform([](int v) -> std::string { return std::to_string(v); });
-    static_assert(std::is_same_v<decltype(r), expected<std::string, int>>);
+    CHECK(type_name<decltype(r)>() == type_name<expected<std::string, int>>());
     REQUIRE(r.has_value());
     CHECK(*r == "42");
 }
@@ -216,7 +220,7 @@ TEST_CASE("transform: const rvalue overload", "[expected_monadic]") {
 TEST_CASE("transform_error: has error - transforms", "[expected_monadic]") {
     expected<int, int> e(unexpect, 3);
     auto               r = e.transform_error([](int v) -> std::string { return std::to_string(v); });
-    static_assert(std::is_same_v<decltype(r), expected<int, std::string>>);
+    CHECK(type_name<decltype(r)>() == type_name<expected<int, std::string>>());
     REQUIRE(!r.has_value());
     CHECK(r.error() == "3");
 }

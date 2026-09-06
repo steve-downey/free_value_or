@@ -39,9 +39,11 @@ static_assert(
 static_assert(
     std::is_same_v<decltype(fvo::or_construct(std::declval<const std::optional<int>&>(), std::declval<int>())), int>);
 
+#if FVO_HAS_STD_EXPECTED
 // expected<int,int> + int → R = int
 static_assert(
     std::is_same_v<decltype(fvo::or_construct(std::declval<std::expected<int, int>&>(), std::declval<int>())), int>);
+#endif // FVO_HAS_STD_EXPECTED
 
 // int* + int → R = int
 static_assert(std::is_same_v<decltype(fvo::or_construct(std::declval<int*>(), std::declval<int>())), int>);
@@ -89,6 +91,7 @@ TEST_CASE("or_construct behavior: optional<int> engaged and disengaged", "[or_co
     CHECK(fvo::or_construct(disengaged, 99) == 99); // constructs int(99)
 }
 
+#if FVO_HAS_STD_EXPECTED
 TEST_CASE("or_construct behavior: expected<int,int> engaged and disengaged", "[or_construct]") {
     auto engaged    = NullableFixture<int>::exp_engaged(42);
     auto disengaged = NullableFixture<int>::exp_disengaged();
@@ -96,6 +99,7 @@ TEST_CASE("or_construct behavior: expected<int,int> engaged and disengaged", "[o
     CHECK(fvo::or_construct(engaged, 99) == 42);
     CHECK(fvo::or_construct(disengaged, 99) == 99);
 }
+#endif // FVO_HAS_STD_EXPECTED
 
 TEST_CASE("or_construct behavior: int* engaged and disengaged", "[or_construct]") {
     int  obj        = 42;

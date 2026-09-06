@@ -11,6 +11,18 @@
 
 using namespace beman::expected;
 
+// =============================================================================
+// How these constraints are checked
+//
+// Each constraint below reduces to a trait, so it is a plain bool. They are
+// checked at runtime rather than at translation time so that a constraint that
+// has drifted is reported by the test run, naming the type and the polarity
+// responsible, instead of stopping the build at the first failure and
+// reporting nothing about the rest. A constraint that must exclude an overload
+// is checked with CHECK_FALSE; the explanatory text each check used to carry is
+// kept as an INFO, so it is printed when that check is the one that fails.
+// =============================================================================
+
 // ---------------------------------------------------------------------------
 // Converting constructor: bool exemption (constraint 18.3)
 //
@@ -33,9 +45,10 @@ TEST_CASE("converting ctor: expected<bool,int> from expected<int,int> error path
     CHECK(dst.error() == 7);
 }
 
-// expected<bool,int> IS constructible from expected<int,int> (converting ctor selected)
-static_assert(std::is_constructible_v<expected<bool, int>, const expected<int, int>&>,
-              "expected<bool,int> must be constructible from expected<int,int> via converting ctor");
+TEST_CASE("converting ctor: expected<bool,int> is constructible from expected<int,int>", "[constraints]") {
+    INFO("expected<bool,int> must be constructible from expected<int,int> via converting ctor");
+    CHECK(std::is_constructible_v<expected<bool, int>, const expected<int, int>&>);
+}
 
 // ---------------------------------------------------------------------------
 // Value constructor: unexpected<G> guard (constraint 23.4)
@@ -69,10 +82,12 @@ TEST_CASE("value ctor: unexpected<int> blocked as value even when T is construct
 
 // Value ctor is blocked for U = unexpected<G>: is_constructible via value ctor
 // path requires U not be an unexpected specialization. Verify by checking that
-// the overall construction resolves correctly (above test covers behavior;
-// the static_assert below checks the trait):
-static_assert(std::is_constructible_v<expected<AcceptsUnexpected, int>, unexpected<int>>,
-              "construction must still work — via unexpected ctor, not value ctor");
+// the overall construction resolves correctly (the test above covers the
+// behavior; the check below covers the trait):
+TEST_CASE("value ctor: expected<AcceptsUnexpected,int> is still constructible from unexpected<int>", "[constraints]") {
+    INFO("construction must still work — via unexpected ctor, not value ctor");
+    CHECK(std::is_constructible_v<expected<AcceptsUnexpected, int>, unexpected<int>>);
+}
 
 // ---------------------------------------------------------------------------
 // Value assignment: unexpected<G> goes to unexpected overload (constraint 11.2)
@@ -96,17 +111,30 @@ struct ThrowingMove {
     ThrowingMove& operator=(ThrowingMove&&) = default;
 };
 
-// Both T and E are throwing-move: move assignment must be deleted
-static_assert(!std::is_move_assignable_v<expected<ThrowingMove, ThrowingMove>>,
-              "move assignment must be deleted when neither T nor E is nothrow move constructible");
+TEST_CASE("move assignment: availability follows the nothrow-move-constructible condition", "[constraints]") {
+    // Each check is braced so that its INFO is scoped to it alone, and only the
+    // explanation belonging to a failing check is printed.
 
-// At least one nothrow-move: move assignment must exist
-static_assert(std::is_move_assignable_v<expected<int, ThrowingMove>>,
-              "move assignment must be available when T is nothrow move constructible");
-static_assert(std::is_move_assignable_v<expected<ThrowingMove, int>>,
-              "move assignment must be available when E is nothrow move constructible");
-static_assert(std::is_move_assignable_v<expected<int, int>>,
-              "move assignment must be available when both are nothrow move constructible");
+    // Both T and E are throwing-move: move assignment must be deleted
+    {
+        INFO("move assignment must be deleted when neither T nor E is nothrow move constructible");
+        CHECK_FALSE(std::is_move_assignable_v<expected<ThrowingMove, ThrowingMove>>);
+    }
+
+    // At least one nothrow-move: move assignment must exist
+    {
+        INFO("move assignment must be available when T is nothrow move constructible");
+        CHECK(std::is_move_assignable_v<expected<int, ThrowingMove>>);
+    }
+    {
+        INFO("move assignment must be available when E is nothrow move constructible");
+        CHECK(std::is_move_assignable_v<expected<ThrowingMove, int>>);
+    }
+    {
+        INFO("move assignment must be available when both are nothrow move constructible");
+        CHECK(std::is_move_assignable_v<expected<int, int>>);
+    }
+}
 
 // ---------------------------------------------------------------------------
 // operator==(expected, T2): T2 must not be an expected specialization
@@ -131,8 +159,11 @@ TEST_CASE("operator==: expected compared to int uses value overload", "[constrai
 // The T2 value overload must NOT fire when T2 is itself an expected specialization.
 // is_constructible check: operator==(expected<int,int>, expected<int,int>) must
 // resolve via the expected<T2,E2> friend, not the T2 value friend.
-// (Behavioral coverage above; static check: ensure T2=expected doesn't pick value overload.)
-static_assert(
-    !std::
-        is_invocable_r_v<bool, decltype([](int x, int y) { return x == y; }), expected<int, int>, expected<int, int>>,
-    "sanity: plain int equality lambda cannot be called with expected args");
+// (Behavioral coverage above; the check below ensures T2=expected doesn't pick
+// the value overload.)
+using int_equality_t = decltype([](int x, int y) { return x == y; });
+
+TEST_CASE("operator==: a plain int equality callable is not invocable with expected arguments", "[constraints]") {
+    INFO("sanity: plain int equality lambda cannot be called with expected args");
+    CHECK_FALSE((std::is_invocable_r_v<bool, int_equality_t, expected<int, int>, expected<int, int>>));
+}
