@@ -32,14 +32,17 @@
 // test that only checks the resulting value passes under both, which is why
 // the pre-existing rvalue coverage did not pin anything.
 //
-// The smart-pointer cases below are deliberately the same shape as the
-// optional and expected ones even though they do NOT change under the
-// alternative.  optional and expected ref-qualify operator*, so
-// decltype(*declval<optional<T>>()) is T&&, while shared_ptr, unique_ptr and
-// raw pointers return T& whatever the pointer's own value category.  Moving
-// out of rvalue nullables would therefore reach optional and expected only,
-// and leave every pointer model copying -- an inconsistency across the
-// concept that the copy-counting cases here would make visible.
+// The smart-pointer cases below are the same shape as the optional and
+// expected ones even though they do NOT change under the alternative, and
+// the difference is ownership rather than an accident of specification.
+// optional and expected contain their value, so an expiring one has an
+// expiring payload and operator* is ref-qualified to say so.  Pointers
+// contain nothing: an rvalue shared_ptr, unique_ptr or T* is an expiring
+// handle to a referent that ordinarily outlives it, so operator* returns T&.
+// optional<T&> settles which property is doing the work -- it is an
+// optional, and it dereferences to T&, because it does not own its referent.
+// Under the alternative every model would still be right; the copy counts
+// here make that division visible instead of leaving it implicit.
 // ==========================================================================
 
 namespace {
