@@ -26,15 +26,15 @@
 \end{flushright}
 
 \begin{abstract}
-  This paper proposes free function overloads of \tcode{value_or} --- and the
-  related \tcode{reference_or}, \tcode{or_invoke}, and \tcode{or_construct}
-  --- over any nullable type, such as \tcode{std::optional},
+  This paper proposes free function overloads of \tcode{value_or} (and the
+  related \tcode{reference_or}, \tcode{or_invoke}, and \tcode{or_construct})
+  over any nullable type, such as \tcode{std::optional},
   \tcode{std::expected}, and pointers to objects. They compute the type of the
   result correctly, via \tcode{common_type} and \tcode{common_reference}, as
   the member \tcode{std::optional::value_or} could not. At LEWG's request it
-  also carries the member functions of \cite{P3413R0} ---
+  also carries the member functions of \cite{P3413R0},
   \tcode{value_or_construct} and \tcode{value_or_else} on \tcode{optional} and
-  \tcode{expected} --- so that the two proposals are reviewed, and can be
+  \tcode{expected}, so that the two proposals are reviewed, and can be
   adopted, as one.
 \end{abstract}
 
@@ -55,8 +55,8 @@
 
 The fundamental nullable type is the raw pointer, and the fundamental idiom
 for providing a default is the conditional expression guarded by a null
-check. The free function names the idiom, removes the repetition of the
-checked entity, and computes the type of the result correctly.
+check. The free function gives that pattern a name, removes the repetition of
+the checked entity, and computes the type of the result correctly.
 
 \begin{tabular}{ lr }
   \begin{minipage}[t]{0.45\columnwidth}
@@ -136,7 +136,7 @@ right type for the result. The consequences are familiar: sentinels truncate
 (\tcode{optional<uint16_t>{}.value_or(-1)} is \tcode{65535}), wider
 alternatives narrow, and reference results are simply impossible, so
 \tcode{value_or} forces a copy even when both candidate results are
-references to long-lived objects.
+references to long-lived objects. It answers the wrong question correctly.
 
 This is not fixable in place. Changing the return type of a member function
 that has been shipping since C++17 is both an API and an ABI break, and the
@@ -153,8 +153,8 @@ and explicitly forecast this paper: free functions over all types modeling
 an optional-like concept, where the return type can finally be computed
 correctly.
 
-Existing practice diverges precisely because there is no one member-function
-answer that satisfies everyone:
+Existing practice diverges because there is no one member-function answer
+that satisfies everyone:
 
 \begin{center}
 \begin{tabular}{ l l }
@@ -172,12 +172,12 @@ Think-Cell & returns \tcode{common_reference}, with some caveats \\
 \end{tabular}
 \end{center}
 
-The machinery to compute the right answer postdates \tcode{optional}.
+The tools to compute the right answer postdate \tcode{optional}.
 \tcode{std::common_type} existed but was not used;
 \tcode{std::common_reference} arrived with ranges in C++20; and
 \tcode{std::reference_constructs_from_temporary_v} \cite{P2255R2} arrived in
 C++23, making it possible for the first time to \emph{statically reject}
-exactly the dangling cases that made reference-returning \tcode{value_or}
+the dangling cases that made reference-returning \tcode{value_or}
 untenable. The conditional expression \tcode{b ? *m : u} has computed the
 common type all along; the library can now name that computation, add the
 lifetime check the core language does not perform, and do so once, for every
@@ -189,7 +189,7 @@ dereferenceable'' is a protocol, not a property of \tcode{std::optional}.
 Raw pointers, \tcode{std::shared_ptr}, \tcode{std::unique_ptr},
 \tcode{std::expected<T,E>}, and \tcode{std::optional<T\&>} all speak it.
 Each of them today requires either a hand-written conditional or a
-type-specific idiom to express ``the value, or this instead.'' A single
+type-specific spelling of ``the value, or this instead.'' A single
 constrained free function family covers them all, with one set of semantics
 to learn and one place to get the corner cases right.
 
@@ -200,7 +200,7 @@ concept:
 
 \begin{minted}[fontsize=\small]{c++}
 template <class T>
-concept nullable = requires(const T t) {
+concept nullable = requires(const std::remove_reference_t<T>& t) {
     bool(t);
     *(t);
 };
@@ -229,8 +229,8 @@ template <class Ret = void, nullable T, class E, class... Args,
 constexpr R or_construct(T&& m, std::initializer_list<E> il, Args&&... args);
 \end{minted}
 
-All four have the same engaged-path behavior --- produce \tcode{*m},
-converted to \tcode{R} --- and differ in how the alternative is supplied
+All four have the same engaged-path behavior, producing \tcode{*m}
+converted to \tcode{R}, and differ in how the alternative is supplied
 (a value, a value bound as a reference, a nullary invocable, constructor
 arguments) and in how \tcode{R} is computed (\tcode{common_type},
 \tcode{common_reference}, or the element type itself).
@@ -239,11 +239,14 @@ arguments) and in how \tcode{R} is computed (\tcode{common_type},
 
 The concept is the ``maybe protocol'' of \cite{P1255R13}: an object is
 nullable if it is contextually convertible to \tcode{bool} and
-dereferenceable. The requirements are stated on \tcode{const T}: observation
-must not require mutable access. A type whose \tcode{operator bool} or
-\tcode{operator*} is non-const does not model \tcode{nullable}; asking
-``the value or a default'' is a query, and a type that cannot be queried
-through const access is not answering that question.
+dereferenceable. The requirements are stated on a const lvalue: observation
+must not require mutable access. The reference is stripped before the const
+is applied, so the rule holds for the deduced \tcode{T} of an lvalue argument
+as much as for an rvalue; spelled \tcode{const T} it would not, since const
+applied to a reference type is discarded. A type whose \tcode{operator bool}
+or \tcode{operator*} is non-const does not model \tcode{nullable}. Asking
+``the value or a default'' is a query. A type that can not be queried
+through const access is not answering it.
 
 Types verified to model the concept: \tcode{std::optional<T>},
 \tcode{std::expected<T,E>}, raw object pointers \tcode{T*},
@@ -254,21 +257,21 @@ to \tcode{bool} but not dereferenceable), \tcode{std::string} and the
 containers (neither), \tcode{std::nullptr_t}, \tcode{void}, and types
 providing only one of the two operations. Iterators in general do not model
 \tcode{nullable} because they are not contextually convertible to
-\tcode{bool} --- correctly so, since an iterator's validity is not a
-property the iterator itself can report.
+\tcode{bool}. Correctly so: an iterator's validity is not a property the
+iterator itself can report.
 
-One refinement remains open. P1255's \tcode{nullable_object} additionally
+One refinement remains open. P1255's \tcode{nullable_object} also
 requires that the result of dereferencing be an equality-preserving
 \emph{object}, which excludes function pointers; the minimal concept above
 admits them (a function pointer is contextually convertible to \tcode{bool}
 and dereferenceable), and they are then rejected only downstream, when
-\tcode{common_type} fails. LEWG guidance is sought on whether the concept
-should require \tcode{is_object_v} of the referent, rejecting function
-pointers at the constraint rather than in the return-type computation.
+\tcode{common_type} fails. However, LEWG guidance is sought on whether the
+concept should require \tcode{is_object_v} of the referent, rejecting
+function pointers at the constraint and not in the return-type computation.
 
 \section{Exposition-only, or a named public concept?}
 
-Whether \tcode{nullable} is an exposition-only constraint on these three
+Whether \tcode{nullable} is an exposition-only constraint on these four
 functions or a named, public concept is a LEWG question in its own right,
 and the paper presents it for a poll.
 
@@ -277,39 +280,39 @@ The case for a public \tcode{std::nullable}: the protocol is vocabulary.
 optional-like, \tcode{concept std::maybe}'', and \cite{P1255R13} is titled,
 in part, ``a concept to constrain maybes'' --- the concept has been treated
 as a deliverable in its own right throughout this line of work. Users
-writing their own functions over nullable types --- a \tcode{value_or}
-variant with different policy, an algorithm taking a range of nullables ---
+writing their own functions over nullable types (a \tcode{value_or}
+variant with different policy, an algorithm taking a range of nullables)
 need the same constraint, and without a public name each codebase
-re-derives it, not always identically. A named concept can be tested
+re-derives it, and not always the same way. A named concept can be tested
 directly (\tcode{static_assert(std::nullable<T>)}), appears by name in
 diagnostics, and fixes the meaning of ``optional-like'' across the
 ecosystem once.
 
 The case for exposition-only: a named standard concept is forever, and
-this one is not yet stable. The open refinements above --- the
+this one is not yet stable. The open refinements above, the
 \tcode{is_object_v} question, const-observability, and the semantic
 requirements a named concept would have to state in words (dereference is
 valid only when the contextual conversion yields \tcode{true};
-observation is equality-preserving) --- can be adjusted release to release
+observation is equality-preserving), can be adjusted release to release
 while the concept is exposition-only, and cannot be once user code
 constrains against the name. The library has a directly analogous
 precedent: \tcode{\placeholder{boolean-testable}}, among the most-used
-constraints in the standard, is deliberately exposition-only for exactly
-this reason. With \cite{P1255R13} concluded (see the discussion of
-\tcode{yield_if} below), this paper is the concept's sole remaining home;
-no cross-paper coordination is needed, but there is also only one chance
-to name it right.
+constraints in the standard, is exposition-only for this reason. With
+\cite{P1255R13} concluded (see the discussion of \tcode{yield_if} below),
+this paper is the concept's sole remaining home. However, that cuts both
+ways: no cross-paper coordination is needed, and there is only one chance to
+name it right.
 
 The asymmetry favors caution: an exposition-only concept can be promoted
 to a public name in a later standard without breaking anything, while a
-public name can never be demoted or meaningfully tightened. R0 therefore
-specifies \tcode{nullable} as exposition-only, with promotion --- under
-whatever name LEWG prefers --- as the poll alternative.
+public name can never be demoted or meaningfully tightened. We therefore
+specify \tcode{nullable} as exposition-only, with promotion, under whatever
+name LEWG prefers, as the poll alternative.
 
 \section{Return type computation}
 
-\tcode{std::iter_reference_t<T>} is \tcode{decltype(*declval<T\&>())} ---
-the type produced by dereferencing an lvalue of the nullable type. For every
+\tcode{std::iter_reference_t<T>} is \tcode{decltype(*declval<T\&>())}, the
+type produced by dereferencing an lvalue of the nullable type. For every
 nullable above with an \tcode{int} payload it is \tcode{int\&}; for a
 \tcode{const optional<int>} it is \tcode{const int\&}; for \tcode{const
 int*} it is \tcode{const int\&}. The return type is then the common type
@@ -336,8 +339,8 @@ nullable \tcode{T} & alternative \tcode{U} & result \tcode{R} \\
 \end{center}
 
 This is the type the equivalent conditional expression would have produced,
-which is exactly the point: \tcode{value_or(m, u)} is the library spelling
-of \tcode{m ? *m : u}, not of \tcode{m ? *m : T(u)}.
+which is the point: \tcode{value_or(m, u)} is the library spelling of
+\tcode{m ? *m : u}, not of \tcode{m ? *m : T(u)}.
 
 \section{Value categories, and observing rather than consuming}
 
@@ -349,9 +352,9 @@ value where
 \tcode{std::move(opt).value_or(u)} would move it. The functions observe;
 they do not consume.
 
-This is a deliberate simplification for R0, and the author seeks LEWG
-guidance. The alternative --- computing the dereference type as
-\tcode{decltype(*std::forward<T>(m))} so that rvalue optionals move ---
+This is a simplification, and we seek LEWG guidance on it. The alternative,
+computing the dereference type as
+\tcode{decltype(*std::forward<T>(m))} so that rvalue optionals move,
 recovers the member function's efficiency for the rvalue case, at the cost
 of making the return type depend on the value category of the nullable and
 of introducing a moved-from path that is harder to reason about under the
@@ -369,28 +372,29 @@ computation as it should: a \tcode{const optional<int>} or a \tcode{const
 int\&} alternative each force \tcode{const int\&} as the result; an
 \tcode{int*} with an \tcode{int\&} alternative yields \tcode{int\&},
 writable through, and mutation through the result reaches the original
-object --- the function introduces no copies.
+object. The function introduces no copies.
 
-Testing surfaced a subtlety: the common
-reference of two unrelated lvalue references need not be a reference.
+Testing surfaced a subtlety, however: the common reference of two unrelated
+lvalue references need not be a reference.
 \tcode{common_reference_t<int\&, long\&>} is \tcode{long}, and
 \tcode{common_reference_t<string\&, const char(\&)[2]>} is \tcode{string};
 in such calls \tcode{reference_or} compiles, the dangling guards are
-vacuously satisfied --- \tcode{R} is not a reference, so nothing can bind
-to a temporary --- and the function quietly returns a prvalue, behaving
-exactly like \tcode{value_or}. No lifetime hazard arises, and this is the
+vacuously satisfied (\tcode{R} is not a reference, so nothing can bind
+to a temporary) and the function quietly returns a prvalue,
+behaving like \tcode{value_or}. No lifetime hazard arises, and this is the
 conditional expression's own behavior faithfully reproduced; but a caller
 who wrote \tcode{reference_or} for its reference semantics receives a copy.
-LEWG guidance is sought on whether \tcode{reference_or} should additionally
-mandate that the computed type \emph{is} a reference type, making the
-degenerate calls ill-formed and steering them to \tcode{value_or}.
+However, LEWG guidance is sought on whether \tcode{reference_or} should
+further mandate that the computed type \emph{is} a reference type, making
+the degenerate calls ill-formed and steering them to \tcode{value_or}.
 
 The danger of returning references is binding one to a temporary, and that
 is now statically detectable. The implementation carries two guards:
 
 \begin{minted}[fontsize=\small]{c++}
 static_assert(!std::reference_constructs_from_temporary_v<R, U>);
-static_assert(!std::reference_constructs_from_temporary_v<R, T&>);
+static_assert(
+    !std::reference_constructs_from_temporary_v<R, std::iter_reference_t<T>>);
 \end{minted}
 
 The first rejects the alternative materializing a temporary: in
@@ -405,15 +409,14 @@ accept and then dangle.
 
 Whether these should be \tcode{static_assert}s or constraints is a design
 question for LEWG. As \tcode{static_assert}s, a dangling call is a hard,
-clearly-diagnosed error wherever it occurs --- including inside an
-overload-resolution context, where it is an error rather than a removed
+clearly-diagnosed error wherever it occurs, including inside an
+overload-resolution context, where it is an error and not a removed
 candidate. As constraints, the overload disappears SFINAE-style, which
 composes better with generic code probing for usability but turns a
 lifetime bug into a silent ``no matching function'' or, worse, a fallback
-to a different overload. The author's position is that a dangling
-\tcode{reference_or} call is a bug to be reported, not a candidate to be
-quietly discarded, and R0 proposes the \tcode{static_assert} behavior
-(specified as \emph{Mandates}).
+to a different overload. Our position is that a dangling \tcode{reference_or}
+call is a bug to be reported, not a candidate to be quietly discarded, and we
+propose the \tcode{static_assert} behavior (specified as \emph{Mandates}).
 
 The name is also open. The Tokyo discussion of the P2988 homework concluded
 that \tcode{value_or} is not an available name for a reference-returning
@@ -424,7 +427,7 @@ unabbreviated names, and will bring a naming table for a poll.
 \section{\tcode{or_invoke} and laziness}
 
 \tcode{value_or} and \tcode{reference_or} evaluate their alternative
-unconditionally --- it is an ordinary function argument. When the
+unconditionally; it is an ordinary function argument. When the
 alternative is expensive to construct, that cost is unwelcome on the
 engaged path, and the established cure is to pass a nullary invocable that
 is called only when needed. \tcode{or_invoke(m, f)} returns
@@ -435,14 +438,13 @@ invocable is not called on the engaged path.
 
 Because \tcode{or_invoke} uses \tcode{common_type}, an invocable returning
 a reference still produces a value: \tcode{common_type_t<int\&, int\&>} is
-\tcode{int}. The family therefore covers three of four quadrants --- eager
-value (\tcode{value_or}), eager reference (\tcode{reference_or}), lazy
-value (\tcode{or_invoke}, and \tcode{or_construct} below) --- and
-deliberately omits the fourth. A lazy reference-returning form is
-specifiable (the dangling guard would apply to
-\tcode{invoke_result_t<I>} just as it does to \tcode{U}), but the use case
---- a reference alternative that is expensive to \emph{name}, rather than
-to construct --- is thin, and it is not proposed. If LEWG wants the
+\tcode{int}. The family therefore covers three of four quadrants, eager
+value (\tcode{value_or}), eager reference (\tcode{reference_or}), and lazy
+value (\tcode{or_invoke}, and \tcode{or_construct} below), and omits the
+fourth. A lazy reference-returning form is specifiable (the dangling guard
+would apply to \tcode{invoke_result_t<I>} just as it does to \tcode{U}), but
+the use case, a reference alternative expensive to \emph{name} and not to
+construct, is thin, and it is not proposed. If LEWG wants the
 quadrant filled, it composes naturally as \tcode{reference_invoke} later.
 
 The obvious name, \tcode{or_else}, is taken:
@@ -459,14 +461,14 @@ make \tcode{x.or_else(f)} and \tcode{or_else(x, f)} mean different things.
 \tcode{or_construct} is the free-function analogue of \cite{P3413R0}'s
 member \tcode{value_or_construct}: the alternative is supplied not as a
 value but as constructor \emph{arguments}, and the fallback object is
-constructed lazily, only on the disengaged path --- on the engaged path
-nothing is constructed from them at all. An \tcode{initializer_list}
-overload provides the same convenience the member form has.
+constructed lazily, only on the disengaged path. On the engaged path nothing
+is constructed from them at all. An \tcode{initializer_list} overload
+provides the same convenience the member form has.
 
-Its return-type rule is deliberately different from the other three.
-There is no fallback \emph{value} whose type could participate in a
-\tcode{common_type} computation --- only arguments waiting to become one
---- so by default \tcode{R} is the decayed element type itself,
+However, its return-type rule differs from the other three. There is no
+fallback \emph{value} whose type could participate in a
+\tcode{common_type} computation, only arguments waiting to become one,
+so by default \tcode{R} is the decayed element type itself,
 \tcode{remove_cvref_t<iter_reference_t<T>>}, and the conversion runs
 \emph{inward}: the arguments construct an \tcode{R} directly, and the
 engaged payload converts to \tcode{R}. This is the member function's model,
@@ -486,29 +488,33 @@ auto s = std::or_construct<std::string>(m, "default");
 \end{minted}
 
 The fallback is direct-initialized, so \tcode{explicit} constructors are
-usable --- the arguments were always explicitly a construction request.
-Like \tcode{value_or} and \tcode{or_invoke}, \tcode{or_construct} returns
-a prvalue and cannot dangle; with \tcode{optional<T\&>} the result is a
-value copy of the referent or a freshly constructed object, never a
-reference.
+usable; the arguments were always explicitly a construction request. Left to
+its default, \tcode{R} is a decayed object type, so \tcode{or_construct}
+returns a prvalue and can not dangle. With \tcode{optional<T\&>} the result
+is a value copy of the referent or a freshly constructed object, never a
+reference. A caller who names a reference \tcode{Ret} explicitly steps
+outside that guarantee and takes on the lifetime obligation, as
+\tcode{or_construct<const int\&>(m, 0)} shows; whether \tcode{Ret} should be
+constrained to object types is one for LEWG.
 
 \section{Why free functions}
 
 The member-function route is closed twice over. For \tcode{std::optional}
 and \tcode{std::expected} the existing \tcode{value_or} cannot change its
 return type, and a second member with corrected semantics would have to
-coexist with the first forever, on each class, kept in sync by hand. For
-pointers --- raw and smart --- there are no members to add at all. A
-constrained free function template is the only form that can state the
+coexist with the first forever, on each class, kept in sync by hand. For a
+raw pointer there is nowhere to put a member at all, and adding one to each
+smart pointer would repeat the same hand-synchronization. A constrained free
+function template is the only form that can state the
 semantics once and apply them to every type speaking the protocol,
 including user-defined nullables, which model the concept simply by being
 contextually convertible to \tcode{bool} and dereferenceable.
 
-These are ordinary function templates, not customization point objects.
-There is nothing to customize: the semantics are fully determined by the
-protocol, and a type that wants different behavior for ``value or default''
-is not modeling \tcode{nullable}, it is doing something else. The usual
-argument for a CPO --- dispatching to a type's own implementation --- is
+These are ordinary function templates rather than customization point
+objects. There is nothing to customize: the semantics are fully determined
+by the protocol, and a type that wants different behavior for ``value or
+default'' is not modeling \tcode{nullable}, it is doing something else. The usual
+argument for a CPO, dispatching to a type's own implementation, is
 therefore absent. Whether the names should nonetheless inhibit ADL is left
 to LEWG.
 
@@ -516,7 +522,7 @@ to LEWG.
 
 \tcode{std::expected<T,E>} models \tcode{nullable}: both \tcode{bool(e)}
 and \tcode{*e} are valid on a const \tcode{expected}. Consequently
-\tcode{value_or(e, u)} works, and discards the error, exactly as the member
+\tcode{value_or(e, u)} works, and discards the error, as the member
 \tcode{value_or} does. This is by design: the moment the question is ``the
 value, or this instead,'' the error has been decided to be uninteresting.
 Uses that need the error have \tcode{error_or} and the monadic interface on
@@ -526,13 +532,13 @@ the member side; no error-observing overload is proposed here.
 
 \cite{P2988R12} forecast a fourth function, \tcode{yield_if}, producing a
 view of zero or one elements, alongside the three proposed here. It was to
-remain with the \cite{P1255R13} ranges work --- but that work is concluded.
+remain with the \cite{P1255R13} ranges work. However, that work is concluded.
 Range support for \tcode{std::optional} \cite{P3168R2} supplanted
 \tcode{views::maybe}, and \tcode{views::nullable} with it: an optional now
 \emph{is} the view of zero or one elements, and a pointer-like nullable
 reaches the same place through \tcode{optional<T\&>} \cite{P2988R12}, as
-\tcode{p ? optional<T\&>(*p) : nullopt}. The author does not expect to
-revise P1255 further; this paper inherits its remaining deliverables, the
+\tcode{p ? optional<T\&>(*p) : nullopt}. Downey, its author, does not expect
+to revise P1255 further; this paper inherits its remaining deliverables, the
 concept and the free functions over it.
 
 That covers \tcode{yield_if} as well: \tcode{yield_if(cond, value)} is now
@@ -546,34 +552,35 @@ proposal.
 
 \cite{P3413R0} (``A more flexible \tcode{optional::value_or} (else!)''),
 reviving \cite{P2218R0}, proposes member functions
-\tcode{value_or_construct} --- constructing the fallback \tcode{T} lazily
+\tcode{value_or_construct}, constructing the fallback \tcode{T} lazily
 and in place from forwarded arguments, with \tcode{initializer_list}
-overloads --- and \tcode{value_or_else} --- taking a lazily evaluated
-nullary callable --- on both \tcode{std::optional} and
+overloads, and \tcode{value_or_else}, taking a lazily evaluated
+nullary callable, on both \tcode{std::optional} and
 \tcode{std::expected}. The two papers aim at the same member function and
 fix different defects, and LEWG should see them together.
 
 P3413 fixes the \emph{cost} of the alternative: with
 \tcode{value_or_construct} the fallback object is not constructed at all on
 the engaged path, and \tcode{value_or_else} defers arbitrary computation.
-It deliberately does not touch the return type --- everything still returns
-\tcode{T}, with the alternative still required to convert to \tcode{T} ---
+It does not touch the return type; everything still returns
+\tcode{T}, with the alternative still required to convert to \tcode{T},
 so the truncation pitfall, the forced copies, and the impossibility of
 reference results all remain. It is also necessarily member-by-member:
 \tcode{optional} and \tcode{expected} each grow six functions, and pointers
 of any kind get nothing. On \tcode{optional<T\&>} it explicitly defers to
 P2988.
 
-This paper fixes the \emph{type} of the answer and the \emph{reach} of the
-idiom: results are computed via \tcode{common_type}/\tcode{common_reference}
-rather than funneled through \tcode{T}, reference results become possible
+This paper fixes the \emph{type} of the answer and its
+\emph{reach}: results are computed via
+\tcode{common_type}/\tcode{common_reference} instead of funneled through
+\tcode{T}, reference results become possible
 and dangling-checked, and one set of free functions covers every nullable
 type. Both lazy cases now overlap. \tcode{or_invoke} and member
 \tcode{value_or_else} differ in form (free vs.\ member), reach (any
 nullable vs.\ \tcode{optional}/\tcode{expected}), and return type
 (\tcode{common_type} vs.\ \tcode{T}). \tcode{or_construct} and member
 \tcode{value_or_construct} share the in-place, lazy construction model and
-the \tcode{initializer_list} overload; the free function additionally lets
+the \tcode{initializer_list} overload; the free function also lets
 the caller name the constructed type
 (\tcode{or_construct<string>(m, args...)}) and works on every nullable.
 
@@ -599,13 +606,13 @@ rvalue nullable moves payload & yes (\tcode{\&\&} overloads) &
 \end{center}
 
 The proposals are not alternatives to choose between. LEWG in Brno asked for
-a single proposal --- ``Can we ask you and Corentin to come back with one
-proposal?'' --- and Corentin is amenable; this chapter, and the wording
+a single proposal, ``Can we ask you and Corentin to come back with one
+proposal?'', and Corentin is amenable; this chapter, and the wording
 below, are that unification. The two compose. Adopt the members and
 \tcode{optional} and \tcode{expected} gain the lazy, in-place fallback,
 spelled the way a member is spelled and moving out of an rvalue. Adopt the
-free functions and the corrected semantics --- the computed result type,
-reference results, the reach to pointers and every other nullable --- become
+free functions and the corrected semantics (the computed result type,
+reference results, the reach to pointers and every other nullable) become
 available generically, over those same types and over the ones that have no
 members to grow. A caller writing \tcode{x.value_or_construct(args...)} and
 one writing \tcode{or_construct<R>(m, args...)} are served by the same design
@@ -625,10 +632,12 @@ the alternative path and the contained-value path.
 
 \textbf{Never knowingly produce a dangling reference.} The functions take
 no address and extend no lifetime; \tcode{reference_or}'s result always
-refers to an object that existed before the call. The rejected cases are
-precisely those where the core language would have materialized a
-temporary: a prvalue alternative whose common reference with the
-dereference type is a const reference
+refers to an object that existed before the call. The second guard is stated
+on \tcode{iter_reference_t<T>}, the type \tcode{*m} yields; stated on
+\tcode{T\&} it would name the nullable rather than its payload, and could
+never fire. The rejected cases are those where the core language would
+have materialized a temporary: a prvalue alternative whose common reference
+with the dereference type is a const reference
 (\tcode{reference_or(opt, 0)}), and conversions of the contained value
 to the result type that materialize.
 
@@ -669,13 +678,14 @@ rebinding semantics: after an \tcode{optional<T\&>} is rebound to a new
 referent, \tcode{value_or} produces and \tcode{reference_or} refers to the
 new referent, and disengaging falls through to the alternative.
 
-The suite --- 106 tests at this writing, all green --- found no defects in
-the implementation. It did surface two behaviors reported in Design: that
+The suite, at this writing 103 test cases and nine negative-compilation
+translation units, all green, found no defects in the implementation. It did
+surface two behaviors reported in Design: that
 \tcode{reference_or} degrades to a prvalue result when the common
 reference of unrelated types is not a reference type, with the dangling
 guards then vacuous; and that \tcode{or_invoke}'s use of
 \tcode{common_type} decays reference-returning invocables to values,
-leaving the lazy-reference quadrant of the family deliberately empty. The
+leaving the lazy-reference quadrant of the family empty by choice. The
 negative-compilation harness was itself validated: each WILL-FAIL
 translation unit was checked to fail for the required reason by mutating
 its expected-diagnostic pattern and observing the test fail.
@@ -699,11 +709,13 @@ nullable (lvalue) & alternative (lvalue) & result \\
 \end{tabular}
 \end{center}
 
-The current implementation, in full:
+The current implementation, less the portability shims --- a polyfill over
+the compiler builtin for \tcode{reference_constructs_from_temporary_v}, and a
+template parameter order that MSVC accepts:
 
 \begin{minted}[fontsize=\small]{c++}
 template <class T>
-concept nullable = requires(const T t) {
+concept nullable = requires(const std::remove_reference_t<T>& t) {
     bool(t);
     *(t);
 };
@@ -712,7 +724,8 @@ template <nullable T, class U,
           class R = std::common_reference_t<std::iter_reference_t<T>, U&&>>
 constexpr auto reference_or(T&& m, U&& u) -> R {
     static_assert(!std::reference_constructs_from_temporary_v<R, U>);
-    static_assert(!std::reference_constructs_from_temporary_v<R, T&>);
+    static_assert(
+        !std::reference_constructs_from_temporary_v<R, std::iter_reference_t<T>>);
     return bool(m) ? static_cast<R>(*m) : static_cast<R>((U&&)u);
 }
 
@@ -726,7 +739,8 @@ template <nullable T, class I,
           class R = std::common_type_t<std::iter_reference_t<T>,
                                        std::invoke_result_t<I>>>
 constexpr auto or_invoke(T&& m, I&& invocable) -> R {
-    return bool(m) ? static_cast<R>(*m) : static_cast<R>(invocable());
+    return bool(m) ? static_cast<R>(*m)
+                   : static_cast<R>(std::forward<I>(invocable)());
 }
 
 template <class Ret = void, nullable T, class... Args,
@@ -748,23 +762,23 @@ constexpr R or_construct(T&& m, std::initializer_list<E> il,
 The member side is implemented too. \tcode{value_or_construct} and
 \tcode{value_or_else} were added to the Beman reference implementations of
 \tcode{optional} \cite{The_Beman_Project_beman_optional} and \tcode{expected}
-\cite{The_Beman_Project_beman_expected} --- vendored into
-\tcode{beman.free_value_or} and edited in place --- on both the primary
+\cite{The_Beman_Project_beman_expected}, vendored into
+\tcode{beman.free_value_or} and edited in place, on both the primary
 templates and their reference specializations. \tcode{beman.expected} already
 carries \tcode{expected<T\&,E>}, \tcode{expected<T,E\&>}, and
 \tcode{expected<T\&,E\&>}, so the members run over references now, ahead of any
 such paper reaching the working draft; standardizing those forms is the only
-dependency, not implementing them. The two libraries' own suites ---
-GoogleTest for \tcode{optional}, Catch2 for \tcode{expected} --- run as part of
-this project's tests, and cover laziness (a construction counter that never
+dependency, and not implementing them. The two libraries' own suites,
+GoogleTest for \tcode{optional} and Catch2 for \tcode{expected}, run as
+part of this project's tests, and cover laziness (a construction counter that never
 ticks on the engaged path), the \tcode{initializer_list} overload, rvalue
 move-out, constant evaluation, and the reference specializations. All green.
 
 \chapter{Proposal}
 
-Add to the standard library four constrained free function templates ---
+Add to the standard library four constrained free function templates,
 \tcode{value_or}, \tcode{reference_or}, \tcode{or_invoke}, and
-\tcode{or_construct} --- and the
+\tcode{or_construct}, and the
 exposition-level concept that constrains them, with the semantics described
 above, targeting C++29. The functions should be usable on any type that is
 contextually convertible to \tcode{bool} and dereferenceable, including
@@ -773,7 +787,7 @@ contextually convertible to \tcode{bool} and dereferenceable, including
 \tcode{std::optional<T\&>}.
 
 Add as well the member functions of \cite{P3413R0}:
-\tcode{value_or_construct} --- with its \tcode{initializer_list} overload ---
+\tcode{value_or_construct}, with its \tcode{initializer_list} overload,
 and \tcode{value_or_else}, on both \tcode{std::optional} and
 \tcode{std::expected}, each in \tcode{const\&} and \tcode{\&\&} form,
 producing the fallback lazily and in place. Their wording is reproduced
@@ -797,6 +811,8 @@ Open questions on which LEWG guidance is sought before wording review:
   \tcode{or_construct} (vs.\ P3413's \tcode{value_or_construct});
 \item whether the concept requires \tcode{is_object_v} of the referent,
   excluding function pointers at the constraint;
+\item whether \tcode{or_construct}'s explicit \tcode{Ret} is constrained to
+  object types, or the caller may name a reference and own the lifetime;
 \item whether rvalue nullables should move their payload
   (see Design);
 \item whether the concept is exposition-only (the proposed default) or
@@ -808,7 +824,7 @@ Open questions on which LEWG guidance is sought before wording review:
 
 \chapter{Wording}
 
-Initial draft wording, relative to \cite{N5008}, to be completed after LEWG
+Initial draft wording, relative to \cite{N5054}, to be completed after LEWG
 design review. Placement (shown here as \tcode{<utility>}) is provisional.
 
 Add to the header synopsis:
@@ -816,10 +832,11 @@ Add to the header synopsis:
 \begin{codeblock}
 namespace std {
   template<class T>
-    concept @\exposid{nullable}@ = requires(const T t) {   // exposition only
-      bool(t);
-      *(t);
-    };
+    concept @\exposid{nullable}@ =                          // exposition only
+      requires(const remove_reference_t<T>& t) {
+        bool(t);
+        *(t);
+      };
 
   template<@\exposid{nullable}@ T, class U>
     constexpr common_reference_t<iter_reference_t<T>, U&&>
@@ -858,7 +875,8 @@ Let \tcode{R} be \tcode{common_reference_t<iter_reference_t<T>, U\&\&>}.
 \pnum
 \mandates
 \tcode{reference_constructs_from_temporary_v<R, U>} is \tcode{false} and
-\tcode{reference_constructs_from_temporary_v<R, T\&>} is \tcode{false}.
+\tcode{reference_constructs_from_temporary_v<R, iter_reference_t<T>>} is
+\tcode{false}.
 
 \pnum
 \effects
@@ -896,7 +914,8 @@ Let \tcode{R} be
 \pnum
 \effects
 Equivalent to:
-\tcode{return bool(m) ? static_cast<R>(*m) : static_cast<R>(invocable());}
+\tcode{return bool(m) ? static_cast<R>(*m) :}\newline
+\tcode{\ \ \ \ \ \ \ static_cast<R>(std::forward<I>(invocable)());}
 \end{itemdescr}
 
 \begin{itemdescr}
@@ -913,7 +932,8 @@ remove_cvref_t<iter_reference_t<T>>, Ret>}.
 
 \pnum
 \mandates
-\tcode{is_constructible_v<R, Args...>} is \tcode{true}.
+\tcode{is_constructible_v<R, Args...>} is \tcode{true} and
+\tcode{is_convertible_v<iter_reference_t<T>, R>} is \tcode{true}.
 
 \pnum
 \effects
@@ -935,8 +955,8 @@ remove_cvref_t<iter_reference_t<T>>, Ret>}.
 
 \pnum
 \mandates
-\tcode{is_constructible_v<R, initializer_list<E>\&, Args...>} is
-\tcode{true}.
+\tcode{is_constructible_v<R, initializer_list<E>\&, Args...>} is \tcode{true}
+and \tcode{is_convertible_v<iter_reference_t<T>, R>} is \tcode{true}.
 
 \pnum
 \effects
@@ -947,7 +967,7 @@ Equivalent to:
 \section{Member functions, from P3413R0}
 
 The following member wording is reproduced from \cite{P3413R0}, relative to
-\cite{N5008}, and is proposed jointly with the free functions above. It is
+\cite{N5054}, and is proposed jointly with the free functions above. It is
 purely additive: the existing \tcode{value_or} is unchanged. Return types and
 \emph{Effects} follow P3413; the \emph{Mandates} spell the construction
 requirement as \tcode{is_constructible_v<T, Args...>}, matching the
@@ -1245,7 +1265,7 @@ A pure library extension. The free functions change no existing class or
 function. The member functions add \tcode{value_or_construct} and
 \tcode{value_or_else} to \tcode{optional} and \tcode{expected} without
 altering any existing member, so nothing existing changes meaning; being
-member function templates, they add no ABI surface. The free functions
+member function templates, they add nothing to the ABI. The free functions
 require C++23 library support (\tcode{reference_constructs_from_temporary_v});
 the members impose no requirement beyond the class they are added to.
 

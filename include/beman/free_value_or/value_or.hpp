@@ -14,7 +14,7 @@ namespace smd {
 namespace free_value_or {
 
 template <class T>
-concept nullable = requires(const T t) {
+concept nullable = requires(const std::remove_reference_t<T>& t) {
     bool(t);
     *(t);
 };
@@ -69,7 +69,10 @@ constexpr auto smd::free_value_or::reference_or(T&& m, U&& u) -> R {
     // Reject fallbacks/holders that would bind the returned reference to a
     // temporary. Uses the P2255 trait (polyfilled for C++20 above).
     static_assert(!smd::free_value_or::detail::reference_constructs_from_temporary_v<R, U>);
-    static_assert(!smd::free_value_or::detail::reference_constructs_from_temporary_v<R, T&>);
+    // Stated on iter_reference_t<T>, the type *m yields. Stated on T& it would
+    // name the nullable rather than its payload, and could never fire.
+    static_assert(
+        !smd::free_value_or::detail::reference_constructs_from_temporary_v<R, std::iter_reference_t<T>>);
 
     return bool(m) ? static_cast<R>(*m) : static_cast<R>((U&&)u);
 }
