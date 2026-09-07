@@ -19,6 +19,19 @@ concept nullable = requires(const std::remove_reference_t<T>& t) {
     *(t);
 };
 
+// The type *m yields, with the value category of the nullable carried
+// through.  std::iter_reference_t always dereferences an lvalue; this does
+// not, so an expiring owning nullable yields an expiring payload.
+//
+// The two groups differ by ownership, and each is right.  optional and
+// expected contain their value, so operator* is ref-qualified and an rvalue
+// of one gives T&&.  T*, shared_ptr and unique_ptr are handles to a referent
+// that outlives them, so operator* gives T& whatever the handle's own value
+// category -- and so does optional<T&>, which is an optional that does not
+// own.
+template <class T>
+using deref_t = decltype(*std::declval<T>());
+
 namespace detail {
 // Polyfill for std::reference_constructs_from_temporary_v (P2255), a C++23
 // library trait. Prefer the standard trait when the stdlib provides it;
@@ -64,7 +77,9 @@ constexpr R or_construct(T&& m, std::initializer_list<E> il, Args&&... args);
 } // namespace free_value_or
 } // namespace smd
 
-template <smd::free_value_or::nullable T, class U, class R = std::common_reference_t<std::iter_reference_t<T>, U&&>>
+template <smd::free_value_or::nullable T,
+          class U,
+          class R = std::common_reference_t<smd::free_value_or::deref_t<T>, U&&>>
 constexpr auto smd::free_value_or::reference_or(T&& m, U&& u) -> R {
     // Reject fallbacks/holders that would bind the returned reference to a
     // temporary. Uses the P2255 trait (polyfilled for C++20 above).
@@ -72,38 +87,38 @@ constexpr auto smd::free_value_or::reference_or(T&& m, U&& u) -> R {
     // Stated on iter_reference_t<T>, the type *m yields. Stated on T& it would
     // name the nullable rather than its payload, and could never fire.
     static_assert(
-        !smd::free_value_or::detail::reference_constructs_from_temporary_v<R, std::iter_reference_t<T>>);
+        !smd::free_value_or::detail::reference_constructs_from_temporary_v<R, smd::free_value_or::deref_t<T>>);
 
-    return bool(m) ? static_cast<R>(*m) : static_cast<R>((U&&)u);
+    return bool(m) ? static_cast<R>(*std::forward<T>(m)) : static_cast<R>((U&&)u);
 }
 
-template <smd::free_value_or::nullable T, class U, class R = std::common_type_t<std::iter_reference_t<T>, U&&>>
+template <smd::free_value_or::nullable T, class U, class R = std::common_type_t<smd::free_value_or::deref_t<T>, U&&>>
 constexpr auto smd::free_value_or::value_or(T&& m, U&& u) -> R {
-    return bool(m) ? static_cast<R>(*m) : static_cast<R>(std::forward<U>(u));
+    return bool(m) ? static_cast<R>(*std::forward<T>(m)) : static_cast<R>(std::forward<U>(u));
 }
 
 template <smd::free_value_or::nullable T,
           class I,
-          class R = std::common_type_t<std::iter_reference_t<T>, std::invoke_result_t<I>>>
+          class R = std::common_type_t<smd::free_value_or::deref_t<T>, std::invoke_result_t<I>>>
 constexpr auto smd::free_value_or::or_invoke(T&& m, I&& invocable) -> R {
-    return bool(m) ? static_cast<R>(*m) : static_cast<R>(std::forward<I>(invocable)());
+    return bool(m) ? static_cast<R>(*std::forward<T>(m)) : static_cast<R>(std::forward<I>(invocable)());
 }
 
 template <class Ret = void,
           smd::free_value_or::nullable T,
-          class R = std::conditional_t<std::is_void_v<Ret>, std::remove_cvref_t<std::iter_reference_t<T>>, Ret>,
+          class R = std::conditional_t<std::is_void_v<Ret>, std::remove_cvref_t<smd::free_value_or::deref_t<T>>, Ret>,
           class... Args>
 constexpr R smd::free_value_or::or_construct(T&& m, Args&&... args) {
-    return bool(m) ? static_cast<R>(*m) : R(std::forward<Args>(args)...);
+    return bool(m) ? static_cast<R>(*std::forward<T>(m)) : R(std::forward<Args>(args)...);
 }
 
 template <class Ret = void,
           smd::free_value_or::nullable T,
           class E,
-          class R = std::conditional_t<std::is_void_v<Ret>, std::remove_cvref_t<std::iter_reference_t<T>>, Ret>,
+          class R = std::conditional_t<std::is_void_v<Ret>, std::remove_cvref_t<smd::free_value_or::deref_t<T>>, Ret>,
           class... Args>
 constexpr R smd::free_value_or::or_construct(T&& m, std::initializer_list<E> il, Args&&... args) {
-    return bool(m) ? static_cast<R>(*m) : R(il, std::forward<Args>(args)...);
+    return bool(m) ? static_cast<R>(*std::forward<T>(m)) : R(il, std::forward<Args>(args)...);
 }
 
 #endif

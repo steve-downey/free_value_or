@@ -205,27 +205,32 @@ concept nullable = requires(const std::remove_reference_t<T>& t) {
     *(t);
 };
 
+// The type *m yields, carrying the value category of the nullable through
+// to its payload.  Exposition only in the wording.
+template <class T>
+using deref_t = decltype(*std::declval<T>());
+
 template <nullable T, class U,
-          class R = std::common_reference_t<std::iter_reference_t<T>, U&&>>
+          class R = std::common_reference_t<deref_t<T>, U&&>>
 constexpr auto reference_or(T&& m, U&& u) -> R;
 
 template <nullable T, class U,
-          class R = std::common_type_t<std::iter_reference_t<T>, U&&>>
+          class R = std::common_type_t<deref_t<T>, U&&>>
 constexpr auto value_or(T&& m, U&& u) -> R;
 
 template <nullable T, class I,
-          class R = std::common_type_t<std::iter_reference_t<T>,
+          class R = std::common_type_t<deref_t<T>,
                                        std::invoke_result_t<I>>>
 constexpr auto or_invoke(T&& m, I&& invocable) -> R;
 
 template <class Ret = void, nullable T, class... Args,
           class R = std::conditional_t<std::is_void_v<Ret>,
-                        std::remove_cvref_t<std::iter_reference_t<T>>, Ret>>
+                        std::remove_cvref_t<deref_t<T>>, Ret>>
 constexpr R or_construct(T&& m, Args&&... args);
 
 template <class Ret = void, nullable T, class E, class... Args,
           class R = std::conditional_t<std::is_void_v<Ret>,
-                        std::remove_cvref_t<std::iter_reference_t<T>>, Ret>>
+                        std::remove_cvref_t<deref_t<T>>, Ret>>
 constexpr R or_construct(T&& m, std::initializer_list<E> il, Args&&... args);
 \end{minted}
 
@@ -309,11 +314,13 @@ the concept exposition-only, which costs nothing but the spelling.
 
 \section{Return type computation}
 
-\tcode{std::iter_reference_t<T>} is \tcode{decltype(*declval<T\&>())}, the
-type produced by dereferencing an lvalue of the nullable type. For every
-nullable above with an \tcode{int} payload it is \tcode{int\&}; for a
-\tcode{const optional<int>} it is \tcode{const int\&}; for \tcode{const
-int*} it is \tcode{const int\&}. The return type is then the common type
+\tcode{deref_t<T>} is \tcode{decltype(*declval<T>())}, the type
+\tcode{*m} yields, with the value category of the nullable carried through.
+For a nullable passed as an lvalue with an \tcode{int} payload it is
+\tcode{int\&}; for a \tcode{const optional<int>} it is \tcode{const
+int\&}; for \tcode{const int*} it is \tcode{const int\&}; and for an
+rvalue \tcode{optional<int>} it is \tcode{int\&\&}, on which see the next
+section. The return type is then the common type
 (for \tcode{value_or} and \tcode{or_invoke}) or the common reference (for
 \tcode{reference_or}) of that dereference type and the alternative.
 
@@ -340,59 +347,53 @@ This is the type the equivalent conditional expression would have produced,
 which is the point: \tcode{value_or(m, u)} is the library spelling of
 \tcode{m ? *m : u}, not of \tcode{m ? *m : T(u)}.
 
-\section{Value categories, and observing rather than consuming}
+\section{Value categories, and what an rvalue nullable means}
 
-As specified, dereference of the nullable is always performed on an lvalue:
-\tcode{iter_reference_t} is computed from \tcode{T\&}, and the engaged path
-returns \tcode{static_cast<R>(*m)}. An rvalue nullable does \emph{not} move
-its payload out: \tcode{value_or(std::move(opt), u)} copies the contained
-value where
-\tcode{std::move(opt).value_or(u)} would move it. The functions observe;
-they do not consume.
+The value category of the nullable reaches its payload. \tcode{deref_t<T>}
+is \tcode{decltype(*declval<T>())}, so an expiring nullable dereferences to
+an expiring payload, and the engaged path moves rather than copies:
+\tcode{value_or(std::move(opt), u)} matches
+\tcode{std::move(opt).value_or(u)}. The free functions do not lose the
+member's efficiency.
 
-The alternative is to compute the dereference type as
-\tcode{decltype(*std::forward<T>(m))}, so that the value category of the
-nullable reaches its payload. That divides the models, and the division is
-worth being exact about, because it is not an accident of specification.
-\tcode{std::optional} and \tcode{std::expected} contain their value. An
-rvalue of one is an expiring object whose payload expires with it, and
-\tcode{operator*} is ref-qualified to say so. A pointer contains nothing.
-\tcode{T*}, \tcode{std::shared_ptr}, and \tcode{std::unique_ptr} are
-handles; an rvalue handle is an expiring handle, and says nothing about the
-lifetime of the referent, which ordinarily outlives it. \tcode{T\&} is the
-truthful answer for all three.
+That divides the models, and the division is the point, because it is not
+an accident of specification. \tcode{std::optional} and
+\tcode{std::expected} contain their value. An rvalue of one is an expiring
+object whose payload expires with it, and \tcode{operator*} is
+ref-qualified to say so. A pointer contains nothing. \tcode{T*},
+\tcode{std::shared_ptr}, and \tcode{std::unique_ptr} are handles; an
+rvalue handle is an expiring handle, and says nothing about the lifetime of
+the referent, which ordinarily outlives it. \tcode{T\&} is the truthful
+answer for all three, and they go on copying.
 
 \tcode{std::optional<T\&>} settles which property is doing the work. It is
 an \tcode{optional}, and it dereferences to \tcode{T\&}, because it does
-not own its referent either. The split is ownership, not optional-ness.
+not own its referent either. The split is ownership, not optional-ness. Each
+nullable reports what its own value category implies about its payload, and
+every one of them is right.
 
-So the alternative would not misbehave. Each nullable would report what its
-own value category implies about its payload: an expiring
-\tcode{optional<T>} would move, an expiring \tcode{unique_ptr<T>} would go
-on copying a referent that is not itself expiring, and both would be right.
-The case for the rule proposed here is not correctness.
+The alternative is to compute the dereference type from \tcode{T\&}
+always, as \tcode{std::iter_reference_t} does, so that the functions
+observe and never consume. It buys a rule that fits in a sentence --- the
+result is what the lvalue conditional expression would have produced --- and
+three smaller things: the return type stops depending on the value category
+of the nullable; \tcode{reference_or} over an rvalue \tcode{optional<int>}
+stays \tcode{int\&} instead of becoming \tcode{const int\&}, which is the
+common reference of \tcode{int\&\&} and \tcode{int\&}; and there is no
+moved-from path to reason about under the dangling analysis of
+\tcode{reference_or}. However, it buys them by making every owning nullable
+copy a payload that is going away, which is the wrong answer stated
+uniformly. We would rather be correct and pay the ergonomics.
 
-It is cost and statement. Moving makes the return type depend on the value
-category of the nullable, where today an lvalue and an rvalue
-\tcode{optional<int>} agree; it turns \tcode{reference_or} over an rvalue
-\tcode{optional<int>} from \tcode{int\&} into \tcode{const int\&}, since
-that is the common reference of \tcode{int\&\&} and \tcode{int\&}; and it
-introduces a moved-from path to reason about under the dangling analysis of
-\tcode{reference_or}. Against those, the rule proposed here fits in a
-sentence: the result is what the lvalue conditional expression would have
-produced, for every nullable alike. Performance-sensitive consuming uses
-retain the member functions. We do not think that is a decisive argument,
-which is why the question is open.
-
-The reference implementation pins the behavior either way: the engaged path
-is copy-counted for \tcode{optional}, \tcode{expected}, and both smart
-pointers, so a change of rule shows up as a test failure and not as a silent
-change of cost (see Implementation Experience).
+The behavior is pinned either way. The engaged path is copy-counted for
+\tcode{optional}, \tcode{expected}, and both smart pointers, so the
+ownership split shows up as test output and a change of rule shows up as a
+test failure (see Implementation Experience).
 
 \section{\tcode{reference_or}}
 
 \tcode{reference_or} computes
-\tcode{common_reference_t<iter_reference_t<T>, U\&\&>} and, when that type
+\tcode{common_reference_t<deref_t<T>, U\&\&>} and, when that type
 is a reference, binds the result to the contained value or to the
 alternative without copying either. Const qualification flows through the
 computation as it should: a \tcode{const optional<int>} or a \tcode{const
@@ -422,7 +423,7 @@ is now statically detectable. The implementation carries two guards:
 \begin{minted}[fontsize=\small]{c++}
 static_assert(!std::reference_constructs_from_temporary_v<R, U>);
 static_assert(
-    !std::reference_constructs_from_temporary_v<R, std::iter_reference_t<T>>);
+    !std::reference_constructs_from_temporary_v<R, deref_t<T>>);
 \end{minted}
 
 The first rejects the alternative materializing a temporary: in
@@ -460,7 +461,7 @@ engaged path, and the established cure is to pass a nullary invocable that
 is called only when needed. \tcode{or_invoke(m, f)} returns
 \tcode{*m} converted to \tcode{R} when \tcode{m} is engaged and
 \tcode{f()} converted to \tcode{R} otherwise, with
-\tcode{R = common_type_t<iter_reference_t<T>, invoke_result_t<I>>}; the
+\tcode{R = common_type_t<deref_t<T>, invoke_result_t<I>>}; the
 invocable is not called on the engaged path.
 
 Because \tcode{or_invoke} uses \tcode{common_type}, an invocable returning
@@ -495,7 +496,7 @@ However, its return-type rule differs from the other three. There is no
 fallback \emph{value} whose type could participate in a
 \tcode{common_type} computation, only arguments waiting to become one,
 so by default \tcode{R} is the decayed element type itself,
-\tcode{remove_cvref_t<iter_reference_t<T>>}, and the conversion runs
+\tcode{remove_cvref_t<deref_t<T>>}, and the conversion runs
 \emph{inward}: the arguments construct an \tcode{R} directly, and the
 engaged payload converts to \tcode{R}. This is the member function's model,
 and here it is the right one; the outward common-type computation is
@@ -623,7 +624,7 @@ lazy alternative & \tcode{value_or_else} & \tcode{or_invoke} \\
 in-place fallback construction & \tcode{value_or_construct} &
   \tcode{or_construct}, callable-chosen result type \\
 rvalue nullable moves payload & yes (\tcode{\&\&} overloads) &
-  no (observes only; see Design) \\
+  yes, for the owning models (see Design) \\
 \tcode{optional<T\&>} & deferred to P2988 & covered by the concept \\
 \hline
 \end{tabular}
@@ -657,7 +658,7 @@ the alternative path and the contained-value path.
 \textbf{Never knowingly produce a dangling reference.} The functions take
 no address and extend no lifetime; \tcode{reference_or}'s result always
 refers to an object that existed before the call. The second guard is stated
-on \tcode{iter_reference_t<T>}, the type \tcode{*m} yields; stated on
+on \tcode{deref_t<T>}, the type \tcode{*m} yields; stated on
 \tcode{T\&} it would name the nullable rather than its payload, and could
 never fire. The rejected cases are those where the core language would
 have materialized a temporary: a prvalue alternative whose common reference
@@ -686,8 +687,10 @@ The test suite exercises the matrix of: nullable types
 \tcode{std::shared_ptr<T>}, \tcode{std::unique_ptr<T>}, and (gated on a
 C++26 toolchain, via the Beman \tcode{optional} reference implementation of
 P2988 \cite{The_Beman_Project_beman_optional}) \tcode{std::optional<T\&>};
-engaged and disengaged; the nullable as lvalue, const lvalue, and rvalue;
-the alternative as lvalue and rvalue; mixed-type combinations; constant
+engaged and disengaged; the nullable as lvalue, const lvalue, and rvalue,
+the rvalue cases copy- and move-counted on the engaged path so that the
+ownership split is pinned rather than assumed; the alternative as lvalue and
+rvalue; mixed-type combinations; constant
 evaluation of all four functions; laziness of \tcode{or_invoke} and
 \tcode{or_construct} and eagerness of \tcode{value_or}; for
 \tcode{or_construct}, construction arities from zero arguments through
@@ -702,8 +705,9 @@ rebinding semantics: after an \tcode{optional<T\&>} is rebound to a new
 referent, \tcode{value_or} produces and \tcode{reference_or} refers to the
 new referent, and disengaging falls through to the alternative.
 
-The suite, at this writing 103 test cases and nine negative-compilation
-translation units, all green, found no defects in the implementation. It did
+The suite, at this writing 118 test cases and nine negative-compilation
+cases over eight translation units, all green, found no defects in the
+implementation. It did
 surface two behaviors reported in Design: that
 \tcode{reference_or} degrades to a prvalue result when the common
 reference of unrelated types is not a reference type, with the dangling
@@ -714,13 +718,13 @@ negative-compilation harness was itself validated: each WILL-FAIL
 translation unit was checked to fail for the required reason by mutating
 its expected-diagnostic pattern and observing the test fail. The rvalue
 cases were validated the same way, against the library and not the
-harness. Switching the dereference type to
-\tcode{decltype(*std::forward<T>(m))} makes \tcode{reference_or}'s static
-assertions fail to compile and, with those removed so that they cannot mask
-the rest, fails the copy counts for \tcode{value_or} over \tcode{optional}
-and over \tcode{expected}, for \tcode{or_invoke}, and for
-\tcode{or_construct}. It leaves the smart pointer cases passing, which is
-the ownership split of Design showing up as test output. Coverage of the
+harness. Reverting the dereference type to \tcode{std::iter_reference_t<T>},
+the observe-only alternative, makes \tcode{reference_or}'s static assertions
+fail to compile and, with those removed so that they cannot mask the rest,
+fails the move counts for \tcode{value_or} over \tcode{optional} and over
+\tcode{expected}, for \tcode{or_invoke}, and for \tcode{or_construct}. It
+leaves the smart pointer cases passing, because those copy under both rules.
+That is the ownership split of Design showing up as test output. Coverage of the
 header from that one file is complete on lines, functions, and branches.
 
 Verified \tcode{common_reference} results for \tcode{reference_or},
@@ -753,23 +757,28 @@ concept nullable = requires(const std::remove_reference_t<T>& t) {
     *(t);
 };
 
+// The type *m yields, carrying the value category of the nullable through
+// to its payload.  Exposition only in the wording.
+template <class T>
+using deref_t = decltype(*std::declval<T>());
+
 template <nullable T, class U,
-          class R = std::common_reference_t<std::iter_reference_t<T>, U&&>>
+          class R = std::common_reference_t<deref_t<T>, U&&>>
 constexpr auto reference_or(T&& m, U&& u) -> R {
     static_assert(!std::reference_constructs_from_temporary_v<R, U>);
     static_assert(
-        !std::reference_constructs_from_temporary_v<R, std::iter_reference_t<T>>);
+        !std::reference_constructs_from_temporary_v<R, deref_t<T>>);
     return bool(m) ? static_cast<R>(*m) : static_cast<R>((U&&)u);
 }
 
 template <nullable T, class U,
-          class R = std::common_type_t<std::iter_reference_t<T>, U&&>>
+          class R = std::common_type_t<deref_t<T>, U&&>>
 constexpr auto value_or(T&& m, U&& u) -> R {
     return bool(m) ? static_cast<R>(*m) : static_cast<R>(std::forward<U>(u));
 }
 
 template <nullable T, class I,
-          class R = std::common_type_t<std::iter_reference_t<T>,
+          class R = std::common_type_t<deref_t<T>,
                                        std::invoke_result_t<I>>>
 constexpr auto or_invoke(T&& m, I&& invocable) -> R {
     return bool(m) ? static_cast<R>(*m)
@@ -778,14 +787,14 @@ constexpr auto or_invoke(T&& m, I&& invocable) -> R {
 
 template <class Ret = void, nullable T, class... Args,
           class R = std::conditional_t<std::is_void_v<Ret>,
-                        std::remove_cvref_t<std::iter_reference_t<T>>, Ret>>
+                        std::remove_cvref_t<deref_t<T>>, Ret>>
 constexpr R or_construct(T&& m, Args&&... args) {
     return bool(m) ? static_cast<R>(*m) : R(std::forward<Args>(args)...);
 }
 
 template <class Ret = void, nullable T, class E, class... Args,
           class R = std::conditional_t<std::is_void_v<Ret>,
-                        std::remove_cvref_t<std::iter_reference_t<T>>, Ret>>
+                        std::remove_cvref_t<deref_t<T>>, Ret>>
 constexpr R or_construct(T&& m, std::initializer_list<E> il,
                          Args&&... args) {
     return bool(m) ? static_cast<R>(*m) : R(il, std::forward<Args>(args)...);
@@ -831,27 +840,25 @@ that one case depends on the expected-over-references work, as the wording
 notes. The two feature sets are severable: LEWG may take the free functions,
 the members, or both, but the point of unifying is that it need not.
 
-Two questions are genuinely open, and we ask LEWG to answer them before
-wording review:
+One question is genuinely open, and we ask LEWG to answer it before wording
+review: whether \tcode{reference_or} should mandate that the computed common
+reference \emph{is} a reference type. As specified it silently degrades to a
+prvalue when the payload and the alternative are unrelated ---
+\tcode{reference_or} over an \tcode{optional<int>} and a \tcode{long\&}
+yields a \tcode{long} --- so a caller who reached for it to avoid a copy
+gets one, and writes through the result do not reach the original object
+(see Design).
 
-\begin{itemize}
-\item whether \tcode{reference_or} should mandate that the computed common
-  reference \emph{is} a reference type. As specified it silently degrades to
-  a prvalue when the payload and the alternative are unrelated ---
-  \tcode{reference_or} over an \tcode{optional<int>} and a \tcode{long\&}
-  yields a \tcode{long} --- so a caller who reached for it to avoid a copy
-  gets one, and writes through the result do not reach the original object
-  (see Design);
-\item whether an rvalue nullable should move its payload. As specified it
-  does not: \tcode{value_or(std::move(o), u)} copies where
-  \tcode{std::move(o).value_or(u)} moves, and \tcode{or_invoke} and
-  \tcode{or_construct} the same. Moving would divide the models along
-  ownership, correctly: the owning \tcode{optional} and \tcode{expected}
-  would move, and the handles would go on copying. The cost is a return type
-  that depends on the value category of the nullable (see Design).
-\end{itemize}
-
-The rest we have decided, and will revisit only if LEWG disagrees. The
+The rest we have decided, and will revisit only if LEWG disagrees. An rvalue
+nullable moves its payload, which divides the models along ownership:
+\tcode{optional} and \tcode{expected} own their value and move it, while
+\tcode{T*}, the smart pointers, and \tcode{optional<T\&>} are handles to a
+referent that outlives them and go on copying. The alternative is to
+dereference an lvalue always, so that the functions observe and never
+consume; it is simpler to state, and it makes every owning nullable copy a
+payload that is going away. We would rather be correct by default, and the
+alternative is a one-line change to the dereference type if LEWG prefers it
+(see Design). The
 dangling guards are \emph{Mandates}, so a dangling call is diagnosed and not
 removed from the overload set. \tcode{nullable} is a public concept.
 The names are \tcode{value_or}, \tcode{reference_or}, \tcode{or_invoke},
@@ -877,25 +884,25 @@ namespace std {
     };
 
   template<nullable T, class U>
-    constexpr common_reference_t<iter_reference_t<T>, U&&>
+    constexpr common_reference_t<@\exposid{deref-t}@<T>, U&&>
       reference_or(T&& m, U&& u);
 
   template<nullable T, class U>
-    constexpr common_type_t<iter_reference_t<T>, U&&>
+    constexpr common_type_t<@\exposid{deref-t}@<T>, U&&>
       value_or(T&& m, U&& u);
 
   template<nullable T, class I>
-    constexpr common_type_t<iter_reference_t<T>, invoke_result_t<I>>
+    constexpr common_type_t<@\exposid{deref-t}@<T>, invoke_result_t<I>>
       or_invoke(T&& m, I&& invocable);
 
   template<class Ret = void, nullable T, class... Args>
     constexpr conditional_t<is_void_v<Ret>,
-                            remove_cvref_t<iter_reference_t<T>>, Ret>
+                            remove_cvref_t<@\exposid{deref-t}@<T>>, Ret>
       or_construct(T&& m, Args&&... args);
 
   template<class Ret = void, nullable T, class E, class... Args>
     constexpr conditional_t<is_void_v<Ret>,
-                            remove_cvref_t<iter_reference_t<T>>, Ret>
+                            remove_cvref_t<@\exposid{deref-t}@<T>>, Ret>
       or_construct(T&& m, initializer_list<E> il, Args&&... args);
 }
 \end{codeblock}
@@ -913,17 +920,17 @@ Let \tcode{t} be a const lvalue of type \tcode{remove_reference_t<T>}.
 \begin{itemdescr}
 \begin{codeblock}
 template<nullable T, class U>
-  constexpr common_reference_t<iter_reference_t<T>, U&&>
+  constexpr common_reference_t<@\exposid{deref-t}@<T>, U&&>
     reference_or(T&& m, U&& u);
 \end{codeblock}
 
 \pnum
-Let \tcode{R} be \tcode{common_reference_t<iter_reference_t<T>, U\&\&>}.
+Let \tcode{R} be \tcode{common_reference_t<@\exposid{deref-t}@<T>, U\&\&>}.
 
 \pnum
 \mandates
 \tcode{reference_constructs_from_temporary_v<R, U>} is \tcode{false} and
-\tcode{reference_constructs_from_temporary_v<R, iter_reference_t<T>>} is
+\tcode{reference_constructs_from_temporary_v<R, @\exposid{deref-t}@<T>>} is
 \tcode{false}.
 
 \pnum
@@ -935,12 +942,12 @@ Equivalent to:
 \begin{itemdescr}
 \begin{codeblock}
 template<nullable T, class U>
-  constexpr common_type_t<iter_reference_t<T>, U&&>
+  constexpr common_type_t<@\exposid{deref-t}@<T>, U&&>
     value_or(T&& m, U&& u);
 \end{codeblock}
 
 \pnum
-Let \tcode{R} be \tcode{common_type_t<iter_reference_t<T>, U\&\&>}.
+Let \tcode{R} be \tcode{common_type_t<@\exposid{deref-t}@<T>, U\&\&>}.
 
 \pnum
 \effects
@@ -951,13 +958,13 @@ Equivalent to:
 \begin{itemdescr}
 \begin{codeblock}
 template<nullable T, class I>
-  constexpr common_type_t<iter_reference_t<T>, invoke_result_t<I>>
+  constexpr common_type_t<@\exposid{deref-t}@<T>, invoke_result_t<I>>
     or_invoke(T&& m, I&& invocable);
 \end{codeblock}
 
 \pnum
 Let \tcode{R} be
-\tcode{common_type_t<iter_reference_t<T>, invoke_result_t<I>>}.
+\tcode{common_type_t<@\exposid{deref-t}@<T>, invoke_result_t<I>>}.
 
 \pnum
 \effects
@@ -970,18 +977,18 @@ Equivalent to:
 \begin{codeblock}
 template<class Ret = void, nullable T, class... Args>
   constexpr conditional_t<is_void_v<Ret>,
-                          remove_cvref_t<iter_reference_t<T>>, Ret>
+                          remove_cvref_t<@\exposid{deref-t}@<T>>, Ret>
     or_construct(T&& m, Args&&... args);
 \end{codeblock}
 
 \pnum
 Let \tcode{R} be \tcode{conditional_t<is_void_v<Ret>,
-remove_cvref_t<iter_reference_t<T>>, Ret>}.
+remove_cvref_t<@\exposid{deref-t}@<T>>, Ret>}.
 
 \pnum
 \mandates
 \tcode{is_constructible_v<R, Args...>} is \tcode{true} and
-\tcode{is_convertible_v<iter_reference_t<T>, R>} is \tcode{true}.
+\tcode{is_convertible_v<@\exposid{deref-t}@<T>, R>} is \tcode{true}.
 
 \pnum
 \effects
@@ -993,18 +1000,18 @@ Equivalent to:
 \begin{codeblock}
 template<class Ret = void, nullable T, class E, class... Args>
   constexpr conditional_t<is_void_v<Ret>,
-                          remove_cvref_t<iter_reference_t<T>>, Ret>
+                          remove_cvref_t<@\exposid{deref-t}@<T>>, Ret>
     or_construct(T&& m, initializer_list<E> il, Args&&... args);
 \end{codeblock}
 
 \pnum
 Let \tcode{R} be \tcode{conditional_t<is_void_v<Ret>,
-remove_cvref_t<iter_reference_t<T>>, Ret>}.
+remove_cvref_t<@\exposid{deref-t}@<T>>, Ret>}.
 
 \pnum
 \mandates
 \tcode{is_constructible_v<R, initializer_list<E>\&, Args...>} is \tcode{true}
-and \tcode{is_convertible_v<iter_reference_t<T>, R>} is \tcode{true}.
+and \tcode{is_convertible_v<@\exposid{deref-t}@<T>, R>} is \tcode{true}.
 
 \pnum
 \effects
