@@ -207,6 +207,14 @@ fvo_add_compile_fail_test(
 fvo_add_test(beman.free_value_or.tests.or_construct_constexpr or_construct_constexpr.test.cpp)
 
 # ---------------------------------------------------------------------------
+# Rvalue nullables: the functions observe rather than consume.  Pins the
+# copy-not-move behavior of the engaged path, and reference_or's result type
+# for an rvalue nullable, both of which change if the open design question
+# about moving payloads out of rvalue nullables is answered the other way.
+# ---------------------------------------------------------------------------
+fvo_add_test(beman.free_value_or.tests.rvalue_nullable rvalue_nullable.test.cpp)
+
+# ---------------------------------------------------------------------------
 # Step 07: optional<T&> tests using beman::optional (vendored).
 # FVO_HAS_OPTIONAL_REF=1 is injected by fvo_add_test, so the feature-gated
 # sections are active.  std::optional<T&> (P2988) is NOT available on this
