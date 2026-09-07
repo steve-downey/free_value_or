@@ -350,16 +350,32 @@ value where
 \tcode{std::move(opt).value_or(u)} would move it. The functions observe;
 they do not consume.
 
-This is a simplification, and the second of the two open questions below.
-The alternative,
-computing the dereference type as
-\tcode{decltype(*std::forward<T>(m))} so that rvalue optionals move,
-recovers the member function's efficiency for the rvalue case, at the cost
-of making the return type depend on the value category of the nullable and
-of introducing a moved-from path that is harder to reason about under the
-dangling analysis of \tcode{reference_or}. The simpler rule has a simple
-statement: the result is what the lvalue conditional expression would have
-produced. Performance-sensitive consuming uses retain the member functions.
+The reason is that moving does not generalize. The alternative, computing
+the dereference type as \tcode{decltype(*std::forward<T>(m))}, recovers the
+member function's efficiency, but only for the nullables that ref-qualify
+\tcode{operator*}. \tcode{std::optional} and \tcode{std::expected} do, so
+dereferencing an rvalue of one yields \tcode{T\&\&}. The pointers do not:
+\tcode{std::shared_ptr}, \tcode{std::unique_ptr}, and \tcode{T*} all return
+\tcode{T\&} whatever the value category of the pointer itself, and no
+change to these functions can alter that. Moving would therefore reach
+\tcode{optional} and \tcode{expected} and leave every pointer model
+copying --- one rule for half the concept and a different rule for the other
+half, decided by a property of each type that the caller has no reason to
+know. A concept whose whole claim is that one set of semantics covers every
+nullable can not afford that.
+
+The lesser costs point the same way. The return type would depend on the
+value category of the nullable, and a moved-from path is harder to reason
+about under the dangling analysis of \tcode{reference_or}. Against those,
+the current rule has a statement that fits in a sentence: the result is what
+the lvalue conditional expression would have produced, for every nullable
+alike. Performance-sensitive consuming uses retain the member functions.
+
+This is the second of the two open questions below, and the reference
+implementation pins the behavior either way: the engaged path is
+copy-counted for \tcode{optional}, \tcode{expected}, and both smart
+pointers, so a change of rule shows up as a test failure and not as a silent
+change of cost (see Implementation Experience).
 
 \section{\tcode{reference_or}}
 
@@ -684,7 +700,16 @@ guards then vacuous; and that \tcode{or_invoke}'s use of
 leaving the lazy-reference quadrant of the family empty by choice. The
 negative-compilation harness was itself validated: each WILL-FAIL
 translation unit was checked to fail for the required reason by mutating
-its expected-diagnostic pattern and observing the test fail.
+its expected-diagnostic pattern and observing the test fail. The rvalue
+cases were validated the same way, against the library and not the
+harness. Switching the dereference type to
+\tcode{decltype(*std::forward<T>(m))} makes \tcode{reference_or}'s static
+assertions fail to compile and, with those removed so that they cannot mask
+the rest, fails the copy counts for \tcode{value_or} over \tcode{optional}
+and over \tcode{expected}, for \tcode{or_invoke}, and for
+\tcode{or_construct}. It leaves the smart pointer cases passing, which is
+the non-uniformity argued in Design. Coverage of the header from that one
+file is complete on lines, functions, and branches.
 
 Verified \tcode{common_reference} results for \tcode{reference_or},
 showing const propagation:
@@ -808,8 +833,9 @@ wording review:
 \item whether an rvalue nullable should move its payload. As specified it
   does not: \tcode{value_or(std::move(o), u)} copies where
   \tcode{std::move(o).value_or(u)} moves, and \tcode{or_invoke} and
-  \tcode{or_construct} the same. Moving costs a return type that depends on
-  the value category of the nullable (see Design).
+  \tcode{or_construct} the same. Moving would reach only the nullables that
+  ref-qualify \tcode{operator*}, so \tcode{optional} and \tcode{expected}
+  would move and every pointer model would go on copying (see Design).
 \end{itemize}
 
 The rest we have decided, and will revisit only if LEWG disagrees. The
