@@ -61,7 +61,7 @@ target_link_libraries(
     beman.expected.tests.expected
     PRIVATE beman::expected Catch2::Catch2WithMain
 )
-catch_discover_tests(beman.expected.tests.expected)
+catch_discover_tests(beman.expected.tests.expected DISCOVERY_MODE PRE_TEST)
 
 if(BEMAN_EXPECTED_USE_MODULES)
     add_library(beman.expected.tests.module_parity OBJECT)
@@ -111,6 +111,7 @@ if(NOT BEMAN_EXPECTED_USING_LIBCXX)
         beman.expected.tests.expected.std
         TEST_PREFIX "std."
         PROPERTIES LABELS std
+        DISCOVERY_MODE PRE_TEST
     )
 endif()
 
@@ -136,7 +137,10 @@ if(NOT BEMAN_EXPECTED_USING_LIBCXX)
         beman.expected.tests.equivalence
         PRIVATE beman::expected Catch2::Catch2WithMain
     )
-    catch_discover_tests(beman.expected.tests.equivalence)
+    catch_discover_tests(
+        beman.expected.tests.equivalence
+        DISCOVERY_MODE PRE_TEST
+    )
 endif()
 
 # =============================================================================
@@ -434,4 +438,4 @@ target_compile_definitions(
     beman.expected.tests.hardened
     PRIVATE BEMAN_EXPECTED_HARDENED
 )
-catch_discover_tests(beman.expected.tests.hardened)
+catch_discover_tests(beman.expected.tests.hardened DISCOVERY_MODE PRE_TEST)
