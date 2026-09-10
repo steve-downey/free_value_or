@@ -26,16 +26,19 @@
 \end{flushright}
 
 \begin{abstract}
-  This paper proposes free function overloads of \tcode{value_or} (and the
-  related \tcode{reference_or}, \tcode{or_invoke}, and \tcode{or_construct})
-  over any nullable type, such as \tcode{std::optional},
-  \tcode{std::expected}, and pointers to objects. They compute the type of the
-  result correctly, via \tcode{common_type} and \tcode{common_reference}, as
-  the member \tcode{std::optional::value_or} could not. At LEWG's request it
-  also carries the member functions of \cite{P3413R0},
-  \tcode{value_or_construct} and \tcode{value_or_else} on \tcode{optional} and
-  \tcode{expected}, so that the two proposals are reviewed, and can be
-  adopted, as one.
+  \tcode{value_or} has two defects, and this paper carries the fix for
+  each. The member half, from \cite{P3413R0}, adds
+  \tcode{value_or_construct} and \tcode{value_or_else} to
+  \tcode{std::optional} and \tcode{std::expected}, so that the alternative
+  is built only when it is needed. The free half adds free function
+  overloads of \tcode{value_or} --- and the related \tcode{reference_or},
+  \tcode{or_invoke}, and \tcode{or_construct} --- over any nullable type,
+  such as \tcode{std::optional}, \tcode{std::expected}, and pointers to
+  objects, computing the type of the result correctly, via
+  \tcode{common_type} and \tcode{common_reference}, as the member
+  \tcode{std::optional::value_or} could not. The two were separate papers
+  until LEWG asked for one. They fix the cost of the alternative and the
+  type of the answer, they compose, and they are severable.
 \end{abstract}
 
 \tableofcontents*
@@ -45,7 +48,11 @@
 \begin{itemize}
 \item \textbf{R1} Unified with \cite{P3413R0} at LEWG's request: Corentin Jabot
   joins as co-author, and the member functions \tcode{value_or_construct} and
-  \tcode{value_or_else} are folded into the proposal and wording.
+  \tcode{value_or_else} are folded into the proposal, the wording, and the
+  implementation. The members are specified over \tcode{optional<T\&>}, which
+  P3413R0 deferred and which is now C++26, rather than deferred.
+  Independently of the unification, an rvalue nullable now moves its payload,
+  which splits the models by ownership, and the asks to LEWG are cut to two.
 \item \textbf{R0} Initial revision.
 \end{itemize}
 
@@ -70,6 +77,32 @@ return cat ? *cat : Cat{"Default"};
       \begin{minted}[fontsize=\small]{c++}
 Cat* cat = find_cat("Fido");
 return std::value_or(cat, Cat{"Default"});
+      \end{minted}
+    \end{minipage}
+\end{tabular}
+
+\section{The fallback that is built anyway}
+
+The argument to \tcode{value_or} is an ordinary function argument,
+constructed on every call and destroyed unused on every engaged one. The
+member \tcode{value_or_construct} takes the fallback's constructor
+arguments instead, and builds nothing when the optional is engaged;
+\tcode{value_or_else} defers an arbitrary computation the same way.
+
+\begin{tabular}{ lr }
+  \begin{minipage}[t]{0.45\columnwidth}
+    \begin{minted}[fontsize=\small]{c++}
+std::optional<Config> o = load();
+// Config built even when o is engaged
+return o.value_or(Config{"/etc/default"});
+    \end{minted}
+  \end{minipage}
+  &
+    \begin{minipage}[t]{0.45\columnwidth}
+      \begin{minted}[fontsize=\small]{c++}
+std::optional<Config> o = load();
+// built only when o is disengaged
+return o.value_or_construct("/etc/default");
       \end{minted}
     \end{minipage}
 \end{tabular}
@@ -128,8 +161,16 @@ Logger& l = std::reference_or(
 \chapter{Motivation}
 
 \tcode{std::optional<T>::value_or} answers the most common question asked of
-an optional --- ``the value, or this instead'' --- and answers it with the
-wrong type. It returns \tcode{T}, and it requires the alternative to be
+an optional --- ``the value, or this instead'' --- and gets two things
+wrong. It answers with the wrong type, funneling both the contained value
+and the alternative through \tcode{T}. And it pays for the alternative
+whether or not it is wanted, because the alternative is an ordinary function
+argument. The two defects are independent, they have been pursued
+independently, and this paper carries the fix for each.
+
+\section{The type of the answer}
+
+\tcode{value_or} returns \tcode{T}, and it requires the alternative to be
 convertible to \tcode{T}. Every use therefore funnels both the contained
 value and the alternative through \tcode{T}, whether or not \tcode{T} is the
 right type for the result. The consequences are familiar: sentinels truncate
@@ -193,10 +234,52 @@ type-specific spelling of ``the value, or this instead.'' A single
 constrained free function family covers them all, with one set of semantics
 to learn and one place to get the corner cases right.
 
+\section{The cost of the alternative}
+
+The second defect is independent of the first, and older in the committee's
+record. \tcode{o.value_or(Config{"/etc/default"})} constructs a
+\tcode{Config} on every call and destroys it unused on every engaged one.
+The parameter is an ordinary function parameter, so the alternative is
+evaluated whether or not it is reached, and the cost is unbounded: an
+expensive construction, an allocation, a lookup, a computation whose result
+is thrown away. The workaround is the conditional expression the member was
+supposed to replace, and callers who care about the cost write it.
+
+The cure has been proposed before. \cite{P2218R0}, by Marc Mutz, proposed
+\tcode{value_or_construct}, taking the fallback's constructor arguments
+rather than a constructed fallback, so that nothing is built on the engaged
+path; it did not proceed at the time. \cite{P3413R0} revived it, added
+\tcode{value_or_else} for the general case of a lazily evaluated nullary
+callable, and specified both on \tcode{std::optional} and
+\tcode{std::expected}. Those members are the member half of this paper, and
+their wording is reproduced below.
+
+Laziness is orthogonal to the type of the result. \tcode{value_or_construct}
+and \tcode{value_or_else} still return \tcode{T}, and still require the
+alternative to converge on \tcode{T}. They fix what they set out to fix, on
+the two types that have the member to grow.
+
+\section{Two defects, two shapes}
+
+The fixes take different shapes because the defects are of different kinds.
+The cost is a defect in the parameters, and a new member name fixes it in
+place: \tcode{value_or_construct} and \tcode{value_or_else} sit beside
+\tcode{value_or} on \tcode{optional} and \tcode{expected}, spelled the way
+the member they join is spelled, and nothing existing changes meaning. The
+type is a defect in the signature, and no member can fix it --- the return
+type of a member shipping since C++17 cannot change, a corrected second
+member would have to be written and kept in sync by hand on every class that
+has members at all, and a raw pointer has none (see Why free functions,
+below).
+
+So this paper proposes each defect's fix in the shape that defect admits: a
+pair of members, and a family of free functions over the protocol. Neither
+forecloses the other, and neither depends on the other.
+
 \chapter{Design}
 
-The proposal is four free function templates over a \tcode{nullable}
-concept:
+The proposal has two halves. The free half is four function templates over a
+\tcode{nullable} concept:
 
 \begin{minted}[fontsize=\small]{c++}
 template <class T>
@@ -239,6 +322,29 @@ converted to \tcode{R}, and differ in how the alternative is supplied
 (a value, a value bound as a reference, a nullary invocable, constructor
 arguments) and in how \tcode{R} is computed (\tcode{common_type},
 \tcode{common_reference}, or the element type itself).
+
+The member half is \tcode{value_or_construct} and \tcode{value_or_else} on
+\tcode{std::optional} and \tcode{std::expected}, as \cite{P3413R0}
+specified them:
+
+\begin{minted}[fontsize=\small]{c++}
+template <class... Args>
+constexpr T value_or_construct(Args&&... args) const&;
+
+template <class U, class... Args>
+constexpr T value_or_construct(std::initializer_list<U> il,
+                               Args&&... args) const&;
+
+template <class F>
+constexpr T value_or_else(F&& f) const&;
+
+// and the corresponding && overloads, on optional and expected alike
+\end{minted}
+
+Both return \tcode{T}, as the member \tcode{value_or} beside them does, and
+neither constructs anything on the engaged path. The sections that follow
+give the design of the free half, where the open choices are; the member
+half is taken up under The member half, below.
 
 \section{The \tcode{nullable} concept}
 
@@ -479,14 +585,15 @@ The obvious name, \tcode{or_else}, is taken:
 \tcode{std::optional::or_else} returns an \tcode{optional}, re-wrapping the
 result, and giving the same name to a value-producing free function would
 make \tcode{x.or_else(f)} and \tcode{or_else(x, f)} mean different things.
-\cite{P3413R0} faces the same collision for its member function and chooses
-\tcode{value_or_else}. For the free function this paper proposes
-\tcode{or_invoke}.
+The member half faces the same collision, and answers it as \cite{P3413R0}
+did, with \tcode{value_or_else}. For the free function this paper proposes
+\tcode{or_invoke}. The two names differ because the two functions differ:
+the member returns \tcode{T}, the free function the common type.
 
 \section{\tcode{or_construct}: the fallback as constructor arguments}
 
-\tcode{or_construct} is the free-function analogue of \cite{P3413R0}'s
-member \tcode{value_or_construct}: the alternative is supplied not as a
+\tcode{or_construct} is the free-function analogue of the other half's member
+\tcode{value_or_construct}: the alternative is supplied not as a
 value but as constructor \emph{arguments}, and the fallback object is
 constructed lazily, only on the disengaged path. On the engaged path nothing
 is constructed from them at all. An \tcode{initializer_list} overload
@@ -523,9 +630,40 @@ reference. A caller who names a reference \tcode{Ret} explicitly steps
 outside that guarantee and takes on the lifetime obligation, as
 \tcode{or_construct<const int\&>(m, 0)} shows.
 
+\section{The member half: \tcode{value_or_construct} and \tcode{value_or_else}}
+
+The members are as \cite{P3413R0} specified them, and their design questions
+are settled by the member they join. Both return \tcode{T}, and require the
+alternative to converge on \tcode{T}, because a member named for
+\tcode{value_or}, sitting beside it, would be a trap if it answered with a
+different type; the corrected result type is the free half's business, under
+its own names. Both come in \tcode{const\&} and \tcode{\&\&} form, so an
+rvalue moves its payload out. \tcode{value_or_construct} takes constructor
+arguments, with an \tcode{initializer_list} overload, and direct-initializes
+the fallback, so \tcode{explicit} constructors are usable --- the arguments
+were always explicitly a construction request. \tcode{value_or_else} takes a
+nullary invocable whose result must convert to \tcode{T}. Neither touches
+the fallback on the engaged path. \tcode{expected<void,E>} gains neither;
+there is no value to construct.
+
+Two things follow from the halves being one paper. The names do not collide:
+\tcode{x.value_or_construct(args...)} and \tcode{or_construct<R>(m, args...)}
+are different spellings of the same model, and \tcode{x.value_or_else(f)}
+and \tcode{or_invoke(x, f)} differ in return type deliberately (see
+\tcode{or_invoke} and laziness, above). And \tcode{optional<T\&>} no longer
+has to be deferred: P3413 deferred it to \cite{P2988R12} while that paper
+was in flight, and \tcode{optional<T\&>} is in C++26 now, so the members are
+specified over it here, returning a value, exactly as its \tcode{value_or}
+does. \tcode{expected<T\&,E>} is the one form still waiting on a paper of
+its own, and the wording says so.
+
 \section{Why free functions}
 
-The member-function route is closed twice over. For \tcode{std::optional}
+The member route is open for one defect and closed for the other, which is
+why the proposal has two halves rather than one. Adding
+\tcode{value_or_construct} and \tcode{value_or_else} adds new names, and new
+names can be added; that is the member half. Correcting the type of the
+answer cannot be done that way. For \tcode{std::optional}
 and \tcode{std::expected} the existing \tcode{value_or} cannot change its
 return type, and a second member with corrected semantics would have to
 coexist with the first forever, on each class, kept in sync by hand. For a
@@ -573,34 +711,47 @@ comprehension-style pipelines; if implementation experience shows it is
 wanted, it is a small separate paper. It is explicitly not part of this
 proposal.
 
-\chapter{Relation to P3413R0}
+\chapter{P3413R0, and the two halves}
 
-\cite{P3413R0} (``A more flexible \tcode{optional::value_or} (else!)''),
-reviving \cite{P2218R0}, proposes member functions
-\tcode{value_or_construct}, constructing the fallback \tcode{T} lazily
-and in place from forwarded arguments, with \tcode{initializer_list}
-overloads, and \tcode{value_or_else}, taking a lazily evaluated
-nullary callable, on both \tcode{std::optional} and
-\tcode{std::expected}. The two papers aim at the same member function and
-fix different defects, and LEWG should see them together.
+\cite{P3413R0} (``A more flexible \tcode{optional::value_or} (else!)''), by
+Corentin Jabot, reviving \cite{P2218R0}, was a separate paper. It proposed
+the member \tcode{value_or_construct}, constructing the fallback \tcode{T}
+lazily and in place from forwarded arguments, with \tcode{initializer_list}
+overloads, and \tcode{value_or_else}, taking a lazily evaluated nullary
+callable, on both \tcode{std::optional} and \tcode{std::expected}. Reviewing
+R0 of this paper in Brno, LEWG saw the two as fixes to the same member
+function and asked, ``Can we ask you and Corentin to come back with one
+proposal?'' This is that proposal. Corentin is a co-author here, and P3413's
+members, wording, and rationale are the member half of this document; P3413R0
+is not pursued separately.
 
-P3413 fixes the \emph{cost} of the alternative: with
+Unification changed presentation, not design. The members are as P3413
+specified them, with the one substantive addition the intervening time
+allows: P3413 deferred \tcode{optional<T\&>} to \cite{P2988R12} while that
+paper was in flight, and \tcode{optional<T\&>} is in C++26 now, so the
+members are specified over it, and over the reference specializations of
+\tcode{expected} as far as the working draft allows. The free half is
+untouched by the unification; where it has changed since R0 --- the rvalue
+rule of Design --- it changed for its own reasons.
+
+What each half fixes stays distinct, and the distinction is worth holding on
+to in review. The member half fixes the \emph{cost} of the alternative: with
 \tcode{value_or_construct} the fallback object is not constructed at all on
-the engaged path, and \tcode{value_or_else} defers arbitrary computation.
-It does not touch the return type; everything still returns
-\tcode{T}, with the alternative still required to convert to \tcode{T},
-so the truncation pitfall, the forced copies, and the impossibility of
-reference results all remain. It is also necessarily member-by-member:
+the engaged path, and \tcode{value_or_else} defers arbitrary computation. It
+does not touch the return type; everything still returns \tcode{T}, with the
+alternative still required to convert to \tcode{T}, so the truncation
+pitfall, the forced copies, and the impossibility of reference results all
+remain --- deliberately, since a member beside \tcode{value_or} has to
+behave like \tcode{value_or}. It is also necessarily member-by-member:
 \tcode{optional} and \tcode{expected} each grow six functions, and pointers
-of any kind get nothing. On \tcode{optional<T\&>} it explicitly defers to
-P2988.
+of any kind get nothing.
 
-This paper fixes the \emph{type} of the answer and its
-\emph{reach}: results are computed via
+The free half fixes the \emph{type} of the answer and its \emph{reach}:
+results are computed via
 \tcode{common_type}/\tcode{common_reference} instead of funneled through
 \tcode{T}, reference results become possible
 and dangling-checked, and one set of free functions covers every nullable
-type. Both lazy cases now overlap. \tcode{or_invoke} and member
+type. The lazy cases are where the halves meet. \tcode{or_invoke} and member
 \tcode{value_or_else} differ in form (free vs.\ member), reach (any
 nullable vs.\ \tcode{optional}/\tcode{expected}), and return type
 (\tcode{common_type} vs.\ \tcode{T}). \tcode{or_construct} and member
@@ -612,38 +763,35 @@ the caller name the constructed type
 \begin{center}
 \begin{tabular}{ l l l }
 \hline
- & P3413R0 & this paper \\
+ & member half (P3413R0) & free half \\
 \hline
 form & members & free functions \\
 applies to & \tcode{optional}, \tcode{expected} &
   any \tcode{nullable} (incl.\ pointers) \\
 return type & \tcode{T} & \tcode{common_type} / \tcode{common_reference} \\
-truncation pitfall & unchanged & fixed \\
+truncation pitfall & unchanged, by design & fixed \\
 reference results & no & \tcode{reference_or}, dangling-checked \\
 lazy alternative & \tcode{value_or_else} & \tcode{or_invoke} \\
 in-place fallback construction & \tcode{value_or_construct} &
-  \tcode{or_construct}, callable-chosen result type \\
+  \tcode{or_construct}, caller-chosen result type \\
 rvalue nullable moves payload & yes (\tcode{\&\&} overloads) &
   yes, for the owning models (see Design) \\
-\tcode{optional<T\&>} & deferred to P2988 & covered by the concept \\
+\tcode{optional<T\&>} & members return a value & covered by the concept \\
 \hline
 \end{tabular}
 \end{center}
 
-The proposals are not alternatives to choose between. LEWG in Brno asked for
-a single proposal, ``Can we ask you and Corentin to come back with one
-proposal?'', and Corentin is amenable; this chapter, and the wording
-below, are that unification. The two compose. Adopt the members and
-\tcode{optional} and \tcode{expected} gain the lazy, in-place fallback,
-spelled the way a member is spelled and moving out of an rvalue. Adopt the
-free functions and the corrected semantics (the computed result type,
-reference results, the reach to pointers and every other nullable) become
-available generically, over those same types and over the ones that have no
-members to grow. A caller writing \tcode{x.value_or_construct(args...)} and
-one writing \tcode{or_construct<R>(m, args...)} are served by the same design
-at two spellings, and neither forecloses the other. This paper therefore
-proposes both: the free functions of the preceding chapters, and the members
-of \cite{P3413R0}, whose wording it reproduces below.
+The halves compose. Adopt the members and \tcode{optional} and
+\tcode{expected} gain the lazy, in-place fallback, spelled the way a member
+is spelled and moving out of an rvalue. Adopt the free functions and the
+corrected semantics --- the computed result type, reference results, the
+reach to pointers and every other nullable --- become available generically,
+over those same types and over the ones that have no members to grow. A
+caller writing \tcode{x.value_or_construct(args...)} and one writing
+\tcode{or_construct<R>(m, args...)} are served by the same design at two
+spellings. The halves also remain severable: LEWG can take one and leave the
+other, and each stands alone. What unification bought is that they need no
+longer be weighed against each other.
 
 \chapter{Principles for Reification of Design}
 
@@ -828,7 +976,8 @@ should be usable on any type that is contextually convertible to
 \tcode{std::shared_ptr}, \tcode{std::unique_ptr}, and
 \tcode{std::optional<T\&>}.
 
-Add as well the member functions of \cite{P3413R0}:
+Add the member functions of the other half, as \cite{P3413R0} specified
+them:
 \tcode{value_or_construct}, with its \tcode{initializer_list} overload,
 and \tcode{value_or_else}, on both \tcode{std::optional} and
 \tcode{std::expected}, each in \tcode{const\&} and \tcode{\&\&} form,
@@ -1341,7 +1490,10 @@ wording feedback carried through that paper.
 \item \textbf{R1} \today\ --- Unified with \cite{P3413R0} following LEWG's
   Brno review, which asked for a single proposal. Corentin Jabot joins as
   co-author; the members \tcode{value_or_construct} and \tcode{value_or_else}
-  are folded into the proposal, wording, and implementation.
+  are folded into the proposal, wording, and implementation, and specified
+  over \tcode{optional<T\&>}, which P3413R0 deferred. Separately: an rvalue
+  nullable moves its payload, splitting the models by ownership, and the asks
+  to LEWG are cut to two.
 \item \textbf{R0} Brno, 2026-06 --- Initial draft, reviewed by LEWG. The
   free-function follow-on promised in \cite{P2988R12}, concluding the line of
   work begun in \cite{P1255R13}.
