@@ -46,13 +46,36 @@
 \chapter*{Changes Since Last Version}
 
 \begin{itemize}
-\item \textbf{R1} Unified with \cite{P3413R0} at LEWG's request: Corentin Jabot
-  joins as co-author, and the member functions \tcode{value_or_construct} and
-  \tcode{value_or_else} are folded into the proposal, the wording, and the
-  implementation. The members are specified over \tcode{optional<T\&>}, which
-  P3413R0 deferred and which is now C++26, rather than deferred.
-  Independently of the unification, an rvalue nullable now moves its payload,
-  which splits the models by ownership, and the asks to LEWG are cut to two.
+\item \textbf{R1}
+  \begin{itemize}
+  \item Unified with \cite{P3413R0} at LEWG's request: Corentin Jabot joins as
+    co-author, and the members \tcode{value_or_construct} and
+    \tcode{value_or_else} are folded into the proposal, the wording, and the
+    implementation, covering \tcode{optional<T\&>}, which P3413R0 deferred and
+    which is now C++26.
+  \item An rvalue nullable moves its payload. R0 dereferenced an lvalue
+    always, observing and never consuming; the models now split by ownership,
+    so \tcode{optional} and \tcode{expected} move, and the handles go on
+    copying.
+  \item \tcode{nullable} is proposed as a named, public concept. R0 specified
+    it as exposition-only and asked LEWG for a poll.
+  \item The concept is stated on \tcode{const remove_reference_t<T>\&} rather
+    than \tcode{const T}, so the const-observability requirement holds for the
+    deduced \tcode{T} of an lvalue argument, where the const was silently
+    discarded before.
+  \item \tcode{reference_or}'s second dangling guard is stated on the
+    dereference type rather than on \tcode{T\&}, where it could never fire.
+  \item \tcode{or_invoke} forwards its invocable, agreeing with the
+    \tcode{invoke_result_t<I>} its return type is computed from;
+    \tcode{or_construct} gains the engaged-path \emph{Mandates}, and its
+    no-dangle guarantee is stated as holding for a defaulted \tcode{Ret}.
+  \item The asks to LEWG are cut from nine to one, whether
+    \tcode{reference_or} should mandate a reference result. The rest are
+    decided in the paper: the dangling guards are \emph{Mandates}, the concept
+    stays minimal, the names stand, and the header is \tcode{<optional>}.
+  \item Wording rebased to \cite{N5054}, which carries
+    \tcode{optional<T\&>}.
+  \end{itemize}
 \item \textbf{R0} Initial revision.
 \end{itemize}
 
@@ -520,8 +543,8 @@ conditional expression's own behavior faithfully reproduced; but a caller
 who wrote \tcode{reference_or} for its reference semantics receives a copy.
 Whether \tcode{reference_or} should further mandate that the computed type
 \emph{is} a reference type, making the degenerate calls ill-formed and
-steering them to \tcode{value_or}, is the first of the two open questions
-below.
+steering them to \tcode{value_or}, is the one question this paper leaves
+open below.
 
 The danger of returning references is binding one to a temporary, and that
 is now statically detectable. The implementation carries two guards:
@@ -1489,11 +1512,13 @@ wording feedback carried through that paper.
 \begin{itemize}
 \item \textbf{R1} \today\ --- Unified with \cite{P3413R0} following LEWG's
   Brno review, which asked for a single proposal. Corentin Jabot joins as
-  co-author; the members \tcode{value_or_construct} and \tcode{value_or_else}
-  are folded into the proposal, wording, and implementation, and specified
-  over \tcode{optional<T\&>}, which P3413R0 deferred. Separately: an rvalue
-  nullable moves its payload, splitting the models by ownership, and the asks
-  to LEWG are cut to two.
+  co-author, and the members \tcode{value_or_construct} and
+  \tcode{value_or_else} are folded into the proposal, wording, and
+  implementation. Independently of the unification: an rvalue nullable moves
+  its payload, \tcode{nullable} is proposed as a public concept and stated so
+  that const-observability holds, \tcode{reference_or}'s second dangling guard
+  is stated where it can fire, \tcode{or_invoke} forwards its invocable, and
+  the asks to LEWG are cut from nine to one. See Changes Since Last Version.
 \item \textbf{R0} Brno, 2026-06 --- Initial draft, reviewed by LEWG. The
   free-function follow-on promised in \cite{P2988R12}, concluding the line of
   work begun in \cite{P1255R13}.
