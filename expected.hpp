@@ -3,8 +3,10 @@
 #ifndef BEMAN_EXPECTED_EXPECTED_HPP
 #define BEMAN_EXPECTED_EXPECTED_HPP
 
+// \rSec2[expected.syn]{Header <expected> synopsis}
 #include <beman/expected/unexpected.hpp>
 #include <beman/expected/bad_expected_access.hpp>
+/// END [expected.syn]
 
 #ifndef BEMAN_EXPECTED_INCLUDED_FROM_INTERFACE_UNIT
     #include <cstdlib>
@@ -56,6 +58,7 @@ namespace expected {
 
 namespace detail {
 
+// \rSec2[expected.detail]{Exposition-only helpers}
 //! \expos
 template <class T>
 struct is_expected_specialization : std::false_type {};
