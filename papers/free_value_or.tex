@@ -954,9 +954,10 @@ The test suite exercises a matrix:
   path; and
 \item negative-compilation cases for concept violations, non-reference
   common-reference results, conversion-created temporaries, and temporary
-  owning \tcode{optional}, \tcode{unique_ptr}, and \tcode{shared_ptr}
-  wrappers, plus an explicitly selected reference result for
-  \tcode{or_construct}.
+  owning \tcode{optional}, \tcode{expected}, \tcode{unique_ptr}, and
+  \tcode{shared_ptr} wrappers; and for \tcode{or_construct}, an explicitly
+  selected reference result, a payload that cannot be explicitly converted,
+  and fallback arguments that cannot construct the result.
 \end{itemize}
 
 Reference identity and mutation
@@ -1068,6 +1069,8 @@ template <class Ret = void, nullable T, class... Args,
                         std::remove_cvref_t<deref_t<T>>, Ret>>
 constexpr R or_construct(T&& m, Args&&... args) {
     static_assert(!std::is_reference_v<R>);
+    static_assert(std::is_constructible_v<R, Args...>);
+    static_assert(requires { static_cast<R>(*std::declval<T>()); });
     return bool(m) ? static_cast<R>(*std::forward<T>(m))
                    : R(std::forward<Args>(args)...);
 }
@@ -1078,6 +1081,9 @@ template <class Ret = void, nullable T, class E, class... Args,
 constexpr R or_construct(T&& m, std::initializer_list<E> il,
                          Args&&... args) {
     static_assert(!std::is_reference_v<R>);
+    static_assert(
+        std::is_constructible_v<R, std::initializer_list<E>&, Args...>);
+    static_assert(requires { static_cast<R>(*std::declval<T>()); });
     return bool(m) ? static_cast<R>(*std::forward<T>(m))
                    : R(il, std::forward<Args>(args)...);
 }
@@ -1301,8 +1307,8 @@ remove_cvref_t<@\exposid{deref-t}@<T>>, Ret>}.
 \pnum
 \mandates
 \tcode{is_reference_v<R>} is \tcode{false},
-\tcode{is_constructible_v<R, Args...>} is \tcode{true}, and
-\tcode{is_convertible_v<@\exposid{deref-t}@<T>, R>} is \tcode{true}.
+\tcode{is_constructible_v<R, Args...>} is \tcode{true}, and the expression
+\tcode{static_cast<R>(*declval<T>())} is well-formed.
 
 \pnum
 \effects
@@ -1327,7 +1333,7 @@ remove_cvref_t<@\exposid{deref-t}@<T>>, Ret>}.
 \mandates
 \tcode{is_reference_v<R>} is \tcode{false},
 \tcode{is_constructible_v<R, initializer_list<E>\&, Args...>} is \tcode{true},
-and \tcode{is_convertible_v<@\exposid{deref-t}@<T>, R>} is \tcode{true}.
+and the expression \tcode{static_cast<R>(*declval<T>())} is well-formed.
 
 \pnum
 \effects
