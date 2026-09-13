@@ -33,6 +33,9 @@ static_assert(fvo::value_or(static_cast<const int*>(nullptr), 7) == 7);
 
 static constexpr int ce_a = 10;
 static constexpr int ce_b = 20;
+// The owning optionals are named so their contained objects outlive the
+// returned references. Passing either as a temporary is intentionally
+// rejected, even if the reference would be consumed in the same expression.
 static constexpr std::optional<int> ce_engaged{ce_a};
 static constexpr std::optional<int> ce_disengaged;
 

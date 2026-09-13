@@ -6,6 +6,8 @@
 #ifndef BEMAN_FREE_VALUE_OR_INCLUDED_FROM_INTERFACE_UNIT
     #include <initializer_list>
     #include <iterator>
+    // This monolithic reference implementation supplies specializations
+    // normatively declared in the standard <optional> and <expected> headers.
     #include <optional>
     #include <type_traits>
     #include <utility>
@@ -43,8 +45,7 @@ inline constexpr bool enable_borrowed_nullable<std::expected<T&, E>> = true;
 
 template <class T>
 concept borrowed_nullable =
-    nullable<T> &&
-    (std::is_lvalue_reference_v<T> || enable_borrowed_nullable<std::remove_cvref_t<T>>);
+    nullable<T> && (std::is_lvalue_reference_v<T> || enable_borrowed_nullable<std::remove_cvref_t<T>>);
 
 // The type *m yields, with the value category of the nullable carried
 // through.  std::iter_reference_t always dereferences an lvalue; this does
@@ -83,7 +84,7 @@ inline constexpr bool reference_constructs_from_temporary_v =
 #endif
 } // namespace detail
 
-template <borrowed_nullable T, class U, class R>
+template <nullable T, class U, class R>
 constexpr auto reference_or(T&& m, U&& u) -> R;
 
 template <nullable T, class U, class R>
@@ -103,14 +104,14 @@ constexpr R or_construct(T&& m, std::initializer_list<E> il, Args&&... args);
 } // namespace free_value_or
 } // namespace smd
 
-template <smd::free_value_or::borrowed_nullable T,
+template <smd::free_value_or::nullable T,
           class U,
           class R = std::common_reference_t<smd::free_value_or::deref_t<T>, U&&>>
 constexpr auto smd::free_value_or::reference_or(T&& m, U&& u) -> R {
+    static_assert(smd::free_value_or::borrowed_nullable<T>, "reference_or requires an lvalue or borrowed nullable");
     // A non-reference common_reference materializes a new result object and
     // defeats this function's reference semantics.
-    static_assert(std::is_reference_v<R>,
-                  "reference_or requires common_reference_t to be a reference");
+    static_assert(std::is_reference_v<R>, "reference_or requires common_reference_t to be a reference");
     // Reject fallbacks/holders that would bind the returned reference to a
     // temporary. Uses the P2255 trait (polyfilled for C++20 above).
     static_assert(!smd::free_value_or::detail::reference_constructs_from_temporary_v<R, U>);
@@ -139,6 +140,7 @@ template <class Ret = void,
           class R = std::conditional_t<std::is_void_v<Ret>, std::remove_cvref_t<smd::free_value_or::deref_t<T>>, Ret>,
           class... Args>
 constexpr R smd::free_value_or::or_construct(T&& m, Args&&... args) {
+    static_assert(!std::is_reference_v<R>, "or_construct requires a non-reference result type");
     return bool(m) ? static_cast<R>(*std::forward<T>(m)) : R(std::forward<Args>(args)...);
 }
 
@@ -148,6 +150,7 @@ template <class Ret = void,
           class R = std::conditional_t<std::is_void_v<Ret>, std::remove_cvref_t<smd::free_value_or::deref_t<T>>, Ret>,
           class... Args>
 constexpr R smd::free_value_or::or_construct(T&& m, std::initializer_list<E> il, Args&&... args) {
+    static_assert(!std::is_reference_v<R>, "or_construct requires a non-reference result type");
     return bool(m) ? static_cast<R>(*std::forward<T>(m)) : R(il, std::forward<Args>(args)...);
 }
 

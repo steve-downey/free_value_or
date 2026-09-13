@@ -125,7 +125,7 @@ foreach(wrapper IN ITEMS optional unique_ptr shared_ptr)
     fvo_add_compile_fail_test(
         fvo.fail.ref_or_temporary_${wrapper}
         ref_or_temporary_${wrapper}_fail.cpp
-        "borrowed_nullable"
+        "reference_or requires an lvalue or borrowed nullable"
     )
 endforeach()
 
@@ -214,6 +214,12 @@ fvo_add_compile_fail_test(
     fvo.fail.or_construct_payload_not_convertible
     or_construct_payload_not_convertible_fail.cpp
     "invalid.*static_cast|no matching conversion|cannot convert"
+)
+
+fvo_add_compile_fail_test(
+    fvo.fail.or_construct_reference_result
+    or_construct_reference_result_fail.cpp
+    "or_construct requires a non-reference result type"
 )
 
 # ---------------------------------------------------------------------------

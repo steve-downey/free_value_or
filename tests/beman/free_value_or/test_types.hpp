@@ -3,6 +3,7 @@
 #define FVO_TEST_TYPES_HPP
 
 #include <beman/free_value_or/value_or.hpp>
+#include <beman/expected/expected.hpp>
 
 #include <memory>
 #include <optional>
@@ -51,7 +52,13 @@ namespace fvo = smd::free_value_or; // rename point: smd:: -> beman::
     #include <beman/optional/optional.hpp>
 // fvo_opt::optional<T&> is optional-with-reference-support, usable in Step 07.
 namespace fvo_opt = beman::optional;
+
+template <class T>
+inline constexpr bool smd::free_value_or::enable_borrowed_nullable<beman::optional::optional<T&>> = true;
 #endif
+
+template <class T, class E>
+inline constexpr bool smd::free_value_or::enable_borrowed_nullable<beman::expected::expected<T&, E>> = true;
 
 // ---------------------------------------------------------------------------
 // Helpers: make engaged / disengaged nullable values for each model type

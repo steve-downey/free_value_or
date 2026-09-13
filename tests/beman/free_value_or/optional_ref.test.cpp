@@ -14,18 +14,11 @@
 
 #if FVO_HAS_OPTIONAL_REF
 
-// Integration customization corresponding to the standard optional<T&>
-// specialization supplied by the proposal implementation.
-template <class T>
-inline constexpr bool
-    smd::free_value_or::enable_borrowed_nullable<beman::optional::optional<T&>> = true;
-
 // ==========================================================================
 // nullable concept: optional<int&> must satisfy nullable
 // ==========================================================================
 static_assert(fvo::nullable<fvo_opt::optional<int&>>, "optional<int&> must satisfy the nullable concept");
-static_assert(fvo::borrowed_nullable<fvo_opt::optional<int&>>,
-              "a temporary optional<T&> must preserve its referent");
+static_assert(fvo::borrowed_nullable<fvo_opt::optional<int&>>, "a temporary optional<T&> must preserve its referent");
 
 // ==========================================================================
 // Return-type static_asserts
