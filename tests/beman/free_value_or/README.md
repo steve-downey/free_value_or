@@ -10,12 +10,13 @@ guards).
 | File | What it covers |
 |------|----------------|
 | `smoke.test.cpp` | Minimal compile-and-run check at C++23; proves `beman::optional<int&>` links |
-| `concept.test.cpp` | `nullable` concept: `static_assert` positive coverage (all model types) and negative coverage (non-nullable anti-models) |
+| `concept.test.cpp` | `nullable` and `borrowed_nullable`: positive and negative `static_assert` coverage |
 | `value_or.test.cpp` | `value_or` runtime behaviour, return-type (`common_type`), value-category axes, all nullable types |
 | `reference_or.test.cpp` | `reference_or` reference identity, `common_reference` return type, const propagation, mutation round-trips, all nullable types |
 | `or_invoke.test.cpp` | `or_invoke` results, laziness (invocable not called when engaged), move-only and stateful invocables |
 | `constexpr.test.cpp` | `static_assert`-level constant-evaluation of all three functions with `optional`, `expected`, and raw pointers |
 | `optional_ref.test.cpp` | All three functions with `fvo_opt::optional<int&>` (C++26 reference-optional via vendored `beman::optional`): `nullable` static_assert, return-type proofs, reference identity, mutation, laziness, rebinding semantics |
+| `expected_ref.test.cpp` | Temporary vendored `expected<T&, E>` is an explicitly borrowed nullable and safely returns its referent |
 | `or_construct.test.cpp` | `or_construct` Step 00 smoke: both overloads compile and run |
 | `or_construct_behavior.test.cpp` | `or_construct` return type, engaged/disengaged, value categories, inward conversion, explicit `Ret` |
 | `or_construct_construct.test.cpp` | `or_construct` zero-arg default-construction, multi-arg emplace-style, init-list overload |
@@ -25,6 +26,10 @@ guards).
 | `fail_not_nullable.cpp` | Negative compile: calling `value_or` with a non-nullable first arg must fail (`no matching function`) |
 | `ref_or_temp_from_prvalue_fail.cpp` | Negative compile: `reference_or` with prvalue fallback that would dangle must fail (`static assertion failed`) |
 | `ref_or_rvalue_string_fail.cpp` | Negative compile: `reference_or` with a `string`-from-literal fallback that would dangle must fail |
+| `ref_or_temporary_optional_fail.cpp` | Negative compile: temporary owning `optional` is not borrowed |
+| `ref_or_temporary_unique_ptr_fail.cpp` | Negative compile: temporary `unique_ptr` is not borrowed |
+| `ref_or_temporary_shared_ptr_fail.cpp` | Negative compile: a temporary last-owner `shared_ptr` is not borrowed |
+| `ref_or_non_reference_common_reference_fail.cpp` | Negative compile: `reference_or` cannot return a value-valued common reference |
 | `value_or_non_nullable_fail.cpp` | Negative compile: `value_or` with non-nullable first arg |
 | `reference_or_non_nullable_fail.cpp` | Negative compile: `reference_or` with non-nullable first arg |
 | `or_invoke_non_nullable_fail.cpp` | Negative compile: `or_invoke` with non-nullable first arg |
@@ -85,13 +90,13 @@ constexpr R or_construct(T&& m, std::initializer_list<E> il, Args&&... args);
 
 | `Ret` argument | `R` (the return type) |
 |----------------|----------------------|
-| Omitted (default `void`) | `remove_cvref_t<iter_reference_t<T>>` — the **decayed** payload type |
+| Omitted (default `void`) | `remove_cvref_t<deref_t<T>>` — the **decayed** payload type |
 | Explicit type | `Ret` — the payload need only be **convertible** to `Ret` via `static_cast` |
 
 Unlike `value_or` there is **no `common_type` negotiation** — there is no single independent
 second type; the fallback is an arg pack that is used to construct `R` directly.
 
-For `optional<int&>`: `iter_reference_t` = `int&`, so default `R = remove_cvref_t<int&> = int`
+For `optional<int&>`: `deref_t` = `int&`, so default `R = remove_cvref_t<int&> = int`
 (always a value, never a reference).
 
 ### Key properties
@@ -131,19 +136,21 @@ For `optional<int&>`: `iter_reference_t` = `int&`, so default `R = remove_cvref_
 | Function | Return kind | How | Fallback eval |
 |----------|-------------|-----|---------------|
 | `value_or` | `common_type_t` — always a **value** | `static_cast<R>(*m)` or `static_cast<R>(u)` | eager |
-| `reference_or` | `common_reference_t` — usually a **reference** | `static_cast<R>(*m)` or `static_cast<R>(u)` | eager |
+| `reference_or` | `common_reference_t` — mandated to be a **reference** | `static_cast<R>(*m)` or `static_cast<R>(u)` | eager |
 | `or_invoke` | `common_type_t` — always a **value** | `static_cast<R>(*m)` or `static_cast<R>(invocable())` | **lazy** (called only when disengaged) |
 
-`reference_or` uses `common_reference_t` (can produce a reference type), while `value_or`
+`reference_or` uses `common_reference_t` and rejects a non-reference result, while `value_or`
 and `or_invoke` use `common_type_t` (always produces a value type).  This is the key
 semantic distinction: `reference_or` is for use cases where the caller wants to observe or
 mutate through the optional without making a copy; the other two always return by value.
 
-`reference_or` carries two compile-time dangling guards:
+`reference_or` requires `borrowed_nullable`: lvalues are accepted, while rvalues must opt in.
+Raw pointers, `optional<T&>`, and `expected<T&, E>` opt in; owning wrappers and smart pointers
+do not. It also carries conversion-temporary guards:
 ```cpp
 static_assert(!std::reference_constructs_from_temporary_v<R, U>);
-static_assert(!std::reference_constructs_from_temporary_v<R, T&>);
+static_assert(!std::reference_constructs_from_temporary_v<R, deref_t<T>>);
 ```
-These reject type combinations that would bind the returned reference to a temporary.
-The negative-compile tests in `ref_or_temp_from_prvalue_fail.cpp` and
-`ref_or_rvalue_string_fail.cpp` verify these guards fire correctly.
+These reject type combinations that would bind the returned reference to a temporary; the
+compile-fail suite separately verifies both conversion-created temporaries and temporary
+owning wrappers.

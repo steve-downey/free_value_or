@@ -119,6 +119,22 @@ fvo_add_compile_fail_test(
     "static assertion failed|static_assert failed"
 )
 
+# Temporary owning wrappers are not borrowed nullables. Their operator*
+# returning T& is insufficient: destroying the wrapper may destroy T.
+foreach(wrapper IN ITEMS optional unique_ptr shared_ptr)
+    fvo_add_compile_fail_test(
+        fvo.fail.ref_or_temporary_${wrapper}
+        ref_or_temporary_${wrapper}_fail.cpp
+        "borrowed_nullable"
+    )
+endforeach()
+
+fvo_add_compile_fail_test(
+    fvo.fail.ref_or_non_reference_common_reference
+    ref_or_non_reference_common_reference_fail.cpp
+    "reference_or requires common_reference_t to be a reference"
+)
+
 # ---------------------------------------------------------------------------
 # Step 04B: non-nullable first argument rejected by the nullable concept
 # Each TU must fail with "no matching function for call to" — one per function.
@@ -222,6 +238,10 @@ fvo_add_test(beman.free_value_or.tests.rvalue_nullable rvalue_nullable.test.cpp)
 # provides the reference-optional support instead.
 # ---------------------------------------------------------------------------
 fvo_add_test(beman.free_value_or.tests.optional_ref optional_ref.test.cpp)
+
+# expected<T&, E> is likewise an explicitly borrowed nullable. This uses the
+# vendored reference implementation until the standard type supports T&.
+fvo_add_test(beman.free_value_or.tests.expected_ref expected_ref.test.cpp)
 
 # ---------------------------------------------------------------------------
 # or_construct Step 06: optional<T&> coverage + finalize

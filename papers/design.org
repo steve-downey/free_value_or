@@ -49,15 +49,22 @@ optional, expected, raw and smart pointers, optional<T&>.
 
 #+begin_src c++
 template <class T>
-concept nullable = requires(const T t) { bool(t); *(t); };
+concept nullable = requires(const std::remove_reference_t<T>& t) { bool(t); *(t); };
 
-template <nullable T, class U, class R = std::common_reference_t<std::iter_reference_t<T>, U&&>>
-constexpr auto reference_or(T&& m, U&& u) -> R;   // R usually a reference; dangling static_asserts
+template <class T>
+inline constexpr bool enable_borrowed_nullable = false;
 
-template <nullable T, class U, class R = std::common_type_t<std::iter_reference_t<T>, U&&>>
+template <class T>
+concept borrowed_nullable = nullable<T> &&
+  (std::is_lvalue_reference_v<T> || enable_borrowed_nullable<std::remove_cvref_t<T>>);
+
+template <borrowed_nullable T, class U, class R = std::common_reference_t<deref_t<T>, U&&>>
+constexpr auto reference_or(T&& m, U&& u) -> R;   // R must be a reference; dangling static_asserts
+
+template <nullable T, class U, class R = std::common_type_t<deref_t<T>, U&&>>
 constexpr auto value_or(T&& m, U&& u) -> R;       // R usually a value
 
-template <nullable T, class I, class R = std::common_type_t<std::iter_reference_t<T>, std::invoke_result_t<I>>>
+template <nullable T, class I, class R = std::common_type_t<deref_t<T>, std::invoke_result_t<I>>>
 constexpr auto or_invoke(T&& m, I&& invocable) -> R;  // I() evaluated only when disengaged
 #+end_src
 
@@ -72,10 +79,9 @@ C++23 floor: reference_constructs_from_temporary_v.
 - Function pointers: the minimal concept ADMITS them (bool + deref both
   valid); P1255's nullable_object excludes via is_object of the referent.
   Open question for LEWG; do not claim they're excluded.
-- iter_reference_t<T> computes from T& → rvalue nullables never move their
-  payload; value_or(std::move(opt), u) copies. Deliberate "observe, don't
-  consume" rule in R0; alternative decltype(*forward<T>(m)) design flagged
-  for LEWG (handoff 003 value-category sweep).
+- deref_t<T> is decltype(*forward<T>(m)): value-producing functions move only
+  when dereferencing the rvalue nullable produces T&&. This does not establish
+  whether returning a reference from a temporary wrapper is safe.
 - common_type results table (handoff 003) and common_reference const-
   propagation table (handoff 004) are reproduced in the paper.
 - value_or fallback confirmed eager (lambda counted while engaged);
@@ -86,12 +92,14 @@ C++23 floor: reference_constructs_from_temporary_v.
 - No header bugs found through step 03 (26/26 tests green).
 
 Final-suite findings (steps 04-07, 59/59 green, plan complete):
-- SURPRISE (handoff 005): common_reference of unrelated lvalue refs need
+- RESOLVED (handoff 005): common_reference of unrelated lvalue refs need
   not be a reference. common_reference_t<int&, long&> = long;
-  common_reference_t<string&, const char(&)[N]> = string. reference_or
-  then compiles, guards vacuous (R not a reference), returns a prvalue —
-  value_or behavior under a reference_or name. New LEWG question in the
-  paper: mandate R is a reference type?
+  common_reference_t<string&, const char(&)[N]> = string. reference_or now
+  mandates that R is a reference type.
+- SAFETY: reference_or uses borrowed_nullable, modeled on borrowed_range.
+  All nullable lvalues qualify. Rvalues opt in; raw pointers, optional<T&>,
+  and expected<T&,E> do, while owning optional/expected and smart pointers do
+  not. Temporary owning wrappers are negative-compilation tests.
 - SURPRISE (handoff 006): or_invoke + reference-returning invocable
   decays via common_type → value. Lazy-reference quadrant of the family
   is empty; paper says deliberately so, reference_invoke composable later.
@@ -106,7 +114,7 @@ The sibling plan (tmp/test-plan-or_construct/) completed: both overloads
 in the header, 106/106 tests, no header bugs. Surface as resolved by
 Steve:
 - ~or_construct<Ret = void>(m, args...)~ + initializer_list overload.
-- Default R = remove_cvref_t<iter_reference_t<T>> — the decayed payload
+- Default R = remove_cvref_t<deref_t<T>> — the decayed payload
   type. INWARD conversion, deliberately unlike value_or's outward
   common_type: there is no fallback value to common with, only
   constructor arguments. The member function's model, correct here.
@@ -181,8 +189,8 @@ poll the promotion.
   optional<T&> (C++26, via vendored beman.optional26) ×
   engaged/disengaged × lvalue/rvalue/const × constexpr.
 - Negative-compile matrix: dangling rejection in reference_or (temporary
-  from U, temporary from *m), non-nullable arguments rejected by the
-  concept.
+  from U, temporary from *m, and temporary owning wrappers), value-valued
+  common references, and non-nullable arguments rejected by the concept.
 - Test build-out tracked in tmp/test-plan (steps 01–07 pending as of
   2026-06-12); finish before R0 ships so the matrix is real.
 

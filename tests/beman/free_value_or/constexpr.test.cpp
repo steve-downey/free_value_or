@@ -33,11 +33,13 @@ static_assert(fvo::value_or(static_cast<const int*>(nullptr), 7) == 7);
 
 static constexpr int ce_a = 10;
 static constexpr int ce_b = 20;
+static constexpr std::optional<int> ce_engaged{ce_a};
+static constexpr std::optional<int> ce_disengaged;
 
 // engaged: result references the held int, reads back ce_a value
-static_assert(fvo::reference_or(std::optional<int>{ce_a}, ce_b) == ce_a);
+static_assert(fvo::reference_or(ce_engaged, ce_b) == ce_a);
 // disengaged: result is the fallback reference ce_b
-static_assert(fvo::reference_or(std::optional<int>{}, ce_b) == ce_b);
+static_assert(fvo::reference_or(ce_disengaged, ce_b) == ce_b);
 
 // ---------------------------------------------------------------------------
 // or_invoke — constant-evaluated proofs
