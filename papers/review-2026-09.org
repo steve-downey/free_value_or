@@ -143,17 +143,19 @@ revision; the whole
 project runs 1439 ctest entries including the vendored suites, which is
 not the number to cite for this header.
 
-** D1. papers/design.org is R0-era
+** D1. papers/design.org was R0-era — FIXED (this branch)
 Its "Current interface" block shows =requires(const T t)= and
 =iter_reference_t=; P3413R0 is "competing/adjacent" with the old chapter
 framing; "Open questions" lists as open things R1 decides (static_assert
 vs constraint, naming, CPOs, header, exposition-only "poll the
 promotion"); the concept-details bullet says function pointers are
 excluded where the findings bullet, correctly, says they are admitted.
-Fix: bring it to R1 or mark the sections as R0 history and add an R1
-status block. This file is linked from its head.
+Done: brought to R1 — interface block is the current header plus the
+member half; the P3413 bullet is history; "Open questions" is "Decided in
+R1" with the one remaining ask; the function-pointer bullet says admitted;
+the thesis names both defects. Entries that are R0 record say so.
 
-** D2. CLAUDE.md and the tests README are stale on the same points
+** D2. CLAUDE.md and the tests README were stale on the same points — FIXED (this branch)
 CLAUDE.md: =todo.hpp= "scaffold" (removed in 2383d3a; the umbrella
 includes =value_or.hpp= now), =examples/todo.cpp= (now
 =free_value_or.cpp=), and "computed from =std::iter_reference_t<T>=" in
@@ -208,7 +210,7 @@ count; state all three.
 =make= in =papers/= on a machine with lualatex, minted, and the wg21 bib
 (=make curl-bib=). Commit the PDF with the tex.
 
-** Step 4 — documentation (D1, D2)
+** Step 4 — documentation (D1, D2) — done
 - =papers/design.org=: replace the interface block with the current
   header; rewrite Provenance's P3413 bullet as history; convert "Open
   questions" into "Decided in R1" with the one remaining question; fix the

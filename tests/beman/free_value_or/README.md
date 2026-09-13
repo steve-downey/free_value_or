@@ -1,7 +1,7 @@
 # `free_value_or` test suite
 
-Tests for `beman::free_value_or` — the non-member `value_or`, `reference_or`, and
-`or_invoke` family (WG21 P1255 / D4270R0).  All tests use **Catch2 v3** and build at
+Tests for `beman::free_value_or` — the non-member `value_or`, `reference_or`,
+`or_invoke`, and `or_construct` family (WG21 D4270, at R1).  All tests use **Catch2 v3** and build at
 **C++23 minimum** (required by `reference_or`'s `reference_constructs_from_temporary_v`
 guards).
 
@@ -22,6 +22,8 @@ guards).
 | `or_construct_laziness.test.cpp` | `or_construct` laziness: fallback constructed exactly once when disengaged, not constructed when engaged |
 | `or_construct_constexpr.test.cpp` | `or_construct` `static_assert`-level constant evaluation: both overloads, `optional`, `expected`, raw pointers, explicit `Ret` |
 | `or_construct_optional_ref.test.cpp` | `or_construct` with `optional<int&>` and `optional<string&>`: nullable proof, `R = int` return-type proof, engaged/disengaged, explicit `Ret`, init-list, rebinding |
+| `rvalue_nullable.test.cpp` | Rvalue nullables: copy/move-counted engaged path for all four functions over `optional`, `expected`, `shared_ptr`, `unique_ptr` — pins that owning-by-containment models move and pointers copy; free and member `value_or` agree; `reference_or` yields `const T&` on an rvalue `optional` and stays `T&` on an rvalue pointer |
+| `public_header.test.cpp` | The umbrella `<beman/free_value_or/free_value_or.hpp>` exposes all four functions, in both the header and the module build |
 | `fail_not_nullable.cpp` | Negative compile: calling `value_or` with a non-nullable first arg must fail (`no matching function`) |
 | `ref_or_temp_from_prvalue_fail.cpp` | Negative compile: `reference_or` with prvalue fallback that would dangle must fail (`static assertion failed`) |
 | `ref_or_rvalue_string_fail.cpp` | Negative compile: `reference_or` with a `string`-from-literal fallback that would dangle must fail |
@@ -85,13 +87,13 @@ constexpr R or_construct(T&& m, std::initializer_list<E> il, Args&&... args);
 
 | `Ret` argument | `R` (the return type) |
 |----------------|----------------------|
-| Omitted (default `void`) | `remove_cvref_t<iter_reference_t<T>>` — the **decayed** payload type |
+| Omitted (default `void`) | `remove_cvref_t<deref_t<T>>` — the **decayed** payload type (`deref_t<T>` is `decltype(*std::declval<T>())`) |
 | Explicit type | `Ret` — the payload need only be **convertible** to `Ret` via `static_cast` |
 
 Unlike `value_or` there is **no `common_type` negotiation** — there is no single independent
 second type; the fallback is an arg pack that is used to construct `R` directly.
 
-For `optional<int&>`: `iter_reference_t` = `int&`, so default `R = remove_cvref_t<int&> = int`
+For `optional<int&>`: `deref_t` = `int&`, so default `R = remove_cvref_t<int&> = int`
 (always a value, never a reference).
 
 ### Key properties
