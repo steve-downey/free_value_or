@@ -2,11 +2,41 @@
 
 find_package(Catch2 3 REQUIRED)
 
+include(CheckCXXSourceCompiles)
+
+# Compile-fail coverage for owning std::expected is available only when the
+# selected standard library supplies it. Probe at the tests' C++23 level even
+# when the enclosing preset configures the library itself for C++20.
+if(DEFINED CMAKE_CXX_STANDARD)
+    set(fvo_saved_cxx_standard "${CMAKE_CXX_STANDARD}")
+    set(fvo_had_cxx_standard true)
+endif()
+set(CMAKE_CXX_STANDARD 23)
+check_cxx_source_compiles(
+    [[
+        #include <expected>
+        #include <version>
+        #if !defined(__cpp_lib_expected) || __cpp_lib_expected < 202202L
+        #error std::expected unavailable
+        #endif
+        int main() {
+            std::expected<int, int> value{1};
+            return *value;
+        }
+    ]]
+    FVO_TEST_HAS_STD_EXPECTED
+)
+if(fvo_had_cxx_standard)
+    set(CMAKE_CXX_STANDARD "${fvo_saved_cxx_standard}")
+else()
+    unset(CMAKE_CXX_STANDARD)
+endif()
+
 # ---------------------------------------------------------------------------
 # Helper: add a positive (passing) test executable at C++23
 #
-# Links beman::free_value_or + beman::optional (vendored, header-only) +
-# Catch2::Catch2WithMain, sets cxx_std_23, injects FVO_HAS_OPTIONAL_REF=1,
+# Links beman::free_value_or plus the vendored optional and expected libraries
+# and Catch2::Catch2WithMain, sets cxx_std_23, injects FVO_HAS_OPTIONAL_REF=1,
 # includes tests/beman/free_value_or/ for test_types.hpp, and registers with
 # catch_discover_tests.
 #
@@ -18,7 +48,11 @@ function(fvo_add_test name source)
     target_sources(${name} PRIVATE ${source})
     target_link_libraries(
         ${name}
-        PRIVATE beman::free_value_or beman::optional Catch2::Catch2WithMain
+        PRIVATE
+            beman::free_value_or
+            beman::optional
+            beman::expected
+            Catch2::Catch2WithMain
     )
     target_compile_features(${name} PRIVATE cxx_std_23)
     target_compile_definitions(${name} PRIVATE FVO_HAS_OPTIONAL_REF=1)
@@ -43,7 +77,7 @@ function(fvo_add_compile_fail_test test_name source regex)
     target_sources(${tgt_name} PRIVATE ${source})
     target_link_libraries(
         ${tgt_name}
-        PRIVATE beman::free_value_or beman::optional
+        PRIVATE beman::free_value_or beman::optional beman::expected
     )
     target_compile_features(${tgt_name} PRIVATE cxx_std_23)
     target_compile_definitions(${tgt_name} PRIVATE FVO_HAS_OPTIONAL_REF=1)
@@ -103,20 +137,25 @@ fvo_add_compile_fail_test(
 )
 
 # ---------------------------------------------------------------------------
-# Step 04A: dangling-reference rejection in reference_or
-# Each TU must fail with "static assertion failed" from
-# reference_constructs_from_temporary_v checks in reference_or.
+# Step 04A: dangling-reference rejection in reference_or. Each TU matches the
+# specific Mandate diagnostic that it is intended to exercise.
 # ---------------------------------------------------------------------------
 fvo_add_compile_fail_test(
     fvo.fail.ref_or_temp_from_prvalue
     ref_or_temp_from_prvalue_fail.cpp
-    "static assertion failed|static_assert failed"
+    "reference_or alternative would bind the result to a temporary"
 )
 
 fvo_add_compile_fail_test(
     fvo.fail.ref_or_rvalue_string
     ref_or_rvalue_string_fail.cpp
-    "static assertion failed|static_assert failed"
+    "reference_or alternative would bind the result to a temporary"
+)
+
+fvo_add_compile_fail_test(
+    fvo.fail.ref_or_deref_temporary
+    ref_or_deref_temporary_fail.cpp
+    "reference_or dereferenced nullable would bind the result to a temporary"
 )
 
 # Temporary owning wrappers are not borrowed nullables. Their operator*
@@ -128,6 +167,14 @@ foreach(wrapper IN ITEMS optional unique_ptr shared_ptr)
         "reference_or requires an lvalue or borrowed nullable"
     )
 endforeach()
+
+if(FVO_TEST_HAS_STD_EXPECTED)
+    fvo_add_compile_fail_test(
+        fvo.fail.ref_or_temporary_expected
+        ref_or_temporary_expected_fail.cpp
+        "reference_or requires an lvalue or borrowed nullable"
+    )
+endif()
 
 fvo_add_compile_fail_test(
     fvo.fail.ref_or_non_reference_common_reference
@@ -206,14 +253,24 @@ fvo_add_compile_fail_test(
     "no matching function for call to|no matching overloaded function|constraints are not satisfied"
 )
 
-# Diagnostic wording for a bad static_cast differs by compiler:
-#   gcc:   invalid 'static_cast' from type ...
-#   clang: no matching conversion for static_cast ...
-#   msvc:  'static_cast': cannot convert from ...
+# Payload conversion is checked against the static_cast expression used by
+# the engaged branch, so explicit conversions remain supported.
 fvo_add_compile_fail_test(
     fvo.fail.or_construct_payload_not_convertible
     or_construct_payload_not_convertible_fail.cpp
-    "invalid.*static_cast|no matching conversion|cannot convert"
+    "or_construct requires static_cast"
+)
+
+fvo_add_compile_fail_test(
+    fvo.fail.or_construct_fallback_not_constructible
+    or_construct_fallback_not_constructible_fail.cpp
+    "or_construct requires is_constructible_v<R, Args...>"
+)
+
+fvo_add_compile_fail_test(
+    fvo.fail.or_construct_initlist_fallback_not_constructible
+    or_construct_initlist_fallback_not_constructible_fail.cpp
+    "or_construct requires is_constructible_v<R, initializer_list<E>&, Args...>"
 )
 
 fvo_add_compile_fail_test(
@@ -248,6 +305,9 @@ fvo_add_test(beman.free_value_or.tests.optional_ref optional_ref.test.cpp)
 # expected<T&, E> is likewise an explicitly borrowed nullable. This uses the
 # vendored reference implementation until the standard type supports T&.
 fvo_add_test(beman.free_value_or.tests.expected_ref expected_ref.test.cpp)
+
+# Public integration proof: no test fixture supplies the vendored opt-ins.
+fvo_add_test(beman.free_value_or.tests.beman_ref_integration beman_ref_integration.test.cpp)
 
 # ---------------------------------------------------------------------------
 # or_construct Step 06: optional<T&> coverage + finalize

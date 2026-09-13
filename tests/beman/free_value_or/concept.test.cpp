@@ -56,6 +56,7 @@ static_assert(!fvo::borrowed_nullable<std::unique_ptr<int>>);
 static_assert(fvo::enable_borrowed_nullable<std::optional<int&>>);
 #if FVO_HAS_STD_EXPECTED
 static_assert(fvo::enable_borrowed_nullable<std::expected<int&, int>>);
+static_assert(!fvo::borrowed_nullable<std::expected<int, int>>);
 #endif
 
 // optional<T&> via vendored beman::optional (gated on FVO_HAS_OPTIONAL_REF)
