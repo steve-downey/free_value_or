@@ -45,15 +45,40 @@
 \chapter*{Changes Since Last Version}
 
 \begin{itemize}
-\item \textbf{R1} Unified with \cite{P3413R0} at LEWG's request: Corentin Jabot
-  joins as co-author, and the member functions \tcode{value_or_construct} and
-  \tcode{value_or_else} are folded into the proposal, the wording, and the
-  implementation. The members are specified over \tcode{optional<T\&>}, which
-  P3413R0 deferred and which is now C++26.
-  Independently of the unification, an rvalue nullable now moves its payload,
-  when its dereference expression permits moving. \tcode{reference_or} now
-  requires \tcode{borrowed_nullable}, rejects non-reference common-reference
-  results, and rejects temporary owning wrappers.
+\item \textbf{R1}
+  \begin{itemize}
+  \item Unified with \cite{P3413R0} at LEWG's request: Corentin Jabot joins as
+    co-author, and the members \tcode{value_or_construct} and
+    \tcode{value_or_else} are folded into the proposal, the wording, and the
+    implementation, covering \tcode{optional<T\&>}, which P3413R0 deferred and
+    which is now C++26.
+  \item An rvalue nullable moves its payload when its dereference expression
+    permits moving. R0 dereferenced an lvalue always, observing and never
+    consuming; the models now split by dereference behavior, so
+    \tcode{optional} and \tcode{expected} move, while raw and smart pointers
+    copy.
+  \item \tcode{nullable} is proposed as a named, public concept. R0 specified
+    it as exposition-only and asked LEWG for a poll.
+  \item The concept is stated on \tcode{const remove_reference_t<T>\&} rather
+    than \tcode{const T}, so the const-observability requirement holds for the
+    deduced \tcode{T} of an lvalue argument, where the const was silently
+    discarded before.
+  \item \tcode{reference_or}'s second dangling guard is stated on the
+    dereference type rather than on \tcode{T\&}, where it could never fire.
+  \item \tcode{reference_or} mandates both that its result is a reference and
+    that an rvalue argument is a \tcode{borrowed_nullable}. Temporary owning
+    wrappers are therefore rejected even when dereferencing them yields
+    \tcode{T\&}.
+  \item \tcode{or_invoke} forwards its invocable, agreeing with the
+    \tcode{invoke_result_t<I>} its return type is computed from;
+    \tcode{or_construct} gains the engaged-path \emph{Mandates} and rejects
+    reference result types.
+  \item The asks to LEWG are cut from nine to zero. The dangling and borrowing
+    checks are \emph{Mandates}, the concept stays minimal, the names stand,
+    and the header is \tcode{<optional>}.
+  \item Wording rebased to \cite{N5054}, which carries
+    \tcode{optional<T\&>}.
+  \end{itemize}
 \item \textbf{R0} Initial revision.
 \end{itemize}
 
@@ -313,7 +338,7 @@ inline constexpr bool
 template <class T>
 using deref_t = decltype(*std::declval<T>());
 
-template <borrowed_nullable T, class U,
+template <nullable T, class U,
           class R = std::common_reference_t<deref_t<T>, U&&>>
 constexpr auto reference_or(T&& m, U&& u) -> R;
 
@@ -364,7 +389,7 @@ constexpr T value_or_else(F&& f) const&;
 
 Both return \tcode{T}, as the member \tcode{value_or} beside them does, and
 neither constructs anything on the engaged path. The sections that follow
-give the design of the free half, where the open choices are; the member
+give the design of the free half and the choices made; the member
 half is taken up under The member half, below.
 
 \section{The \tcode{nullable} concept}
@@ -392,7 +417,8 @@ providing only one of the two operations. Iterators in general do not model
 \tcode{bool}. Correctly so: an iterator's validity is not a property the
 iterator itself can report.
 
-One refinement remains open. P1255's \tcode{nullable_object} also
+One possible refinement is deliberately not taken. P1255's
+\tcode{nullable_object} also
 requires that the result of dereferencing be an equality-preserving
 \emph{object}, which excludes function pointers; the minimal concept above
 admits them (a function pointer is contextually convertible to \tcode{bool}
@@ -440,6 +466,19 @@ the end of the full-expression. A custom deleter that happens not to delete is
 not the lifetime guarantee on which a generic reference-returning function
 may rely. Users may still pass every one of these types as an lvalue.
 
+This rule has a deliberate ergonomic cost for an owning nullable returned by
+value. Even if the selected reference would be consumed immediately, the
+temporary wrapper cannot promise that its referent survives the return:
+
+\begin{minted}[fontsize=\small]{c++}
+reference_or(lookup(key), fallback); // ill-formed, even if consumed immediately
+
+auto result = lookup(key);
+reference_or(result, fallback);      // the wrapper remains alive
+
+value_or(lookup(key), fallback);     // produce a value instead
+\end{minted}
+
 This is deliberately an opt-in promise. A program-defined nullable may
 specialize \tcode{enable_borrowed_nullable} to \tcode{true} when destruction
 of the nullable cannot invalidate the result of dereferencing it.
@@ -478,8 +517,8 @@ there is no cross-paper coordination to wait on.
 The semantics a public name has to carry are stated with it: the contextual
 conversion is equality-preserving and does not modify the object; \tcode{*t}
 may be evaluated only when that conversion yields \tcode{true}; and both
-are valid on a const lvalue. LEWG may of course take the name back and make
-the concept exposition-only, which costs nothing but the spelling.
+are valid on a const lvalue. Making the concept exposition-only instead would
+cost nothing but the spelling, but this paper proposes the public name.
 
 \section{Return type computation}
 
@@ -561,7 +600,8 @@ test failure (see Implementation Experience). This does not govern
 
 \section{\tcode{reference_or}}
 
-\tcode{reference_or} accepts a \tcode{borrowed_nullable}, computes
+\tcode{reference_or} accepts a \tcode{nullable} and mandates that it is a
+\tcode{borrowed_nullable}, computes
 \tcode{common_reference_t<deref_t<T>, U\&\&>}, and binds the result to the
 contained value or to the alternative without copying either. Const
 qualification flows through the
@@ -596,22 +636,21 @@ The first rejects the alternative materializing a temporary: in
 and \tcode{int\&\&} is \tcode{const int\&}, which would bind to a temporary
 materialized from the literal, and the call is ill-formed. The second
 rejects the symmetric case where the conversion of \tcode{*m} to \tcode{R}
-would materialize a temporary. The concept rejects an rvalue wrapper whose
+would materialize a temporary. The mandate rejects an rvalue wrapper whose
 destruction may invalidate an otherwise direct reference. Together the three
 checks reject the known ways this operation could return a dangling
 reference, including temporary owning smart pointers whose \tcode{operator*}
 itself only reveals \tcode{T\&}.
 
-Whether these should be \tcode{static_assert}s or constraints is a design
-question for LEWG. As \tcode{static_assert}s, a dangling call is a hard,
+These checks are specified as \emph{Mandates}, implemented by
+\tcode{static_assert}s. A dangling call is therefore a hard,
 clearly-diagnosed error wherever it occurs, including inside an
 overload-resolution context, where it is an error and not a removed
 candidate. As constraints, the overload disappears SFINAE-style, which
 composes better with generic code probing for usability but turns a
 lifetime bug into a silent ``no matching function'' or, worse, a fallback
 to a different overload. Our position is that a dangling \tcode{reference_or}
-call is a bug, and should be reported as one. We propose the
-\tcode{static_assert} behavior (specified as \emph{Mandates}).
+call is a bug, and should be reported as one.
 
 The Tokyo discussion of the P2988 homework concluded that \tcode{value_or}
 is not an available name for a reference-returning function, and suggested
@@ -637,8 +676,8 @@ value (\tcode{or_invoke}, and \tcode{or_construct} below), and omits the
 fourth. A lazy reference-returning form is specifiable (the dangling guard
 would apply to \tcode{invoke_result_t<I>} just as it does to \tcode{U}), but
 the use case, a reference alternative expensive to \emph{name} and not to
-construct, is thin, and it is not proposed. If LEWG wants the
-quadrant filled, it composes naturally as \tcode{reference_invoke} later.
+construct, is thin, and it is not proposed. That quadrant could compose
+naturally as a separate \tcode{reference_invoke} proposal later.
 
 The obvious name, \tcode{or_else}, is taken:
 \tcode{std::optional::or_else} returns an \tcode{optional}, re-wrapping the
@@ -685,9 +724,9 @@ usable; the arguments were always explicitly a construction request. Left to
 its default, \tcode{R} is a decayed object type, so \tcode{or_construct}
 returns a prvalue and can not dangle. With \tcode{optional<T\&>} the result
 is a value copy of the referent or a freshly constructed object, never a
-reference. A caller who names a reference \tcode{Ret} explicitly steps
-outside that guarantee and takes on the lifetime obligation, as
-\tcode{or_construct<const int\&>(m, 0)} shows.
+reference. An explicitly named \tcode{Ret} is likewise required not to be a
+reference, because otherwise fallback construction could bind the returned
+reference to a temporary.
 
 \section{The member half: \tcode{value_or_construct} and \tcode{value_or_else}}
 
@@ -858,9 +897,10 @@ The same principles that governed \cite{P2988R12} govern here.
 
 \textbf{Errors that can be detected at compile time must be detected at
 compile time.} The concept rejects non-nullable arguments at the
-constraint; \tcode{reference_or} additionally rejects rvalue wrappers that
-do not model \tcode{borrowed_nullable}, non-reference common-reference
-results, and every conversion that would bind the result to a temporary.
+constraint; \tcode{reference_or} additionally mandates against rvalue
+wrappers that do not model \tcode{borrowed_nullable}, non-reference
+common-reference results, and every conversion that would bind the result to
+a temporary.
 
 \textbf{Never knowingly produce a dangling reference.} The functions take
 no address and extend no lifetime; \tcode{reference_or}'s result always
@@ -872,12 +912,13 @@ have materialized a temporary: a prvalue alternative whose common reference
 with the dereference type is a const reference
 (\tcode{reference_or(opt, 0)}), and conversions of the contained value
 to the result type that materialize.
-The \tcode{borrowed_nullable} constraint covers the orthogonal danger that
+The \tcode{borrowed_nullable} mandate covers the orthogonal danger that
 destroying a temporary nullable destroys its directly referenced payload.
 
 \textbf{Value-producing functions never dangle by construction.}
 \tcode{value_or}, \tcode{or_invoke}, and \tcode{or_construct} return
-prvalues; there is no reference in their result to check.
+non-reference values; \tcode{or_construct} mandates this even when its result
+type is explicitly selected.
 
 These principles are enforced by a negative-compilation test suite in the
 reference implementation: each forbidden combination is a translation unit
@@ -914,7 +955,8 @@ The test suite exercises a matrix:
 \item negative-compilation cases for concept violations, non-reference
   common-reference results, conversion-created temporaries, and temporary
   owning \tcode{optional}, \tcode{unique_ptr}, and \tcode{shared_ptr}
-  wrappers.
+  wrappers, plus an explicitly selected reference result for
+  \tcode{or_construct}.
 \end{itemize}
 
 Reference identity and mutation
@@ -994,9 +1036,10 @@ inline constexpr bool enable_borrowed_nullable<std::expected<T&, E>> = true;
 template <class T>
 using deref_t = decltype(*std::declval<T>());
 
-template <borrowed_nullable T, class U,
+template <nullable T, class U,
           class R = std::common_reference_t<deref_t<T>, U&&>>
 constexpr auto reference_or(T&& m, U&& u) -> R {
+    static_assert(borrowed_nullable<T>);
     static_assert(std::is_reference_v<R>);
     static_assert(!std::reference_constructs_from_temporary_v<R, U>);
     static_assert(
@@ -1024,6 +1067,7 @@ template <class Ret = void, nullable T, class... Args,
           class R = std::conditional_t<std::is_void_v<Ret>,
                         std::remove_cvref_t<deref_t<T>>, Ret>>
 constexpr R or_construct(T&& m, Args&&... args) {
+    static_assert(!std::is_reference_v<R>);
     return bool(m) ? static_cast<R>(*std::forward<T>(m))
                    : R(std::forward<Args>(args)...);
 }
@@ -1033,6 +1077,7 @@ template <class Ret = void, nullable T, class E, class... Args,
                         std::remove_cvref_t<deref_t<T>>, Ret>>
 constexpr R or_construct(T&& m, std::initializer_list<E> il,
                          Args&&... args) {
+    static_assert(!std::is_reference_v<R>);
     return bool(m) ? static_cast<R>(*std::forward<T>(m))
                    : R(il, std::forward<Args>(args)...);
 }
@@ -1083,12 +1128,11 @@ the members, or both, but the point of unifying is that it need not.
 reference type. An rvalue nullable moves its payload in the value-producing
 functions exactly when dereferencing that rvalue produces an rvalue
 reference. Thus \tcode{optional} and \tcode{expected} move their values,
-while raw and smart pointers copy their referents. The alternative is to
-dereference an lvalue always, so that the functions observe and never
-consume; it is simpler to state, and it makes every owning nullable copy a
-payload that is going away. We would rather be correct by default, and the
-alternative is a one-line change to the dereference type if LEWG prefers it
-(see Design). The conversion dangling guards are \emph{Mandates}, so a
+while raw and smart pointers copy their referents. Dereferencing an lvalue
+always would make every owning nullable copy a payload that is going away;
+this paper instead follows the rvalue's dereference expression (see Design).
+\tcode{or_construct} rejects an explicitly selected reference result type.
+The conversion dangling guards are \emph{Mandates}, so a
 dangling call is diagnosed and not
 removed from the overload set. \tcode{nullable} is a public concept.
 The names are \tcode{value_or}, \tcode{reference_or}, \tcode{or_invoke},
@@ -1101,9 +1145,12 @@ will look for them.
 \chapter{Wording}
 
 Initial draft wording, relative to \cite{N5054}, to be completed after LEWG
-design review. Shown in \tcode{<optional>}.
+design review.
 
-Add to the header synopsis:
+For a type \tcode{T}, let \exposid{deref-t}\tcode{<T>} denote
+\tcode{decltype(*declval<T>())}.
+
+Add to the \tcode{<optional>} header synopsis:
 
 \begin{codeblock}
 namespace std {
@@ -1125,10 +1172,8 @@ namespace std {
     inline constexpr bool enable_borrowed_nullable<T*> = true;
   template<class T>
     inline constexpr bool enable_borrowed_nullable<optional<T&>> = true;
-  template<class T, class E>
-    inline constexpr bool enable_borrowed_nullable<expected<T&, E>> = true;
 
-  template<borrowed_nullable T, class U>
+  template<nullable T, class U>
     constexpr common_reference_t<@\exposid{deref-t}@<T>, U&&>
       reference_or(T&& m, U&& u);
 
@@ -1152,6 +1197,18 @@ namespace std {
 }
 \end{codeblock}
 
+Add to the \tcode{<expected>} header synopsis:
+
+\begin{codeblock}
+namespace std {
+  template<class T, class E>
+    inline constexpr bool enable_borrowed_nullable<expected<T&, E>> = true;
+}
+\end{codeblock}
+
+The \tcode{expected<T\&, E>} specialization depends on standardizing
+\tcode{expected} over reference types.
+
 \pnum
 Let \tcode{t} be a const lvalue of type \tcode{remove_reference_t<T>}.
 \tcode{T} models \tcode{nullable} only if:
@@ -1171,7 +1228,7 @@ have type \tcode{const bool}.
 
 \begin{itemdescr}
 \begin{codeblock}
-template<borrowed_nullable T, class U>
+template<nullable T, class U>
   constexpr common_reference_t<@\exposid{deref-t}@<T>, U&&>
     reference_or(T&& m, U&& u);
 \end{codeblock}
@@ -1181,6 +1238,7 @@ Let \tcode{R} be \tcode{common_reference_t<@\exposid{deref-t}@<T>, U\&\&>}.
 
 \pnum
 \mandates
+\tcode{borrowed_nullable<T>} is \tcode{true},
 \tcode{is_reference_v<R>} is \tcode{true},
 \tcode{reference_constructs_from_temporary_v<R, U>} is \tcode{false}, and
 \tcode{reference_constructs_from_temporary_v<R, @\exposid{deref-t}@<T>>} is
@@ -1242,7 +1300,8 @@ remove_cvref_t<@\exposid{deref-t}@<T>>, Ret>}.
 
 \pnum
 \mandates
-\tcode{is_constructible_v<R, Args...>} is \tcode{true} and
+\tcode{is_reference_v<R>} is \tcode{false},
+\tcode{is_constructible_v<R, Args...>} is \tcode{true}, and
 \tcode{is_convertible_v<@\exposid{deref-t}@<T>, R>} is \tcode{true}.
 
 \pnum
@@ -1266,7 +1325,8 @@ remove_cvref_t<@\exposid{deref-t}@<T>>, Ret>}.
 
 \pnum
 \mandates
-\tcode{is_constructible_v<R, initializer_list<E>\&, Args...>} is \tcode{true}
+\tcode{is_reference_v<R>} is \tcode{false},
+\tcode{is_constructible_v<R, initializer_list<E>\&, Args...>} is \tcode{true},
 and \tcode{is_convertible_v<@\exposid{deref-t}@<T>, R>} is \tcode{true}.
 
 \pnum
@@ -1597,11 +1657,14 @@ wording feedback carried through that paper.
 \begin{itemize}
 \item \textbf{R1} \today\ --- Unified with \cite{P3413R0} following LEWG's
   Brno review, which asked for a single proposal. Corentin Jabot joins as
-  co-author; the members \tcode{value_or_construct} and \tcode{value_or_else}
-  are folded into the proposal, wording, and implementation, and specified
-  over \tcode{optional<T\&>}, which P3413R0 deferred. Separately: an rvalue
-  nullable moves its payload, splitting the models by ownership, and the asks
-  to LEWG are cut to two.
+  co-author, and the members \tcode{value_or_construct} and
+  \tcode{value_or_else} are folded into the proposal, wording, and
+  implementation. Independently of the unification: an rvalue nullable moves
+  its payload, \tcode{nullable} is proposed as a public concept and stated so
+  that const-observability holds, \tcode{reference_or}'s dangling guards are
+  corrected and extended to temporary owning wrappers, reference results are
+  required where appropriate, \tcode{or_invoke} forwards its invocable, and
+  the asks to LEWG are cut from nine to zero. See Changes Since Last Version.
 \item \textbf{R0} Brno, 2026-06 --- Initial draft, reviewed by LEWG. The
   free-function follow-on promised in \cite{P2988R12}, concluding the line of
   work begun in \cite{P1255R13}.
