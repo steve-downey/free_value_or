@@ -236,3 +236,132 @@ Leave =d4270.org= untouched.
 - =grep -n "static_cast<R>(\*m)" papers/free_value_or.tex= is empty (it is, as of this commit).
 - =grep -c "deref-t" papers/free_value_or.tex= includes the definition.
 - PDF timestamp is newer than the tex.
+
+* PR #10 review — "Require borrowed nullables for reference_or" (2026-09-13)
+
+Branch =safety/borrowed-nullable= at c4b8859, one commit on main ca4fd66.
+Main at that point carries PR #9 up to f4531de plus two edits of Steve's;
+it does not carry the six later commits of this branch (b714851 → a87b6ce),
+so PR #10's base still has =*m= in the Effects, "two open questions", the
+ownership framing, and the pre-audit change list.
+
+** What it does
+- Adds =enable_borrowed_nullable<T>= (variable template, default false) and
+  =borrowed_nullable<T> = nullable<T> && (is_lvalue_reference_v<T> ||
+  enable_borrowed_nullable<remove_cvref_t<T>>)=, on the =borrowed_range=
+  model. Opts in =T*=, =optional<T&>=, =expected<T&,E>=. Does not opt in
+  =optional<T>=, =expected<T,E>=, =unique_ptr=, =shared_ptr=.
+- Constrains =reference_or= on =borrowed_nullable=; adds
+  =static_assert(is_reference_v<R>)=, deciding the paper's one open
+  question (mandate a reference result) in favor of mandating; keeps both
+  =reference_constructs_from_temporary_v= guards.
+- Four new compile-fail units (temporary =optional=, =unique_ptr=,
+  =shared_ptr=; non-reference common reference), =expected_ref.test.cpp=,
+  =borrowed_nullable= static_asserts in =concept.test.cpp=. Drops the two
+  =reference_or=-over-rvalue-=optional= cases from =rvalue_nullable=, now
+  ill-formed. =constexpr.test.cpp= names its optionals instead of passing
+  temporaries.
+- Paper: new Design section "Borrowed nullables"; =reference_or= section,
+  Principles, Proposal, wording synopsis, and a semantic paragraph for
+  =enable_borrowed_nullable= modeled on [range.range]/enable_borrowed_range.
+  Independently fixes W1 (the five Effects and the listing now
+  =*std::forward<T>(m)=). Does not fix W2 (=deref-t= still undefined) or
+  touch W3.
+
+** The hole it closes is real
+On main's header, =const int& a = reference_or(std::optional<int>{42}, f);=
+and =int& b = reference_or(std::make_unique<int>(42), f);= both compile
+(probed with g++ -std=c++23). Neither guard fires: the reference binds
+directly to the temporary wrapper's payload, no conversion temporary is
+materialized, and the payload dies at the end of the full-expression. The
+paper's "never knowingly produce a dangling reference" principle was not
+met for rvalue owning wrappers. This is the right hole to close, and the
+=borrowed_range= shape is the right precedent for closing it: lvalues
+always safe, rvalues opt in by promise.
+
+** Consistent with the rulings
+- =unique_ptr= not opting in is the same fact as the containment ruling
+  seen from the other side: =operator*= says =T&= (so value-producing
+  functions copy), and the deleter is policy (so =reference_or= may not
+  rely on the referent surviving). The PR says so in the new section.
+- The "follow operator*, no ownership inference" wording in the PR's
+  Design paragraph is the rule; this branch's containment paragraph is the
+  rationale for why =operator*= says what it says. They compose; keep both
+  on merge (see below).
+
+** Findings, in order of weight
+1. CI red: pre-commit fails on clang-format (the wrapped =borrowed_nullable=
+   definition and =static_assert= message in the header; =constexpr=,
+   =expected_ref=, =optional_ref= tests). =make lint= and push.
+2. Constraint vs Mandates. Borrowed-ness is a *constraint* (the compile-fail
+   test matches "borrowed_nullable", a constraint-failure diagnostic), while
+   every other lifetime guard on =reference_or= is a *Mandates* by the
+   paper's own ruling ("a dangling call is a bug to be reported, not a
+   candidate to be quietly discarded"). Either make it a static_assert
+   inside the body, or add a sentence to the Design section saying why this
+   one guard is a constraint: it mirrors =borrowed_range=, and it is the one
+   check generic code might legitimately want to probe. Without that
+   sentence the paper contradicts itself two sections apart.
+3. Wording placement. The synopsis puts
+   =enable_borrowed_nullable<expected<T&, E>>= in =<optional>=, which does
+   not declare =expected=. Put that specialization in =<expected>=, as the
+   =enable_borrowed_range= specializations live in each container's header.
+   And =expected<T&,E>= is not in the working draft; say so beside it, as
+   the member wording already does for its =expected<T&,E>= dependency.
+4. The ergonomic cost is not stated. =reference_or(lookup(key), fallback)=
+   with a prvalue =optional= is now ill-formed even when used within the
+   full-expression, where it was safe (the =constexpr= test had to be
+   rewritten for exactly this). That is stricter than
+   =optional::value()= on a temporary, which the standard allows. The
+   section should show the rejected idiom and the rewrite (name the
+   optional, or use =value_or=), so LEWG sees the trade made.
+5. W2 still open in the PR: =deref-t= is used throughout the wording and
+   never defined. This branch's fix (exposition-only alias in the synopsis
+   plus a defining paragraph) carries over on merge.
+6. Principles: "value_or, or_invoke, and or_construct return prvalues;
+   there is no reference in their result to check" — =or_construct= with an
+   explicit reference =Ret= returns a reference. This branch scopes the
+   guarantee to a defaulted =Ret=; keep that scoping.
+7. Test hygiene: the opt-ins for the vendored =beman::optional<T&>= and
+   =beman::expected<T&,E>= are specialized inside individual test TUs
+   (=optional_ref.test.cpp=, =expected_ref.test.cpp=). Each test is its own
+   executable so it is not an ODR problem today, but the opt-in belongs in
+   one place (=test_types.hpp=, next to the =fvo_opt= alias) so a future
+   test that links two of them cannot disagree.
+8. Header cost: =value_or.hpp= now includes =<optional>=, =<version>=, and
+   =<expected>= (when present) to spell the std specializations. The header
+   was free of both. Acceptable, since the paper proposes =<optional>= as
+   the home, but note it in the header comment; a leaner alternative is to
+   put the std opt-ins in the umbrella or a small =borrowed.hpp=.
+9. tests README line 3 still says "all three functions" and the table row
+   for =constexpr.test.cpp= says "all three"; and =concept.test.cpp='s row
+   was rewritten but =rvalue_nullable= / =public_header= rows (added on
+   this branch) are absent on the PR's base — merge artifact, not the PR's
+   fault.
+
+** Merge plan against this branch
+=git merge-tree= reports content conflicts in =value_or.hpp=,
+=free_value_or.tex=, =design.org=, and the tests README. Resolution:
+- =value_or.hpp=: take the PR's =borrowed_nullable= machinery and
+  constraint; keep this branch's containment comment on =deref_t= and add
+  the PR's one-line "follow operator*" sentence to it.
+- =free_value_or.tex=: take the PR's new section, wording, and Proposal
+  text; keep this branch's Effects (identical intent, already
+  =*std::forward<T>(m)=), the =deref-t= definition, the remove_cv_t member
+  wording, the containment paragraph, and the restructured change list —
+  then add one R1 bullet for =borrowed_nullable= + the reference mandate,
+  and delete the "one question this paper leaves open" sentence in the
+  =reference_or= section, since the PR decides it.
+- =design.org=: keep this branch's R1 refresh; fold the PR's SAFETY
+  finding into the findings list and move the "still open" ask to
+  "decided".
+- CLAUDE.md (no conflict, PR does not touch it): add =borrowed_nullable=
+  to the =reference_or= bullet.
+- The R1 change list on this branch says "asks to LEWG cut from nine to
+  one"; after the PR it is none. Update.
+
+** Local verification
+CI on c4b8859: every build-and-test, preset, vcpkg, and modules job green
+(86 runs); only "pre-commit / Pre-Commit check on PR" red, on clang-format.
+Local: worktree build with CMake 4.3.2, GCC, C++23 — in progress at the
+time of this entry; result recorded below when it finishes.
