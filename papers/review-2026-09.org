@@ -363,5 +363,6 @@ always safe, rvalues opt in by promise.
 ** Local verification
 CI on c4b8859: every build-and-test, preset, vcpkg, and modules job green
 (86 runs); only "pre-commit / Pre-Commit check on PR" red, on clang-format.
-Local: worktree build with CMake 4.3.2, GCC, C++23 — in progress at the
-time of this entry; result recorded below when it finishes.
+Local: worktree build with CMake 4.3.2, GCC, C++23: 1444/1444 pass,
+matching the PR's claim; the four new compile-fail units fail for the
+expected reason.
