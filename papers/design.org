@@ -3,6 +3,11 @@
 
 Working notes for D4270R0. The paper source is [[file:free_value_or.tex]].
 
+Status 2026-09-13: the paper is at R1, unified with P3413R0. Much of this
+file is R0-era (the interface block, the P3413 framing, the open-questions
+list) and is scheduled for refresh in [[file:review-2026-09.org]], which
+holds the September review record and the fix plan.
+
 * Provenance
 
 - P2988R12 (optional<T&>), Design / value_or: "no particularly wonderful

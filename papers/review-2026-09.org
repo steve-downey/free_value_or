@@ -1,0 +1,202 @@
+#+TITLE: D4270R1 review notes — September 2026
+#+AUTHOR: Steve Downey
+
+Review record for D4270R1 (papers/free_value_or.tex) on branch
+=claude/p3413r0-relation-clarity-dy29oq=, 2026-09-10 through 2026-09-13.
+The design notes are [[file:design.org]]; the paper source is
+[[file:free_value_or.tex]]. This file records what the review found, what was
+fixed and where, what is still open, and the plan for the rest.
+
+* Rulings made during review
+
+These are decisions taken in review that later edits should respect.
+
+- The in-paper change list records *design* changes between revisions,
+  not commits. Reorganizing where the member functions appear in the
+  paper is presentation, and is not listed. Folding P3413R0's members in
+  is one entry; the =optional<T&>= coverage rides inside it.
+- The paper is written from after the merge. P3413R0 was a separate
+  paper; it is not one now. Prose that treats it as live, competing, or
+  "also carried" is a defect.
+- The rvalue rule is argued from *containment*, not ownership. =unique_ptr=
+  ordinarily owns its referent, and still yields =T&= from =operator*=
+  whatever its value category, because ownership there is the deleter's
+  policy and the referent is never a subobject. The axis that predicts
+  =operator*= is whether the payload is a subobject.
+
+* Findings fixed on this branch
+
+** F1. "Relation to P3413R0" spoke from before the merge — fixed f4531de
+Introduced P3413R0 as a live paper, argued LEWG should "see them
+together", tabulated "P3413R0 vs this paper", and only in its last
+paragraph revealed the unification had happened. Rewritten as history
+plus composition under the title "P3413R0, and the two halves": past
+tense, Corentin as co-author, the table as member half vs free half,
+severability as the closing point.
+
+** F2. The member half read as an afterthought — fixed f4531de
+Abstract now leads with the two defects and both fixes. Comparison table
+gains "The fallback that is built anyway". Motivation splits into "The
+type of the answer", "The cost of the alternative" (with the P2218R0 →
+P3413R0 history), and "Two defects, two shapes". Design opens "The
+proposal has two halves", shows both synopses, and gains "The member
+half" as a section. "Why free functions" no longer argues against the
+members it sits beside; =or_invoke= and =or_construct= refer to "the other
+half", not to an external paper.
+
+** F3. Change list omitted most R1 design changes — fixed b714851
+R1 listed only the unification. Audited against R0 (commit 2374005) and
+now lists: rvalue nullables move their payload; =nullable= is a public
+concept; the concept is stated on =const remove_reference_t<T>&= (R0's
+=const T= discarded the const for lvalue arguments, so the
+const-observability rule was not enforced); =reference_or='s second guard
+is on the dereference type (on =T&= it could never fire); =or_invoke=
+forwards its invocable; =or_construct= gains engaged-path Mandates and its
+no-dangle guarantee is scoped to a defaulted =Ret=; asks to LEWG cut from
+nine to one; wording rebased to N5054.
+
+** F4. Stale count of open questions — fixed b714851
+=reference_or='s degradation was "the first of the two open questions
+below" after the rvalue question had been decided. Now "the one question
+this paper leaves open".
+
+** F5. Ownership was the wrong axis for the rvalue rule — fixed b321f19
+Design, Proposal, the comparison table row, Implementation Experience,
+the change list, and the =deref_t= comment in =value_or.hpp= all said
+"owning models move, handles to a referent that outlives them copy".
+False for =unique_ptr= twice over. Reframed to containment throughout,
+with =unique_ptr= as the worked example.
+
+** F6. "callable-chosen result type" — fixed f4531de
+Typo for caller-chosen, in the comparison table.
+
+* Findings still open
+
+** W1. Free-function Effects dereference an lvalue — WORDING DEFECT
+Every free-function /Effects/ in the Wording chapter reads
+=static_cast<R>(*m)=. =m= is a named parameter, so =*m= is the lvalue
+dereference, which for =optional= and =expected= yields =T&= and copies.
+The design (Value categories), the change list, the implementation, and
+the return type (computed from =deref-t<T>=, which is =T&&= for an rvalue
+=optional=) all say the rvalue path moves. The words do not. All five:
+=reference_or=, =value_or=, =or_invoke=, both =or_construct=.
+Fix: =static_cast<R>(*std::forward<T>(m))= in each, matching the header.
+
+** W2. =deref-t= is used but never defined — WORDING DEFECT
+The synopsis and every itemdescr use =@\exposid{deref-t}@<T>=; nothing
+introduces it. Fix: add to the synopsis, before the concept,
+=template<class T> using deref-t = decltype(*declval<T>()); // exposition only=,
+and a sentence that it is the type =*m= yields with =T='s value category
+carried through.
+
+** W3. Member return type disagrees with the implementation — CHECK N5054
+The =optional<T>= primary-template member wording returns =T=; the vendored
+=beman.optional= returns =remove_cv_t<T>= for =value_or_construct= and
+=value_or_else=, matching its =value_or=, which tracks the working draft
+after LWG4304/LWG4406. The paper's own =optional<T&>= wording already
+returns =remove_cv_t<T>=. Verify [optional.observe] in N5054; if =value_or=
+there returns =remove_cv_t<T>=, the members beside it must too, and the
+Mandates change with it (=is_copy_constructible_v<remove_cv_t<T>>=, etc.).
+=expected<T,E>= returns =T= in both wording and implementation, and
+=expected<T&,E>= returns =remove_cv_t<T>= in both; those stay.
+
+** W4. Implementation Experience counts are partly stale
+"118 test cases and nine negative-compilation cases over eight
+translation units". As of 2026-09-13: 118 =TEST_CASE=s (accurate), nine
+=*_fail.cpp= units (accurate), but fifteen positive translation units
+(=public_header=, =smoke=, =rvalue_nullable=, and the =or_construct_*=
+split arrived after the sentence). Recount at each revision; the whole
+project runs 1439 ctest entries including the vendored suites, which is
+not the number to cite for this header.
+
+** D1. papers/design.org is R0-era
+Its "Current interface" block shows =requires(const T t)= and
+=iter_reference_t=; P3413R0 is "competing/adjacent" with the old chapter
+framing; "Open questions" lists as open things R1 decides (static_assert
+vs constraint, naming, CPOs, header, exposition-only "poll the
+promotion"); the concept-details bullet says function pointers are
+excluded where the findings bullet, correctly, says they are admitted.
+Fix: bring it to R1 or mark the sections as R0 history and add an R1
+status block. This file is linked from its head.
+
+** D2. CLAUDE.md and the tests README are stale on the same points
+CLAUDE.md: =todo.hpp= "scaffold" (removed in 2383d3a; the umbrella
+includes =value_or.hpp= now), =examples/todo.cpp= (now
+=free_value_or.cpp=), and "computed from =std::iter_reference_t<T>=" in
+the function descriptions (now =deref_t<T>=, value category carried
+through). =tests/beman/free_value_or/README.md= lines 88–94 describe
+=or_construct='s default =R= via =iter_reference_t=.
+
+** D3. The slide deck is the Brno R0 deck
+=papers/presentation/d4270.org= (2026-06-12) presents R0: four free
+functions over =iter_reference_t=, "P3413R0: not strictly competing",
+"concept: exposition-only (proposed) or public?". Keep as the record of
+what LEWG saw. The next review needs an R1 deck: two halves up front,
+containment rule, one open question.
+
+** B1. The PDF on this branch is stale
+=papers/free_value_or.pdf= predates every commit on this branch; the
+review container had no LaTeX toolchain. Rebuild with =make= in =papers/=
+before the branch merges.
+
+** P1. Minor prose, optional
+- "The type of the answer" ends with the P1255 reach paragraph ("That last
+  point is the generalization…"), which is a third thing — reach — riding
+  under the type heading. Reads fine; a heading would be tidier.
+- The =deref_t= comment in =value_or.hpp= and the Design paragraph are the
+  same argument in two places; change them together.
+
+* Fix plan
+
+Order chosen so the wording defects, which change meaning, land first
+and get the PDF rebuilt behind them; documentation catches up after.
+
+** Step 1 — wording (W1, W2, W3)
+Files: =papers/free_value_or.tex=, Wording chapter.
+- W2: add the exposition-only =deref-t= alias to the synopsis with its
+  one-sentence definition.
+- W1: change the five /Effects/ to =*std::forward<T>(m)=.
+- W3: check N5054 [optional.observe]. If =value_or= returns
+  =remove_cv_t<T>=, change the six =optional<T>= member declarations and
+  their Mandates; leave =expected=. If it returns =T=, change the vendored
+  =beman.optional= members back to =T= instead and note why.
+Check: the free-function /Effects/ now read like the header; grep the
+chapter for =deref-t= finds its definition; =optional= wording and
+=include/beman/optional/optional.hpp= agree on every return type.
+
+** Step 2 — counts (W4)
+File: =papers/free_value_or.tex=, Implementation Experience.
+Recount with =grep -c TEST_CASE tests/beman/free_value_or/*.test.cpp=,
+=ls tests/beman/free_value_or/*_fail.cpp | wc -l=, and the =.test.cpp=
+count; state all three.
+
+** Step 3 — build the PDF (B1)
+=make= in =papers/= on a machine with lualatex, minted, and the wg21 bib
+(=make curl-bib=). Commit the PDF with the tex.
+
+** Step 4 — documentation (D1, D2)
+- =papers/design.org=: replace the interface block with the current
+  header; rewrite Provenance's P3413 bullet as history; convert "Open
+  questions" into "Decided in R1" with the one remaining question; fix the
+  function-pointer contradiction.
+- =CLAUDE.md=: drop the =todo.hpp= scaffold paragraph and the
+  architecture lines for it, name =examples/free_value_or.cpp=, replace
+  =iter_reference_t= with =deref_t= and one sentence on value category.
+- =tests/beman/free_value_or/README.md=: same =iter_reference_t= fix.
+Check: =grep -rn iter_reference_t CLAUDE.md papers/design.org tests/beman/free_value_or/README.md=
+returns nothing but the R0 history.
+
+** Step 5 — R1 deck (D3)
+New =papers/presentation/d4270r1.org= from the R0 deck: open with the
+two halves and the member comparison; replace the =iter_reference_t=
+synopsis with =deref_t= and the containment slide; the P3413 slide
+becomes "what unification changed"; the questions slide has one item.
+Leave =d4270.org= untouched.
+
+* Verification checklist
+
+- =cmake --workflow --preset gcc-debug= green (1439/1439 on 2026-09-13).
+- =grep -n "two open questions\|owning models\|ownership split\|callable-chosen" papers/free_value_or.tex= is empty.
+- =grep -n "static_cast<R>(\*m)" papers/free_value_or.tex= is empty after Step 1.
+- =grep -c "deref-t" papers/free_value_or.tex= includes the definition.
+- PDF timestamp is newer than the tex.
