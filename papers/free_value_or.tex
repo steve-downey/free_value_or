@@ -279,8 +279,8 @@ callable, and specified both on \tcode{std::optional} and
 their wording is reproduced below.
 
 Laziness is orthogonal to the type of the result. \tcode{value_or_construct}
-and \tcode{value_or_else} still return \tcode{T}, and still require the
-alternative to converge on \tcode{T}. They fix what they set out to fix, on
+and \tcode{value_or_else} still return what \tcode{value_or} beside them
+returns, and still require the alternative to converge on \tcode{T}. They fix what they set out to fix, on
 the two types that have the member to grow.
 
 \section{Two defects, two shapes}
@@ -362,11 +362,13 @@ constexpr T value_or_construct(std::initializer_list<U> il,
 template <class F>
 constexpr T value_or_else(F&& f) const&;
 
-// and the corresponding && overloads, on optional and expected alike
+// and the corresponding && overloads, on optional and expected alike;
+// on optional the return type is remove_cv_t<T>, as its value_or's is
 \end{minted}
 
-Both return \tcode{T}, as the member \tcode{value_or} beside them does, and
-neither constructs anything on the engaged path. The sections that follow
+Both return what the member \tcode{value_or} beside them returns
+(\tcode{remove_cv_t<T>} on \tcode{optional}, \tcode{T} on \tcode{expected}),
+and neither constructs anything on the engaged path. The sections that follow
 give the design of the free half, where the open choices are; the member
 half is taken up under The member half, below.
 
@@ -662,8 +664,10 @@ outside that guarantee and takes on the lifetime obligation, as
 \section{The member half: \tcode{value_or_construct} and \tcode{value_or_else}}
 
 The members are as \cite{P3413R0} specified them, and their design questions
-are settled by the member they join. Both return \tcode{T}, and require the
-alternative to converge on \tcode{T}, because a member named for
+are settled by the member they join. Both return what \tcode{value_or}
+returns, \tcode{remove_cv_t<T>} on \tcode{optional} and \tcode{T} on
+\tcode{expected}, and require the alternative to converge on it, because a
+member named for
 \tcode{value_or}, sitting beside it, would be a trap if it answered with a
 different type; the corrected result type is the free half's business, under
 its own names. Both come in \tcode{const\&} and \tcode{\&\&} form, so an
@@ -797,7 +801,7 @@ the caller name the constructed type
 form & members & free functions \\
 applies to & \tcode{optional}, \tcode{expected} &
   any \tcode{nullable} (incl.\ pointers) \\
-return type & \tcode{T} & \tcode{common_type} / \tcode{common_reference} \\
+return type & \tcode{T}, as \tcode{value_or} & \tcode{common_type} / \tcode{common_reference} \\
 truncation pitfall & unchanged, by design & fixed \\
 reference results & no & \tcode{reference_or}, dangling-checked \\
 lazy alternative & \tcode{value_or_else} & \tcode{or_invoke} \\
@@ -882,8 +886,8 @@ rebinding semantics: after an \tcode{optional<T\&>} is rebound to a new
 referent, \tcode{value_or} produces and \tcode{reference_or} refers to the
 new referent, and disengaging falls through to the alternative.
 
-The suite, at this writing 118 test cases and nine negative-compilation
-cases over eight translation units, all green, found no defects in the
+The suite, at this writing 118 test cases over fifteen translation units
+and nine negative-compilation units, all green, found no defects in the
 implementation. It did
 surface two behaviors reported in Design: that
 \tcode{reference_or} degrades to a prvalue result when the common
@@ -1221,9 +1225,13 @@ Equivalent to:
 
 The following member wording is reproduced from \cite{P3413R0}, relative to
 \cite{N5054}, and is proposed jointly with the free functions above. It is
-purely additive: the existing \tcode{value_or} is unchanged. Return types and
-\emph{Effects} follow P3413; the \emph{Mandates} spell the construction
-requirement as \tcode{is_constructible_v<T, Args...>}, matching the
+purely additive: the existing \tcode{value_or} is unchanged. \emph{Effects}
+follow P3413. Return types follow the \tcode{value_or} each member sits
+beside: on \tcode{optional} that is \tcode{remove_cv_t<T>}, matching the
+reference implementation, which tracks LWG4406, and the \emph{Mandates} are
+stated on that type; on \tcode{expected} it is \tcode{T}. In both, the
+\emph{Mandates} spell the construction requirement as
+\tcode{is_constructible_v<X, Args...>} on the returned type, matching the
 \emph{Effects}.
 
 \subsection{\tcode{optional} [optional.optional], [optional.observe]}
@@ -1232,108 +1240,134 @@ To the synopsis of \tcode{optional} in [optional.optional.general], after the
 \tcode{value_or} declarations, add:
 
 \begin{codeblock}
-template<class... Args> constexpr T value_or_construct(Args&&... args) const&;
-template<class... Args> constexpr T value_or_construct(Args&&... args) &&;
+template<class... Args> constexpr remove_cv_t<T> value_or_construct(Args&&... args) const&;
+template<class... Args> constexpr remove_cv_t<T> value_or_construct(Args&&... args) &&;
 
 template<class U, class... Args>
-  constexpr T value_or_construct(initializer_list<U> il, Args&&... args) const&;
+  constexpr remove_cv_t<T> value_or_construct(initializer_list<U> il, Args&&... args) const&;
 template<class U, class... Args>
-  constexpr T value_or_construct(initializer_list<U> il, Args&&... args) &&;
+  constexpr remove_cv_t<T> value_or_construct(initializer_list<U> il, Args&&... args) &&;
 
-template<class F> constexpr T value_or_else(F&& f) const&;
-template<class F> constexpr T value_or_else(F&& f) &&;
+template<class F> constexpr remove_cv_t<T> value_or_else(F&& f) const&;
+template<class F> constexpr remove_cv_t<T> value_or_else(F&& f) &&;
 \end{codeblock}
 
 To [optional.observe], add:
 
 \begin{itemdescr}
 \begin{codeblock}
-template<class... Args> constexpr T value_or_construct(Args&&... args) const&;
+template<class... Args> constexpr remove_cv_t<T> value_or_construct(Args&&... args) const&;
 \end{codeblock}
 \pnum
+Let \tcode{X} be \tcode{remove_cv_t<T>}.
+\pnum
 \mandates
-\tcode{is_copy_constructible_v<T>} is \tcode{true} and
-\tcode{is_constructible_v<T, Args...>} is \tcode{true}.
+\tcode{is_convertible_v<const T\&, X>} is \tcode{true} and
+\tcode{is_constructible_v<X, Args...>} is \tcode{true}.
 \pnum
 \effects
 Equivalent to:
-\tcode{return has_value() ? **this : T(std::forward<Args>(args)...);}
+\begin{codeblock}
+if (has_value()) return **this;
+return X(std::forward<Args>(args)...);
+\end{codeblock}
 \end{itemdescr}
 
 \begin{itemdescr}
 \begin{codeblock}
-template<class... Args> constexpr T value_or_construct(Args&&... args) &&;
+template<class... Args> constexpr remove_cv_t<T> value_or_construct(Args&&... args) &&;
 \end{codeblock}
 \pnum
+Let \tcode{X} be \tcode{remove_cv_t<T>}.
+\pnum
 \mandates
-\tcode{is_move_constructible_v<T>} is \tcode{true} and
-\tcode{is_constructible_v<T, Args...>} is \tcode{true}.
+\tcode{is_convertible_v<T, X>} is \tcode{true} and
+\tcode{is_constructible_v<X, Args...>} is \tcode{true}.
 \pnum
 \effects
 Equivalent to:
-\tcode{return has_value() ? std::move(**this) : T(std::forward<Args>(args)...);}
-\end{itemdescr}
-
-\begin{itemdescr}
 \begin{codeblock}
-template<class U, class... Args>
-  constexpr T value_or_construct(initializer_list<U> il, Args&&... args) const&;
+if (has_value()) return std::move(**this);
+return X(std::forward<Args>(args)...);
 \end{codeblock}
-\pnum
-\mandates
-\tcode{is_copy_constructible_v<T>} is \tcode{true} and
-\tcode{is_constructible_v<T, initializer_list<U>\&, Args...>} is \tcode{true}.
-\pnum
-\effects
-Equivalent to:
-\tcode{return has_value() ? **this : T(il, std::forward<Args>(args)...);}
 \end{itemdescr}
 
 \begin{itemdescr}
 \begin{codeblock}
 template<class U, class... Args>
-  constexpr T value_or_construct(initializer_list<U> il, Args&&... args) &&;
+  constexpr remove_cv_t<T> value_or_construct(initializer_list<U> il, Args&&... args) const&;
 \end{codeblock}
 \pnum
+Let \tcode{X} be \tcode{remove_cv_t<T>}.
+\pnum
 \mandates
-\tcode{is_move_constructible_v<T>} is \tcode{true} and
-\tcode{is_constructible_v<T, initializer_list<U>\&, Args...>} is \tcode{true}.
+\tcode{is_convertible_v<const T\&, X>} is \tcode{true} and
+\tcode{is_constructible_v<X, initializer_list<U>\&, Args...>} is \tcode{true}.
 \pnum
 \effects
 Equivalent to:
-\tcode{return has_value() ? std::move(**this) : T(il, std::forward<Args>(args)...);}
+\begin{codeblock}
+if (has_value()) return **this;
+return X(il, std::forward<Args>(args)...);
+\end{codeblock}
 \end{itemdescr}
 
 \begin{itemdescr}
 \begin{codeblock}
-template<class F> constexpr T value_or_else(F&& f) const&;
+template<class U, class... Args>
+  constexpr remove_cv_t<T> value_or_construct(initializer_list<U> il, Args&&... args) &&;
 \end{codeblock}
 \pnum
-Let \tcode{U} be \tcode{invoke_result_t<F>}.
+Let \tcode{X} be \tcode{remove_cv_t<T>}.
 \pnum
 \mandates
-\tcode{is_copy_constructible_v<T>} is \tcode{true} and
-\tcode{is_convertible_v<U, T>} is \tcode{true}.
+\tcode{is_convertible_v<T, X>} is \tcode{true} and
+\tcode{is_constructible_v<X, initializer_list<U>\&, Args...>} is \tcode{true}.
 \pnum
 \effects
 Equivalent to:
-\tcode{return has_value() ? **this : std::forward<F>(f)();}
+\begin{codeblock}
+if (has_value()) return std::move(**this);
+return X(il, std::forward<Args>(args)...);
+\end{codeblock}
 \end{itemdescr}
 
 \begin{itemdescr}
 \begin{codeblock}
-template<class F> constexpr T value_or_else(F&& f) &&;
+template<class F> constexpr remove_cv_t<T> value_or_else(F&& f) const&;
 \end{codeblock}
 \pnum
-Let \tcode{U} be \tcode{invoke_result_t<F>}.
+Let \tcode{X} be \tcode{remove_cv_t<T>} and \tcode{U} be \tcode{invoke_result_t<F>}.
 \pnum
 \mandates
-\tcode{is_move_constructible_v<T>} is \tcode{true} and
-\tcode{is_convertible_v<U, T>} is \tcode{true}.
+\tcode{is_convertible_v<const T\&, X>} is \tcode{true} and
+\tcode{is_convertible_v<U, X>} is \tcode{true}.
 \pnum
 \effects
 Equivalent to:
-\tcode{return has_value() ? std::move(**this) : std::forward<F>(f)();}
+\begin{codeblock}
+if (has_value()) return **this;
+return std::forward<F>(f)();
+\end{codeblock}
+\end{itemdescr}
+
+\begin{itemdescr}
+\begin{codeblock}
+template<class F> constexpr remove_cv_t<T> value_or_else(F&& f) &&;
+\end{codeblock}
+\pnum
+Let \tcode{X} be \tcode{remove_cv_t<T>} and \tcode{U} be \tcode{invoke_result_t<F>}.
+\pnum
+\mandates
+\tcode{is_convertible_v<T, X>} is \tcode{true} and
+\tcode{is_convertible_v<U, X>} is \tcode{true}.
+\pnum
+\effects
+Equivalent to:
+\begin{codeblock}
+if (has_value()) return std::move(**this);
+return std::forward<F>(f)();
+\end{codeblock}
 \end{itemdescr}
 
 \pnum

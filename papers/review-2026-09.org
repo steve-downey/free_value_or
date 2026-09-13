@@ -23,6 +23,10 @@ These are decisions taken in review that later edits should respect.
   whatever its value category, because ownership there is the deleter's
   policy and the referent is never a subobject. The axis that predicts
   =operator*= is whether the payload is a subobject.
+- Where the member wording and the vendored reference implementation
+  disagree, the wording conforms to the implementation ("I might as well
+  conform to my own code"). The =optional<T>= members return
+  =remove_cv_t<T>=, as its =value_or= does there.
 
 * Findings fixed on this branch
 
@@ -92,7 +96,7 @@ introduced it. Fixed: the synopsis now opens with
 and a paragraph says what it yields for an lvalue =optional=, an rvalue
 one, and a pointer.
 
-** W3. Member return type disagrees with the implementation — BLOCKED
+** W3. Member return type disagreed with the implementation — FIXED (this branch)
 The =optional<T>= primary-template member wording returns =T=; the vendored
 =beman.optional= returns =remove_cv_t<T>= for =value_or_construct= and
 =value_or_else=, matching its =value_or=. The paper's own =optional<T&>=
@@ -118,12 +122,24 @@ and =is_constructible_v<remove_cv_t<T>, Args...>=, and the /Effects/
 casts adjusted. If it reads =T=, the vendored members should go back to
 =T= and the reason recorded. One reading of [optional.observe] settles it.
 
-** W4. Implementation Experience counts are partly stale
+Ruling: conform to the vendored implementation. Done: the six =optional<T>=
+member declarations return =remove_cv_t<T>=; each itemdescr introduces
+=X = remove_cv_t<T>=, Mandates =is_convertible_v<const T&, X>= (const&) or
+=is_convertible_v<T, X>= (&&) plus the construction or invoke requirement
+on =X=, and Effects use the =if=-form the implementation uses. The Design
+chapter and the comparison table now say "what =value_or= beside them
+returns" rather than =T=. =expected= unchanged. A later read of
+[optional.observe] should confirm the draft agrees; if it does not, that is
+an implementation question, not a wording one.
+
+** W4. Implementation Experience counts were partly stale — FIXED (this branch)
 "118 test cases and nine negative-compilation cases over eight
 translation units". As of 2026-09-13: 118 =TEST_CASE=s (accurate), nine
 =*_fail.cpp= units (accurate), but fifteen positive translation units
 (=public_header=, =smoke=, =rvalue_nullable=, and the =or_construct_*=
-split arrived after the sentence). Recount at each revision; the whole
+split arrived after the sentence). Now "118 test cases over fifteen
+translation units and nine negative-compilation units". Recount at each
+revision; the whole
 project runs 1439 ctest entries including the vendored suites, which is
 not the number to cite for this header.
 
@@ -169,22 +185,22 @@ before the branch merges.
 Order chosen so the wording defects, which change meaning, land first
 and get the PDF rebuilt behind them; documentation catches up after.
 
-** Step 1 — wording (W1 done, W2 done, W3 blocked on a draft read)
+** Step 1 — wording (W1, W2, W3 done)
 Files: =papers/free_value_or.tex=, Wording chapter and the listing in
 Implementation Experience.
 - W2: done — exposition-only =deref-t= alias in the synopsis, defined in
   prose.
 - W1: done — all /Effects/ and the listing use =*std::forward<T>(m)=.
-- W3: read [optional.observe] on eel.is. If =value_or= returns
-  =remove_cv_t<T>=, change the six =optional<T>= member declarations, their
-  Mandates, and Effects; leave =expected=. If it returns =T=, change the
-  vendored =beman.optional= members back to =T= instead and note why.
-Check: =optional= wording and =include/beman/optional/optional.hpp= agree
-on every return type.
+- W3: done — the =optional<T>= members return =remove_cv_t<T>= with
+  Mandates and Effects mirroring =include/beman/optional/optional.hpp=;
+  =expected= untouched.
+Check: =grep -c 'constexpr T value_or' papers/free_value_or.tex= is
+fifteen: the twelve =expected= declarations and the three in the Design
+chapter's generic member synopsis, whose comment says =optional= differs.
 
-** Step 2 — counts (W4)
+** Step 2 — counts (W4) — done
 File: =papers/free_value_or.tex=, Implementation Experience.
-Recount with =grep -c TEST_CASE tests/beman/free_value_or/*.test.cpp=,
+Recounted with =grep -c TEST_CASE tests/beman/free_value_or/*.test.cpp=,
 =ls tests/beman/free_value_or/*_fail.cpp | wc -l=, and the =.test.cpp=
 count; state all three.
 
