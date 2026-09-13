@@ -16,7 +16,7 @@ struct nullable_source {
     source value;
 
     explicit operator bool() const { return true; }
-    source& operator*() const { return const_cast<source&>(value); }
+    source&  operator*() const { return const_cast<source&>(value); }
 };
 
 template <>
