@@ -945,20 +945,22 @@ constexpr auto reference_or(T&& m, U&& u) -> R {
     static_assert(!std::reference_constructs_from_temporary_v<R, U>);
     static_assert(
         !std::reference_constructs_from_temporary_v<R, deref_t<T>>);
-    return bool(m) ? static_cast<R>(*m) : static_cast<R>((U&&)u);
+    return bool(m) ? static_cast<R>(*std::forward<T>(m))
+                   : static_cast<R>((U&&)u);
 }
 
 template <nullable T, class U,
           class R = std::common_type_t<deref_t<T>, U&&>>
 constexpr auto value_or(T&& m, U&& u) -> R {
-    return bool(m) ? static_cast<R>(*m) : static_cast<R>(std::forward<U>(u));
+    return bool(m) ? static_cast<R>(*std::forward<T>(m))
+                   : static_cast<R>(std::forward<U>(u));
 }
 
 template <nullable T, class I,
           class R = std::common_type_t<deref_t<T>,
                                        std::invoke_result_t<I>>>
 constexpr auto or_invoke(T&& m, I&& invocable) -> R {
-    return bool(m) ? static_cast<R>(*m)
+    return bool(m) ? static_cast<R>(*std::forward<T>(m))
                    : static_cast<R>(std::forward<I>(invocable)());
 }
 
@@ -966,7 +968,8 @@ template <class Ret = void, nullable T, class... Args,
           class R = std::conditional_t<std::is_void_v<Ret>,
                         std::remove_cvref_t<deref_t<T>>, Ret>>
 constexpr R or_construct(T&& m, Args&&... args) {
-    return bool(m) ? static_cast<R>(*m) : R(std::forward<Args>(args)...);
+    return bool(m) ? static_cast<R>(*std::forward<T>(m))
+                   : R(std::forward<Args>(args)...);
 }
 
 template <class Ret = void, nullable T, class E, class... Args,
@@ -974,7 +977,8 @@ template <class Ret = void, nullable T, class E, class... Args,
                         std::remove_cvref_t<deref_t<T>>, Ret>>
 constexpr R or_construct(T&& m, std::initializer_list<E> il,
                          Args&&... args) {
-    return bool(m) ? static_cast<R>(*m) : R(il, std::forward<Args>(args)...);
+    return bool(m) ? static_cast<R>(*std::forward<T>(m))
+                   : R(il, std::forward<Args>(args)...);
 }
 \end{minted}
 
@@ -1057,6 +1061,9 @@ Add to the header synopsis:
 \begin{codeblock}
 namespace std {
   template<class T>
+    using @\exposid{deref-t}@ = decltype(*declval<T>());      // \expos
+
+  template<class T>
     concept nullable = requires(const remove_reference_t<T>& t) {
       bool(t);
       *(t);
@@ -1087,6 +1094,14 @@ namespace std {
 \end{codeblock}
 
 \pnum
+\tcode{\exposid{deref-t}<T>} is the type that \tcode{*m} yields for an
+\tcode{m} of type \tcode{T}, with the value category of \tcode{T} carried
+through. For an \tcode{optional<U>} it is \tcode{U\&} when \tcode{T} is an
+lvalue reference type and \tcode{U\&\&} otherwise, const-qualified as
+\tcode{T} is; for a pointer to \tcode{U} it is \tcode{U\&} whatever the
+value category of \tcode{T}.
+
+\pnum
 Let \tcode{t} be a const lvalue of type \tcode{remove_reference_t<T>}.
 \tcode{T} models \tcode{nullable} only if:
 
@@ -1115,7 +1130,8 @@ Let \tcode{R} be \tcode{common_reference_t<@\exposid{deref-t}@<T>, U\&\&>}.
 \pnum
 \effects
 Equivalent to:
-\tcode{return bool(m) ? static_cast<R>(*m) : static_cast<R>(std::forward<U>(u));}
+\tcode{return bool(m) ? static_cast<R>(*std::forward<T>(m))}\newline
+\tcode{\ \ \ \ \ \ \ : static_cast<R>(std::forward<U>(u));}
 \end{itemdescr}
 
 \begin{itemdescr}
@@ -1131,7 +1147,8 @@ Let \tcode{R} be \tcode{common_type_t<@\exposid{deref-t}@<T>, U\&\&>}.
 \pnum
 \effects
 Equivalent to:
-\tcode{return bool(m) ? static_cast<R>(*m) : static_cast<R>(std::forward<U>(u));}
+\tcode{return bool(m) ? static_cast<R>(*std::forward<T>(m))}\newline
+\tcode{\ \ \ \ \ \ \ : static_cast<R>(std::forward<U>(u));}
 \end{itemdescr}
 
 \begin{itemdescr}
@@ -1148,8 +1165,8 @@ Let \tcode{R} be
 \pnum
 \effects
 Equivalent to:
-\tcode{return bool(m) ? static_cast<R>(*m) :}\newline
-\tcode{\ \ \ \ \ \ \ static_cast<R>(std::forward<I>(invocable)());}
+\tcode{return bool(m) ? static_cast<R>(*std::forward<T>(m))}\newline
+\tcode{\ \ \ \ \ \ \ : static_cast<R>(std::forward<I>(invocable)());}
 \end{itemdescr}
 
 \begin{itemdescr}
@@ -1172,7 +1189,8 @@ remove_cvref_t<@\exposid{deref-t}@<T>>, Ret>}.
 \pnum
 \effects
 Equivalent to:
-\tcode{return bool(m) ? static_cast<R>(*m) : R(std::forward<Args>(args)...);}
+\tcode{return bool(m) ? static_cast<R>(*std::forward<T>(m))}\newline
+\tcode{\ \ \ \ \ \ \ : R(std::forward<Args>(args)...);}
 \end{itemdescr}
 
 \begin{itemdescr}
@@ -1195,7 +1213,8 @@ and \tcode{is_convertible_v<@\exposid{deref-t}@<T>, R>} is \tcode{true}.
 \pnum
 \effects
 Equivalent to:
-\tcode{return bool(m) ? static_cast<R>(*m) : R(il, std::forward<Args>(args)...);}
+\tcode{return bool(m) ? static_cast<R>(*std::forward<T>(m))}\newline
+\tcode{\ \ \ \ \ \ \ : R(il, std::forward<Args>(args)...);}
 \end{itemdescr}
 
 \section{Member functions, from P3413R0}

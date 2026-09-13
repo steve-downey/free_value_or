@@ -72,33 +72,51 @@ Typo for caller-chosen, in the comparison table.
 
 * Findings still open
 
-** W1. Free-function Effects dereference an lvalue — WORDING DEFECT
-Every free-function /Effects/ in the Wording chapter reads
+** W1. Free-function Effects dereferenced an lvalue — FIXED (this branch)
+Every free-function /Effects/ in the Wording chapter read
 =static_cast<R>(*m)=. =m= is a named parameter, so =*m= is the lvalue
 dereference, which for =optional= and =expected= yields =T&= and copies.
 The design (Value categories), the change list, the implementation, and
 the return type (computed from =deref-t<T>=, which is =T&&= for an rvalue
-=optional=) all say the rvalue path moves. The words do not. All five:
-=reference_or=, =value_or=, =or_invoke=, both =or_construct=.
-Fix: =static_cast<R>(*std::forward<T>(m))= in each, matching the header.
+=optional=) all say the rvalue path moves. The words did not. All five:
+=reference_or=, =value_or=, =or_invoke=, both =or_construct=. The
+Implementation Experience listing, presented as the header "less the
+portability shims", had the same =*m= and so was not the header.
+Fixed: =static_cast<R>(*std::forward<T>(m))= in all ten places.
+Check: =grep -n 'static_cast<R>(\*m)' papers/free_value_or.tex= is empty.
 
-** W2. =deref-t= is used but never defined — WORDING DEFECT
-The synopsis and every itemdescr use =@\exposid{deref-t}@<T>=; nothing
-introduces it. Fix: add to the synopsis, before the concept,
-=template<class T> using deref-t = decltype(*declval<T>()); // exposition only=,
-and a sentence that it is the type =*m= yields with =T='s value category
-carried through.
+** W2. =deref-t= was used but never defined — FIXED (this branch)
+The synopsis and every itemdescr used =@\exposid{deref-t}@<T>=; nothing
+introduced it. Fixed: the synopsis now opens with
+=template<class T> using deref-t = decltype(*declval<T>()); // exposition only=
+and a paragraph says what it yields for an lvalue =optional=, an rvalue
+one, and a pointer.
 
-** W3. Member return type disagrees with the implementation — CHECK N5054
+** W3. Member return type disagrees with the implementation — BLOCKED
 The =optional<T>= primary-template member wording returns =T=; the vendored
 =beman.optional= returns =remove_cv_t<T>= for =value_or_construct= and
-=value_or_else=, matching its =value_or=, which tracks the working draft
-after LWG4304/LWG4406. The paper's own =optional<T&>= wording already
-returns =remove_cv_t<T>=. Verify [optional.observe] in N5054; if =value_or=
-there returns =remove_cv_t<T>=, the members beside it must too, and the
-Mandates change with it (=is_copy_constructible_v<remove_cv_t<T>>=, etc.).
-=expected<T,E>= returns =T= in both wording and implementation, and
-=expected<T&,E>= returns =remove_cv_t<T>= in both; those stay.
+=value_or_else=, matching its =value_or=. The paper's own =optional<T&>=
+wording already returns =remove_cv_t<T>=. =expected<T,E>= returns =T= in
+both wording and implementation, and =expected<T&,E>= returns
+=remove_cv_t<T>= in both; those stay.
+
+The ruling is to take https://eel.is/c++draft/ as the standard. From the
+review container both eel.is and the timsong-cpp.github.io mirror are
+denied by the network egress policy, and the proxy's own guidance is to
+report a denial rather than route around it, so [optional.observe] was
+not read for this record.
+
+Local evidence, for whoever reads it: commit bc9bda0 in the vendored
+=beman.optional= ("optional::value_or return statement is inconsistent
+with Mandates", LWG4406, https://cplusplus.github.io/LWG/issue4406) changed
+the primary template's =value_or= to return =remove_cv_t<T>=, and 460fce5
+gave the new members the same return type. If [optional.observe] reads
+=constexpr remove_cv_t<T> value_or(U&& v) const &;=, the member wording
+should say =remove_cv_t<T>= too, with Mandates
+=is_copy_constructible_v<remove_cv_t<T>>= / =is_move_constructible_v<remove_cv_t<T>>=
+and =is_constructible_v<remove_cv_t<T>, Args...>=, and the /Effects/
+casts adjusted. If it reads =T=, the vendored members should go back to
+=T= and the reason recorded. One reading of [optional.observe] settles it.
 
 ** W4. Implementation Experience counts are partly stale
 "118 test cases and nine negative-compilation cases over eight
@@ -151,18 +169,18 @@ before the branch merges.
 Order chosen so the wording defects, which change meaning, land first
 and get the PDF rebuilt behind them; documentation catches up after.
 
-** Step 1 — wording (W1, W2, W3)
-Files: =papers/free_value_or.tex=, Wording chapter.
-- W2: add the exposition-only =deref-t= alias to the synopsis with its
-  one-sentence definition.
-- W1: change the five /Effects/ to =*std::forward<T>(m)=.
-- W3: check N5054 [optional.observe]. If =value_or= returns
-  =remove_cv_t<T>=, change the six =optional<T>= member declarations and
-  their Mandates; leave =expected=. If it returns =T=, change the vendored
-  =beman.optional= members back to =T= instead and note why.
-Check: the free-function /Effects/ now read like the header; grep the
-chapter for =deref-t= finds its definition; =optional= wording and
-=include/beman/optional/optional.hpp= agree on every return type.
+** Step 1 — wording (W1 done, W2 done, W3 blocked on a draft read)
+Files: =papers/free_value_or.tex=, Wording chapter and the listing in
+Implementation Experience.
+- W2: done — exposition-only =deref-t= alias in the synopsis, defined in
+  prose.
+- W1: done — all /Effects/ and the listing use =*std::forward<T>(m)=.
+- W3: read [optional.observe] on eel.is. If =value_or= returns
+  =remove_cv_t<T>=, change the six =optional<T>= member declarations, their
+  Mandates, and Effects; leave =expected=. If it returns =T=, change the
+  vendored =beman.optional= members back to =T= instead and note why.
+Check: =optional= wording and =include/beman/optional/optional.hpp= agree
+on every return type.
 
 ** Step 2 — counts (W4)
 File: =papers/free_value_or.tex=, Implementation Experience.
@@ -197,6 +215,6 @@ Leave =d4270.org= untouched.
 
 - =cmake --workflow --preset gcc-debug= green (1439/1439 on 2026-09-13).
 - =grep -n "two open questions\|owning models\|ownership split\|callable-chosen" papers/free_value_or.tex= is empty.
-- =grep -n "static_cast<R>(\*m)" papers/free_value_or.tex= is empty after Step 1.
+- =grep -n "static_cast<R>(\*m)" papers/free_value_or.tex= is empty (it is, as of this commit).
 - =grep -c "deref-t" papers/free_value_or.tex= includes the definition.
 - PDF timestamp is newer than the tex.
