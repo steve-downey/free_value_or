@@ -21,14 +21,17 @@ concept nullable = requires(const std::remove_reference_t<T>& t) {
 
 // The type *m yields, with the value category of the nullable carried
 // through.  std::iter_reference_t always dereferences an lvalue; this does
-// not, so an expiring owning nullable yields an expiring payload.
+// not, so an expiring nullable that contains its payload yields an expiring
+// payload.
 //
-// The two groups differ by ownership, and each is right.  optional and
-// expected contain their value, so operator* is ref-qualified and an rvalue
-// of one gives T&&.  T*, shared_ptr and unique_ptr are handles to a referent
-// that outlives them, so operator* gives T& whatever the handle's own value
-// category -- and so does optional<T&>, which is an optional that does not
-// own.
+// The two groups differ by containment, and each is right.  optional and
+// expected hold their value as a subobject, so operator* is ref-qualified
+// and an rvalue of one gives T&&.  T*, shared_ptr and unique_ptr reach a
+// separate object through indirection, so operator* gives T& whatever the
+// handle's own value category.  unique_ptr ordinarily owns that object, but
+// ownership there is the deleter's policy and the object is never part of
+// the pointer, which is why its operator* says T& regardless -- and so does
+// optional<T&>, whose referent is not a subobject either.
 template <class T>
 using deref_t = decltype(*std::declval<T>());
 

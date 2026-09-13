@@ -54,8 +54,9 @@
     implementation, covering \tcode{optional<T\&>}, which P3413R0 deferred and
     which is now C++26.
   \item An rvalue nullable moves its payload. R0 dereferenced an lvalue
-    always, observing and never consuming; the models now split by ownership,
-    so \tcode{optional} and \tcode{expected} move, and the handles go on
+    always, observing and never consuming; the models now split by
+    containment, so \tcode{optional} and \tcode{expected} move their
+    subobject, and the pointers, \tcode{optional<T\&>} among them, go on
     copying.
   \item \tcode{nullable} is proposed as a named, public concept. R0 specified
     it as exposition-only and asked LEWG for a poll.
@@ -487,19 +488,24 @@ member's efficiency.
 
 That divides the models, and the division is the point, because it is not
 an accident of specification. \tcode{std::optional} and
-\tcode{std::expected} contain their value. An rvalue of one is an expiring
-object whose payload expires with it, and \tcode{operator*} is
-ref-qualified to say so. A pointer contains nothing. \tcode{T*},
-\tcode{std::shared_ptr}, and \tcode{std::unique_ptr} are handles; an
-rvalue handle is an expiring handle, and says nothing about the lifetime of
-the referent, which ordinarily outlives it. \tcode{T\&} is the truthful
-answer for all three, and they go on copying.
+\tcode{std::expected} contain their value: it is a subobject, an rvalue of
+one is an expiring object whose payload expires with it, and
+\tcode{operator*} is ref-qualified to say so. A pointer contains nothing.
+\tcode{T*}, \tcode{std::shared_ptr}, and \tcode{std::unique_ptr} reach a
+separate object through indirection, and an expiring handle says nothing
+about the lifetime of what it reaches. \tcode{unique_ptr} makes the point
+sharpest. It does own its referent, ordinarily; but ownership there is a
+policy of the deleter, which may return the object to a pool or do nothing
+at all, and the referent is not part of the pointer under any deleter. So
+\tcode{unique_ptr::operator*} returns \tcode{T\&} whatever the value
+category of the pointer, and the free functions follow it. \tcode{T\&} is
+the truthful answer for all three, and they go on copying.
 
 \tcode{std::optional<T\&>} settles which property is doing the work. It is
-an \tcode{optional}, and it dereferences to \tcode{T\&}, because it does
-not own its referent either. The split is ownership, not optional-ness. Each
-nullable reports what its own value category implies about its payload, and
-every one of them is right.
+an \tcode{optional}, and it dereferences to \tcode{T\&}, because its
+referent is not a subobject either. The split is containment, not
+optional-ness and not ownership. Each nullable reports what its own value
+category implies about its payload, and every one of them is right.
 
 The alternative is to compute the dereference type from \tcode{T\&}
 always, as \tcode{std::iter_reference_t} does, so that the functions
@@ -510,13 +516,13 @@ of the nullable; \tcode{reference_or} over an rvalue \tcode{optional<int>}
 stays \tcode{int\&} instead of becoming \tcode{const int\&}, which is the
 common reference of \tcode{int\&\&} and \tcode{int\&}; and there is no
 moved-from path to reason about under the dangling analysis of
-\tcode{reference_or}. However, it buys them by making every owning nullable
-copy a payload that is going away, which is the wrong answer stated
+\tcode{reference_or}. However, it buys them by making every containing
+nullable copy a payload that is going away, which is the wrong answer stated
 uniformly. We would rather be correct and pay the ergonomics.
 
 The behavior is pinned either way. The engaged path is copy-counted for
 \tcode{optional}, \tcode{expected}, and both smart pointers, so the
-ownership split shows up as test output and a change of rule shows up as a
+containment split shows up as test output and a change of rule shows up as a
 test failure (see Implementation Experience).
 
 \section{\tcode{reference_or}}
@@ -798,7 +804,7 @@ lazy alternative & \tcode{value_or_else} & \tcode{or_invoke} \\
 in-place fallback construction & \tcode{value_or_construct} &
   \tcode{or_construct}, caller-chosen result type \\
 rvalue nullable moves payload & yes (\tcode{\&\&} overloads) &
-  yes, for the owning models (see Design) \\
+  yes, for the containing models (see Design) \\
 \tcode{optional<T\&>} & members return a value & covered by the concept \\
 \hline
 \end{tabular}
@@ -860,7 +866,7 @@ C++26 toolchain, via the Beman \tcode{optional} reference implementation of
 P2988 \cite{The_Beman_Project_beman_optional}) \tcode{std::optional<T\&>};
 engaged and disengaged; the nullable as lvalue, const lvalue, and rvalue,
 the rvalue cases copy- and move-counted on the engaged path so that the
-ownership split is pinned rather than assumed; the alternative as lvalue and
+containment split is pinned rather than assumed; the alternative as lvalue and
 rvalue; mixed-type combinations; constant
 evaluation of all four functions; laziness of \tcode{or_invoke} and
 \tcode{or_construct} and eagerness of \tcode{value_or}; for
@@ -895,7 +901,7 @@ fail to compile and, with those removed so that they cannot mask the rest,
 fails the move counts for \tcode{value_or} over \tcode{optional} and over
 \tcode{expected}, for \tcode{or_invoke}, and for \tcode{or_construct}. It
 leaves the smart pointer cases passing, because those copy under both rules.
-That is the ownership split of Design showing up as test output. Coverage of the
+That is the containment split of Design showing up as test output. Coverage of the
 header from that one file is complete on lines, functions, and branches.
 
 Verified \tcode{common_reference} results for \tcode{reference_or},
@@ -1022,13 +1028,14 @@ gets one, and writes through the result do not reach the original object
 (see Design).
 
 The rest we have decided, and will revisit only if LEWG disagrees. An rvalue
-nullable moves its payload, which divides the models along ownership:
-\tcode{optional} and \tcode{expected} own their value and move it, while
-\tcode{T*}, the smart pointers, and \tcode{optional<T\&>} are handles to a
-referent that outlives them and go on copying. The alternative is to
-dereference an lvalue always, so that the functions observe and never
-consume; it is simpler to state, and it makes every owning nullable copy a
-payload that is going away. We would rather be correct by default, and the
+nullable moves its payload, which divides the models along containment:
+\tcode{optional} and \tcode{expected} hold their value as a subobject and
+move it, while \tcode{T*}, the smart pointers, and \tcode{optional<T\&>}
+reach a separate object and go on copying, \tcode{unique_ptr} included,
+since its \tcode{operator*} says \tcode{T\&} whatever the deleter. The
+alternative is to dereference an lvalue always, so that the functions
+observe and never consume; it is simpler to state, and it makes every
+containing nullable copy a payload that is going away. We would rather be correct by default, and the
 alternative is a one-line change to the dereference type if LEWG prefers it
 (see Design). The
 dangling guards are \emph{Mandates}, so a dangling call is diagnosed and not
