@@ -409,6 +409,22 @@ valid. It does not say that the result of dereferencing survives destruction
 of the nullable itself. That distinction does not matter to the three
 value-producing functions, but it is decisive for \tcode{reference_or}.
 
+A nullable can be understood as a view of zero or one element. In a
+\tcode{borrowed_nullable}, it is that element --- the result of dereferencing
+--- that is borrowed: its lifetime is managed independently of the nullable
+wrapper. The name does not mean that the nullable object itself is borrowed.
+
+This is the same lifetime distinction made by ranges. A
+\tcode{single_view<T>} contains its element, and destroying the view
+invalidates references to that element; an \tcode{optional<T>} has the same
+relationship to its value. A \tcode{span<T>} presents externally owned
+elements, as a raw pointer, \tcode{optional<T\&>}, or
+\tcode{expected<T\&, E>} presents an externally owned referent.
+\tcode{borrowed_range} permits an iterator or reference obtained from an
+rvalue range to escape the range wrapper; \tcode{borrowed_nullable} permits
+the reference obtained by dereferencing an rvalue nullable to escape through
+\tcode{reference_or}.
+
 As with \tcode{borrowed_range}, an lvalue nullable is always safe to observe:
 the caller's object remains alive after the call. An rvalue must opt in via
 \tcode{enable_borrowed_nullable}. Raw pointers opt in because destroying a
