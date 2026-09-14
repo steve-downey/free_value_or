@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-#include <beman/free_value_or/value_or.hpp>
-
-#include <beman/expected/expected.hpp>
-#include <beman/optional/optional.hpp>
+#include <beman/free_value_or/beman_expected.hpp>
+#include <beman/free_value_or/beman_optional.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -13,7 +11,7 @@ static_assert(smd::free_value_or::borrowed_nullable<beman::optional::optional<in
 static_assert(smd::free_value_or::borrowed_nullable<beman::expected::expected<int&, int>>);
 #endif
 
-TEST_CASE("public header integrates vendored reference nullables", "[reference_or][integration]") {
+TEST_CASE("explicit integration headers opt in vendored reference nullables", "[reference_or][integration]") {
     int value    = 42;
     int fallback = 0;
 

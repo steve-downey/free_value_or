@@ -16,14 +16,6 @@
         #include <expected>
         #define BEMAN_FREE_VALUE_OR_DETAIL_HAS_STD_EXPECTED_HEADER 1
     #endif
-    #if defined(__has_include) && __has_include(<beman/optional/optional.hpp>)
-        #include <beman/optional/optional.hpp>
-        #define BEMAN_FREE_VALUE_OR_DETAIL_HAS_BEMAN_OPTIONAL_HEADER 1
-    #endif
-    #if defined(__has_include) && __has_include(<beman/expected/expected.hpp>)
-        #include <beman/expected/expected.hpp>
-        #define BEMAN_FREE_VALUE_OR_DETAIL_HAS_BEMAN_EXPECTED_HEADER 1
-    #endif
 #endif
 
 namespace smd {
@@ -51,17 +43,6 @@ inline constexpr bool enable_borrowed_nullable<std::optional<T&>> = true;
     __cpp_lib_expected >= 202202L
 template <class T, class E>
 inline constexpr bool enable_borrowed_nullable<std::expected<T&, E>> = true;
-#endif
-
-#if defined(BEMAN_FREE_VALUE_OR_DETAIL_HAS_BEMAN_OPTIONAL_HEADER)
-template <class T>
-inline constexpr bool enable_borrowed_nullable<beman::optional::optional<T&>> = true;
-#endif
-
-#if defined(BEMAN_FREE_VALUE_OR_DETAIL_HAS_BEMAN_EXPECTED_HEADER) && defined(BEMAN_EXPECTED_HAS_REFERENCES) && \
-    BEMAN_EXPECTED_HAS_REFERENCES
-template <class T, class E>
-inline constexpr bool enable_borrowed_nullable<beman::expected::expected<T&, E>> = true;
 #endif
 
 template <class T>
@@ -104,8 +85,8 @@ inline constexpr bool reference_constructs_from_temporary_v =
     #error "no std::reference_constructs_from_temporary_v and no __reference_constructs_from_temporary builtin"
 #endif
 
-template <class To, class From>
-inline constexpr bool explicitly_convertible_to_v = requires { static_cast<To>(std::declval<From>()); };
+template <class To, class T>
+inline constexpr bool explicitly_convertible_from_deref_v = requires { static_cast<To>(*std::declval<T>()); };
 } // namespace detail
 
 template <nullable T, class U, class R>
@@ -171,7 +152,7 @@ template <class Ret = void,
 constexpr R smd::free_value_or::or_construct(T&& m, Args&&... args) {
     static_assert(!std::is_reference_v<R>, "or_construct requires a non-reference result type");
     static_assert(std::is_constructible_v<R, Args...>, "or_construct requires is_constructible_v<R, Args...>");
-    static_assert(smd::free_value_or::detail::explicitly_convertible_to_v<R, smd::free_value_or::deref_t<T>>,
+    static_assert(smd::free_value_or::detail::explicitly_convertible_from_deref_v<R, T>,
                   "or_construct requires static_cast<R>(*m) to be well-formed");
     return bool(m) ? static_cast<R>(*std::forward<T>(m)) : R(std::forward<Args>(args)...);
 }
@@ -185,13 +166,11 @@ constexpr R smd::free_value_or::or_construct(T&& m, std::initializer_list<E> il,
     static_assert(!std::is_reference_v<R>, "or_construct requires a non-reference result type");
     static_assert(std::is_constructible_v<R, std::initializer_list<E>&, Args...>,
                   "or_construct requires is_constructible_v<R, initializer_list<E>&, Args...>");
-    static_assert(smd::free_value_or::detail::explicitly_convertible_to_v<R, smd::free_value_or::deref_t<T>>,
+    static_assert(smd::free_value_or::detail::explicitly_convertible_from_deref_v<R, T>,
                   "or_construct requires static_cast<R>(*m) to be well-formed");
     return bool(m) ? static_cast<R>(*std::forward<T>(m)) : R(il, std::forward<Args>(args)...);
 }
 
 #undef BEMAN_FREE_VALUE_OR_DETAIL_HAS_STD_EXPECTED_HEADER
-#undef BEMAN_FREE_VALUE_OR_DETAIL_HAS_BEMAN_OPTIONAL_HEADER
-#undef BEMAN_FREE_VALUE_OR_DETAIL_HAS_BEMAN_EXPECTED_HEADER
 
 #endif

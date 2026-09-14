@@ -30,6 +30,14 @@ operations proposed by this project.
 Include the public umbrella header and call the functions from
 `smd::free_value_or`.
 
+The vendored Beman reference types use explicit integration headers so the
+core header does not probe the include path or pull in optional dependencies:
+
+```c++
+#include <beman/free_value_or/beman_optional.hpp> // beman::optional::optional<T&>
+#include <beman/free_value_or/beman_expected.hpp> // beman::expected::expected<T&, E>
+```
+
 Full runnable examples can be found in [`examples/`](examples/).
 
 ## Dependencies

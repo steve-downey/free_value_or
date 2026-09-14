@@ -306,8 +306,13 @@ fvo_add_test(beman.free_value_or.tests.optional_ref optional_ref.test.cpp)
 # vendored reference implementation until the standard type supports T&.
 fvo_add_test(beman.free_value_or.tests.expected_ref expected_ref.test.cpp)
 
-# Public integration proof: no test fixture supplies the vendored opt-ins.
+# Explicit integration-header proof: no test fixture supplies the vendored
+# opt-ins, and the core value_or header does not probe for vendored libraries.
 fvo_add_test(beman.free_value_or.tests.beman_ref_integration beman_ref_integration.test.cpp)
+fvo_add_test(
+    beman.free_value_or.tests.beman_no_implicit_integration
+    beman_no_implicit_integration.test.cpp
+)
 
 # ---------------------------------------------------------------------------
 # or_construct Step 06: optional<T&> coverage + finalize

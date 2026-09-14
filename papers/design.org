@@ -100,6 +100,10 @@ Final-suite findings (steps 04-07, 59/59 green, plan complete):
   All nullable lvalues qualify. Rvalues opt in; raw pointers, optional<T&>,
   and expected<T&,E> do, while owning optional/expected and smart pointers do
   not. Temporary owning wrappers are negative-compilation tests.
+- REFERENCE IMPLEMENTATION PACKAGING: vendored reference-nullable opt-ins use
+  explicit integration headers. The core header does not discover them from
+  the include path; the standard wording still places each specialization in
+  the header that owns its type.
 - SURPRISE (handoff 006): or_invoke + reference-returning invocable
   decays via common_type → value. Lazy-reference quadrant of the family
   is empty; paper says deliberately so, reference_invoke composable later.

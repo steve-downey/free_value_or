@@ -17,8 +17,9 @@ Tests for `beman::free_value_or` — the non-member `value_or`, `reference_or`,
 | `constexpr.test.cpp` | `static_assert`-level constant-evaluation of all three functions with `optional`, `expected`, and raw pointers |
 | `optional_ref.test.cpp` | All three functions with `fvo_opt::optional<int&>` (C++26 reference-optional via vendored `beman::optional`): `nullable` static_assert, return-type proofs, reference identity, mutation, laziness, rebinding semantics |
 | `expected_ref.test.cpp` | Temporary vendored `expected<T&, E>` is an explicitly borrowed nullable and safely returns its referent |
-| `beman_ref_integration.test.cpp` | Public-header integration of vendored reference nullables without fixture-provided opt-ins |
-| `or_construct.test.cpp` | `or_construct` Step 00 smoke: both overloads compile and run |
+| `beman_ref_integration.test.cpp` | Explicit integration headers for vendored reference nullables, without fixture-provided opt-ins |
+| `beman_no_implicit_integration.test.cpp` | Core header neither includes nor implicitly opts in vendored reference nullables |
+| `or_construct.test.cpp` | `or_construct` Step 00 smoke, including an immovable payload returned by value |
 | `or_construct_behavior.test.cpp` | `or_construct` return type, engaged/disengaged, value categories, inward conversion, explicit `Ret` |
 | `or_construct_construct.test.cpp` | `or_construct` zero-arg default-construction, multi-arg emplace-style, init-list overload |
 | `or_construct_laziness.test.cpp` | `or_construct` laziness: fallback constructed exactly once when disengaged, not constructed when engaged |

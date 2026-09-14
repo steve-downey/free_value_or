@@ -1089,6 +1089,13 @@ constexpr R or_construct(T&& m, std::initializer_list<E> il,
 }
 \end{minted}
 
+The Beman reference nullables opt in through explicit integration headers.
+The core header neither probes the include path for those optional
+dependencies nor includes them implicitly. This is a packaging boundary of
+the reference implementation; the proposed standard-library specializations
+remain beside their types in the \tcode{<optional>} and \tcode{<expected>}
+header synopses below.
+
 The member side is implemented too. \tcode{value_or_construct} and
 \tcode{value_or_else} were added to the Beman reference implementations of
 \tcode{optional} \cite{The_Beman_Project_beman_optional} and \tcode{expected}

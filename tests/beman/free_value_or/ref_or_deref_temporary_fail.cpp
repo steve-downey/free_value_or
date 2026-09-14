@@ -19,8 +19,8 @@ struct nullable_source {
     source&  operator*() const { return const_cast<source&>(value); }
 };
 
-template <>
-struct std::common_reference<source&, target&> {
+template <template <class> class SQ, template <class> class TQ>
+struct std::basic_common_reference<source, target, SQ, TQ> {
     using type = const target&;
 };
 
