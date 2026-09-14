@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+#include <beman/free_value_or/free_value_or.hpp>
 #include <beman/free_value_or/beman_expected.hpp>
 #include <beman/free_value_or/beman_optional.hpp>
 

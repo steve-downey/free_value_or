@@ -2,10 +2,10 @@
 #ifndef INCLUDED_BEMAN_FREE_VALUE_OR_BEMAN_EXPECTED
 #define INCLUDED_BEMAN_FREE_VALUE_OR_BEMAN_EXPECTED
 
+// Follow the umbrella's configured module/header mode. It must precede the
+// vendored header so module imports occur before textual includes.
+#include <beman/free_value_or/free_value_or.hpp>
 #include <beman/expected/expected.hpp>
-// Keep the integration textual so this header can add a specialization even
-// when the umbrella header is configured to import the module.
-#include <beman/free_value_or/value_or.hpp>
 
 #if defined(BEMAN_EXPECTED_HAS_REFERENCES) && BEMAN_EXPECTED_HAS_REFERENCES
 namespace smd::free_value_or {
