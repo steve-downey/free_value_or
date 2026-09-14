@@ -6,8 +6,10 @@
 
 #include <beman/optional/detail/stl_interfaces/iterator_interface.hpp>
 
-#include <concepts>
-#include <iterator>
+#ifndef BEMAN_OPTIONAL_INCLUDED_FROM_INTERFACE_UNIT
+    #include <concepts>
+    #include <iterator>
+#endif
 
 namespace beman::optional::detail {
 

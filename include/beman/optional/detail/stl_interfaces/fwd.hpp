@@ -10,11 +10,13 @@
 
 #include <beman/optional/detail/stl_interfaces/config.hpp>
 
-#if BEMAN_OPTIONAL_DETAIL_STL_INTERFACES_USE_CONCEPTS
-    #include <ranges>
-#endif
-#if defined(__cpp_lib_three_way_comparison)
-    #include <compare>
+#ifndef BEMAN_OPTIONAL_INCLUDED_FROM_INTERFACE_UNIT
+    #if BEMAN_OPTIONAL_DETAIL_STL_INTERFACES_USE_CONCEPTS
+        #include <ranges>
+    #endif
+    #if defined(__cpp_lib_three_way_comparison)
+        #include <compare>
+    #endif
 #endif
 
 #ifndef BEMAN_OPTIONAL_DETAIL_STL_INTERFACES_DOXYGEN

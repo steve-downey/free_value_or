@@ -2,6 +2,7 @@
 #ifndef FVO_TEST_TYPES_HPP
 #define FVO_TEST_TYPES_HPP
 
+#include <beman/free_value_or/value_or.hpp>
 #include <beman/free_value_or/beman_expected.hpp>
 #include <beman/free_value_or/beman_optional.hpp>
 

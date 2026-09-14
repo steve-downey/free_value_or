@@ -13,7 +13,7 @@ module;
 
 export module beman.free_value_or;
 
-import std;
+export import std;
 
 #define BEMAN_FREE_VALUE_OR_INCLUDED_FROM_INTERFACE_UNIT
 export {

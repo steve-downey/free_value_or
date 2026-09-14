@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+#include <catch2/catch_test_macros.hpp>
+
 #include <beman/free_value_or/free_value_or.hpp>
 #include <beman/free_value_or/beman_expected.hpp>
 #include <beman/free_value_or/beman_optional.hpp>
-
-#include <catch2/catch_test_macros.hpp>
 
 static_assert(smd::free_value_or::borrowed_nullable<beman::optional::optional<int&>>);
 
