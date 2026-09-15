@@ -7,9 +7,13 @@ module;
 // in module builds while using the standard trait everywhere else.
 #include <version>
 
+#if defined(__has_include) && __has_include(<expected>)
+    #define BEMAN_FREE_VALUE_OR_DETAIL_HAS_STD_EXPECTED_HEADER 1
+#endif
+
 export module beman.free_value_or;
 
-import std;
+export import std;
 
 #define BEMAN_FREE_VALUE_OR_INCLUDED_FROM_INTERFACE_UNIT
 export {

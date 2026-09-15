@@ -3,6 +3,8 @@
 #define FVO_TEST_TYPES_HPP
 
 #include <beman/free_value_or/value_or.hpp>
+#include <beman/free_value_or/beman_expected.hpp>
+#include <beman/free_value_or/beman_optional.hpp>
 
 #include <memory>
 #include <optional>
@@ -27,6 +29,14 @@ namespace fvo = smd::free_value_or; // rename point: smd:: -> beman::
     #endif
 #endif // FVO_HAS_OPTIONAL_REF
 
+#ifndef FVO_HAS_EXPECTED_REF
+    #if defined(BEMAN_EXPECTED_HAS_REFERENCES) && BEMAN_EXPECTED_HAS_REFERENCES
+        #define FVO_HAS_EXPECTED_REF 1
+    #else
+        #define FVO_HAS_EXPECTED_REF 0
+    #endif
+#endif // FVO_HAS_EXPECTED_REF
+
 // ---------------------------------------------------------------------------
 // Feature detection for std::expected (P0323).
 //
@@ -48,7 +58,6 @@ namespace fvo = smd::free_value_or; // rename point: smd:: -> beman::
 #endif
 
 #if FVO_HAS_OPTIONAL_REF
-    #include <beman/optional/optional.hpp>
 // fvo_opt::optional<T&> is optional-with-reference-support, usable in Step 07.
 namespace fvo_opt = beman::optional;
 #endif

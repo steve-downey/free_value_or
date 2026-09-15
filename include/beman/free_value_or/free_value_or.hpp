@@ -7,6 +7,8 @@
 
 #if BEMAN_FREE_VALUE_OR_USE_MODULES() && !defined(BEMAN_FREE_VALUE_OR_INCLUDED_FROM_INTERFACE_UNIT)
 
+    // Imports do not propagate feature-test macros needed by textual adapters.
+    #include <version>
 import beman.free_value_or;
 
 #else

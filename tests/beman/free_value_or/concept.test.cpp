@@ -40,6 +40,25 @@ static_assert(fvo::nullable<double*>);
 static_assert(fvo::nullable<std::shared_ptr<int>>);
 static_assert(fvo::nullable<std::unique_ptr<int>>);
 
+// borrowed_nullable is the stricter boundary used only by reference_or.
+// Every nullable lvalue is safe; rvalues must explicitly opt in.
+static_assert(fvo::borrowed_nullable<std::optional<int>&>);
+static_assert(!fvo::borrowed_nullable<std::optional<int>>);
+static_assert(fvo::borrowed_nullable<int*>);
+static_assert(fvo::borrowed_nullable<const int*>);
+static_assert(fvo::borrowed_nullable<std::shared_ptr<int>&>);
+static_assert(!fvo::borrowed_nullable<std::shared_ptr<int>>);
+static_assert(fvo::borrowed_nullable<std::unique_ptr<int>&>);
+static_assert(!fvo::borrowed_nullable<std::unique_ptr<int>>);
+
+// These standard-library specializations are part of the customization
+// point even on a toolchain that cannot instantiate the reference forms yet.
+static_assert(fvo::enable_borrowed_nullable<std::optional<int&>>);
+#if FVO_HAS_STD_EXPECTED
+static_assert(fvo::enable_borrowed_nullable<std::expected<int&, int>>);
+static_assert(!fvo::borrowed_nullable<std::expected<int, int>>);
+#endif
+
 // optional<T&> via vendored beman::optional (gated on FVO_HAS_OPTIONAL_REF)
 #if FVO_HAS_OPTIONAL_REF
 static_assert(fvo::nullable<fvo_opt::optional<int&>>);

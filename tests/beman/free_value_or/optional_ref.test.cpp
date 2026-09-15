@@ -18,6 +18,7 @@
 // nullable concept: optional<int&> must satisfy nullable
 // ==========================================================================
 static_assert(fvo::nullable<fvo_opt::optional<int&>>, "optional<int&> must satisfy the nullable concept");
+static_assert(fvo::borrowed_nullable<fvo_opt::optional<int&>>, "a temporary optional<T&> must preserve its referent");
 
 // ==========================================================================
 // Return-type static_asserts
@@ -87,6 +88,13 @@ TEST_CASE("reference_or: optional<int&> disengaged returns reference to fallback
     int&                    r        = fvo::reference_or(d, fallback);
     CHECK(&r == &fallback);
     CHECK(r == 99);
+}
+
+TEST_CASE("reference_or: temporary optional<int&> preserves its referent", "[optional_ref][reference_or]") {
+    int  a        = 42;
+    int  fallback = 0;
+    int& r        = fvo::reference_or(fvo_opt::optional<int&>{a}, fallback);
+    CHECK(&r == &a);
 }
 
 TEST_CASE("reference_or: mutation through reference changes referent", "[optional_ref][reference_or]") {

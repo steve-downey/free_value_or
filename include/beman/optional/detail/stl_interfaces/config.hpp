@@ -9,7 +9,9 @@
 #define BEMAN_OPTIONAL_DETAIL_STL_INTERFACES_CONFIG_HPP
 
 // Included for definition of __cpp_lib_concepts.
-#include <iterator>
+#ifndef BEMAN_OPTIONAL_INCLUDED_FROM_INTERFACE_UNIT
+    #include <iterator>
+#endif
 
 #if defined(__cpp_lib_concepts) && defined(__cpp_lib_ranges) && \
     !defined(BEMAN_OPTIONAL_DETAIL_STL_INTERFACES_DISABLE_CONCEPTS)

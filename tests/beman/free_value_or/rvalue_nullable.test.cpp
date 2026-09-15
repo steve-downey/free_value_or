@@ -20,25 +20,19 @@
 // to an expiring payload and the engaged path moves rather than copies.
 // value_or(std::move(o), u) matches std::move(o).value_or(u).
 //
-// The models divide by OWNERSHIP, and each side is right:
+// Moving a payload is determined solely by the result of dereferencing:
 //
 //   optional<T>, expected<T,E>   own the value.  An rvalue of one is expiring
 //                                and so is its payload -- operator* is
 //                                ref-qualified, deref_t is T&&, and the
 //                                engaged path MOVES.
 //
-//   T*, shared_ptr<T>,           are handles to a referent that ordinarily
-//   unique_ptr<T>, optional<T&>  outlives them.  An rvalue handle says nothing
-//                                about the referent -- operator* gives T&,
-//                                deref_t is T&, and the engaged path COPIES.
+//   T*, shared_ptr<T>,           dereference to T& even as rvalues, so the
+//   unique_ptr<T>, optional<T&>  value-producing functions COPY.
 //
-// optional<T&> is the case that shows the split is ownership and not
-// optional-ness: it is an optional, and it copies, because it does not own.
-//
-// So the smart-pointer cases below assert COPIES while the optional and
-// expected cases assert MOVES.  That asymmetry is the specification, not an
-// oversight, and these tests are what would catch it being flattened in
-// either direction.
+// This rule says nothing about whether an rvalue wrapper may safely return a
+// reference. reference_or answers that separate question with
+// borrowed_nullable; raw pointers opt in, while owning smart pointers do not.
 //
 // The discriminator is the copy/move count on the engaged path.  A test that
 // only checks the resulting value passes under both rules, which is why the
@@ -97,17 +91,12 @@ static_assert(std::is_same_v<decltype(fvo::or_invoke(std::declval<std::optional<
 static_assert(std::is_same_v<decltype(fvo::or_construct(std::declval<std::optional<int>&>())),
                              decltype(fvo::or_construct(std::declval<std::optional<int>>()))>);
 
-// reference_or over an OWNING rvalue nullable: deref_t is int&&, and the
-// common reference of int&& and int& is const int&.
-static_assert(
-    std::is_same_v<decltype(fvo::reference_or(std::declval<std::optional<int>>(), std::declval<int&>())), const int&>);
-
-// over an lvalue nullable, and over an rvalue HANDLE, it stays int&
+// reference_or over an lvalue nullable stays int&.
 static_assert(
     std::is_same_v<decltype(fvo::reference_or(std::declval<std::optional<int>&>(), std::declval<int&>())), int&>);
 
-static_assert(
-    std::is_same_v<decltype(fvo::reference_or(std::declval<std::shared_ptr<int>>(), std::declval<int&>())), int&>);
+// A raw pointer explicitly models borrowed_nullable, including as an rvalue.
+static_assert(std::is_same_v<decltype(fvo::reference_or(std::declval<int*>(), std::declval<int&>())), int&>);
 
 // ==========================================================================
 // Bootstrap
@@ -286,39 +275,7 @@ TEST_CASE("or_construct initializer_list overload, disengaged rvalue nullable", 
 // reference_or
 // ==========================================================================
 
-TEST_CASE("reference_or on a disengaged rvalue nullable refers to the fallback", "[rvalue][reference_or]") {
-    std::optional<Counted> o;
-    Counted                fallback{3};
-    Counted::reset();
-
-    decltype(auto) r = fvo::reference_or(std::move(o), fallback);
-
-    // R is computed from the types, not the engaged state: an owning rvalue
-    // nullable gives const Counted& on both paths
-    STATIC_REQUIRE(std::is_same_v<decltype(r), const Counted&>);
-    CHECK(Counted::copies == 0);
-    CHECK(Counted::moves == 0);
-    CHECK(&r == &fallback);
-}
-
-TEST_CASE("reference_or on an owning rvalue nullable yields a const reference", "[rvalue][reference_or]") {
-    std::optional<Counted> o{Counted{7}};
-    Counted                fallback{3};
-    Counted::reset();
-
-    decltype(auto) r = fvo::reference_or(std::move(o), fallback);
-
-    // common_reference_t<Counted&&, Counted&> is const Counted&
-    STATIC_REQUIRE(std::is_same_v<decltype(r), const Counted&>);
-    CHECK(Counted::copies == 0);
-    CHECK(Counted::moves == 0);
-
-    // it still refers to the optional's payload, not to a copy of it
-    CHECK(&r == &*o);
-    CHECK(r.v == 7);
-}
-
-TEST_CASE("reference_or on an rvalue handle stays a mutable reference", "[rvalue][reference_or]") {
+TEST_CASE("reference_or on an rvalue raw pointer stays a mutable reference", "[rvalue][reference_or]") {
     Counted  owned{7};
     Counted  fallback{3};
     Counted* p = &owned;
@@ -326,7 +283,7 @@ TEST_CASE("reference_or on an rvalue handle stays a mutable reference", "[rvalue
 
     decltype(auto) r = fvo::reference_or(std::move(p), fallback);
 
-    // a handle does not own, so the referent is not expiring
+    // Raw pointers opt in: destroying the pointer cannot destroy its referent.
     STATIC_REQUIRE(std::is_same_v<decltype(r), Counted&>);
     CHECK(Counted::copies == 0);
     CHECK(Counted::moves == 0);

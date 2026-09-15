@@ -10,10 +10,12 @@
 
 #include <beman/optional/detail/stl_interfaces/fwd.hpp>
 
-#include <utility>
-#include <type_traits>
-#if defined(__cpp_lib_three_way_comparison)
-    #include <compare>
+#ifndef BEMAN_OPTIONAL_INCLUDED_FROM_INTERFACE_UNIT
+    #include <utility>
+    #include <type_traits>
+    #if defined(__cpp_lib_three_way_comparison)
+        #include <compare>
+    #endif
 #endif
 
 namespace beman::optional::detail {

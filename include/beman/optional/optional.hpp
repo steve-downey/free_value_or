@@ -4,16 +4,19 @@
 #ifndef BEMAN_OPTIONAL_OPTIONAL_HPP
 #define BEMAN_OPTIONAL_OPTIONAL_HPP
 
-#include <version>
-#include <compare>
-#include <concepts>
-#if defined(__cpp_lib_format_ranges)
-    #include <format>
+// A module-aware includer can provide these declarations with `import std`.
+#ifndef BEMAN_OPTIONAL_INCLUDED_FROM_INTERFACE_UNIT
+    #include <version>
+    #include <compare>
+    #include <concepts>
+    #if defined(__cpp_lib_format_ranges)
+        #include <format>
+    #endif
+    #include <functional>
+    #include <ranges>
+    #include <type_traits>
+    #include <utility>
 #endif
-#include <functional>
-#include <ranges>
-#include <type_traits>
-#include <utility>
 
 #include <beman/optional/detail/iterator.hpp>
 

@@ -6,8 +6,16 @@
 #ifndef BEMAN_FREE_VALUE_OR_INCLUDED_FROM_INTERFACE_UNIT
     #include <initializer_list>
     #include <iterator>
+    // This monolithic reference implementation supplies specializations
+    // normatively declared in the standard <optional> and <expected> headers.
+    #include <optional>
     #include <type_traits>
     #include <utility>
+    #include <version>
+    #if defined(__has_include) && __has_include(<expected>)
+        #include <expected>
+        #define BEMAN_FREE_VALUE_OR_DETAIL_HAS_STD_EXPECTED_HEADER 1
+    #endif
 #endif
 
 namespace smd {
@@ -19,16 +27,37 @@ concept nullable = requires(const std::remove_reference_t<T>& t) {
     *(t);
 };
 
+// As with borrowed_range, an lvalue is safe to observe regardless of its
+// type. An rvalue nullable must opt in to promise that destroying the
+// nullable does not invalidate the object produced by dereferencing it.
+template <class T>
+inline constexpr bool enable_borrowed_nullable = false;
+
+template <class T>
+inline constexpr bool enable_borrowed_nullable<T*> = true;
+
+template <class T>
+inline constexpr bool enable_borrowed_nullable<std::optional<T&>> = true;
+
+#if defined(BEMAN_FREE_VALUE_OR_DETAIL_HAS_STD_EXPECTED_HEADER) && defined(__cpp_lib_expected) && \
+    __cpp_lib_expected >= 202202L
+template <class T, class E>
+inline constexpr bool enable_borrowed_nullable<std::expected<T&, E>> = true;
+#endif
+
+template <class T>
+concept borrowed_nullable =
+    nullable<T> && (std::is_lvalue_reference_v<T> || enable_borrowed_nullable<std::remove_cvref_t<T>>);
+
 // The type *m yields, with the value category of the nullable carried
 // through.  std::iter_reference_t always dereferences an lvalue; this does
 // not, so an expiring owning nullable yields an expiring payload.
 //
-// The two groups differ by ownership, and each is right.  optional and
-// expected contain their value, so operator* is ref-qualified and an rvalue
-// of one gives T&&.  T*, shared_ptr and unique_ptr are handles to a referent
-// that outlives them, so operator* gives T& whatever the handle's own value
-// category -- and so does optional<T&>, which is an optional that does not
-// own.
+// For value-producing operations, operator* itself determines whether an
+// rvalue nullable permits moving the payload: move only when dereference
+// yields T&&. reference_or additionally requires borrowed_nullable because
+// a T& result alone does not promise that destroying the wrapper preserves
+// the referent (notably for owning smart pointers).
 template <class T>
 using deref_t = decltype(*std::declval<T>());
 
@@ -55,6 +84,9 @@ inline constexpr bool reference_constructs_from_temporary_v =
 #else
     #error "no std::reference_constructs_from_temporary_v and no __reference_constructs_from_temporary builtin"
 #endif
+
+template <class To, class T>
+inline constexpr bool explicitly_convertible_from_deref_v = requires { static_cast<To>(*std::declval<T>()); };
 } // namespace detail
 
 template <nullable T, class U, class R>
@@ -81,13 +113,22 @@ template <smd::free_value_or::nullable T,
           class U,
           class R = std::common_reference_t<smd::free_value_or::deref_t<T>, U&&>>
 constexpr auto smd::free_value_or::reference_or(T&& m, U&& u) -> R {
+    static_assert(smd::free_value_or::borrowed_nullable<T>,
+                  "reference_or requires an lvalue or borrowed nullable; name the nullable or use value_or for a "
+                  "value result");
+    // A non-reference common_reference materializes a new result object and
+    // defeats this function's reference semantics.
+    static_assert(std::is_reference_v<R>,
+                  "reference_or requires common_reference_t to be a reference; use value_or for a value result");
     // Reject fallbacks/holders that would bind the returned reference to a
     // temporary. Uses the P2255 trait (polyfilled for C++20 above).
-    static_assert(!smd::free_value_or::detail::reference_constructs_from_temporary_v<R, U>);
-    // Stated on iter_reference_t<T>, the type *m yields. Stated on T& it would
-    // name the nullable rather than its payload, and could never fire.
+    static_assert(!smd::free_value_or::detail::reference_constructs_from_temporary_v<R, U>,
+                  "reference_or alternative would bind the result to a temporary");
+    // Stated on deref_t<T>, the type *std::forward<T>(m) yields. Stated on T&
+    // it would name the nullable rather than its payload, and could never fire.
     static_assert(
-        !smd::free_value_or::detail::reference_constructs_from_temporary_v<R, smd::free_value_or::deref_t<T>>);
+        !smd::free_value_or::detail::reference_constructs_from_temporary_v<R, smd::free_value_or::deref_t<T>>,
+        "reference_or dereferenced nullable would bind the result to a temporary");
 
     return bool(m) ? static_cast<R>(*std::forward<T>(m)) : static_cast<R>((U&&)u);
 }
@@ -109,6 +150,10 @@ template <class Ret = void,
           class R = std::conditional_t<std::is_void_v<Ret>, std::remove_cvref_t<smd::free_value_or::deref_t<T>>, Ret>,
           class... Args>
 constexpr R smd::free_value_or::or_construct(T&& m, Args&&... args) {
+    static_assert(!std::is_reference_v<R>, "or_construct requires a non-reference result type");
+    static_assert(std::is_constructible_v<R, Args...>, "or_construct requires is_constructible_v<R, Args...>");
+    static_assert(smd::free_value_or::detail::explicitly_convertible_from_deref_v<R, T>,
+                  "or_construct requires static_cast<R>(*m) to be well-formed");
     return bool(m) ? static_cast<R>(*std::forward<T>(m)) : R(std::forward<Args>(args)...);
 }
 
@@ -118,7 +163,14 @@ template <class Ret = void,
           class R = std::conditional_t<std::is_void_v<Ret>, std::remove_cvref_t<smd::free_value_or::deref_t<T>>, Ret>,
           class... Args>
 constexpr R smd::free_value_or::or_construct(T&& m, std::initializer_list<E> il, Args&&... args) {
+    static_assert(!std::is_reference_v<R>, "or_construct requires a non-reference result type");
+    static_assert(std::is_constructible_v<R, std::initializer_list<E>&, Args...>,
+                  "or_construct requires is_constructible_v<R, initializer_list<E>&, Args...>");
+    static_assert(smd::free_value_or::detail::explicitly_convertible_from_deref_v<R, T>,
+                  "or_construct requires static_cast<R>(*m) to be well-formed");
     return bool(m) ? static_cast<R>(*std::forward<T>(m)) : R(il, std::forward<Args>(args)...);
 }
+
+#undef BEMAN_FREE_VALUE_OR_DETAIL_HAS_STD_EXPECTED_HEADER
 
 #endif

@@ -7,6 +7,8 @@ if(BEMAN_FREE_VALUE_OR_USE_MODULES)
             FILE_SET CXX_MODULES FILES free_value_or.cppm
             FILE_SET HEADERS
                 FILES
+                    beman_expected.hpp
+                    beman_optional.hpp
                     config.hpp
                     free_value_or.hpp
                     value_or.hpp
@@ -18,6 +20,8 @@ else()
         PUBLIC
             FILE_SET HEADERS
                 FILES
+                    beman_expected.hpp
+                    beman_optional.hpp
                     config.hpp
                     free_value_or.hpp
                     value_or.hpp
