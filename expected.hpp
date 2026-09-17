@@ -3,10 +3,8 @@
 #ifndef BEMAN_EXPECTED_EXPECTED_HPP
 #define BEMAN_EXPECTED_EXPECTED_HPP
 
-// \rSec2[expected.syn]{Header <expected> synopsis}
 #include <beman/expected/unexpected.hpp>
 #include <beman/expected/bad_expected_access.hpp>
-/// END [expected.syn]
 
 #ifndef BEMAN_EXPECTED_INCLUDED_FROM_INTERFACE_UNIT
     #include <cstdlib>
@@ -58,7 +56,6 @@ namespace expected {
 
 namespace detail {
 
-// \rSec2[expected.detail]{Exposition-only helpers}
 //! \expos
 template <class T>
 struct is_expected_specialization : std::false_type {};
@@ -3341,10 +3338,8 @@ class expected<T&, E> {
     // Assignment (rebind semantics)
     // -------------------------------------------------------------------------
 
+    // Copy assignment (trivial path)
     //! \at expected.ref.assign
-    //! \remarks Assignment rebinds: assigning to an `expected<T&, E>` that
-    //! holds a value changes which object it refers to. It never assigns
-    //! through to the referent.
     //! \effects If `rhs.has_value()` is `true`: if `has_value()` is `true`,
     //! assigns `rhs.val` to `val`; otherwise destroys `unex` and
     //! initializes `val` with `rhs.val`. If `rhs.has_value()` is `false`,
@@ -3352,8 +3347,9 @@ class expected<T&, E> {
     //! for the primary template. In every case `*this` comes to refer to
     //! the object `rhs` refers to, or to hold the error of `rhs`.
     //! \returns `*this`.
-    //! \remarks This operator is trivial.
-    // Copy assignment (trivial path)
+    //! \remarks Assignment rebinds: assigning to an `expected<T&, E>` that
+    //! holds a value changes which object it refers to. It never assigns
+    //! through to the referent. This operator is trivial.
     constexpr expected& operator=(const expected&)
         requires(std::is_trivially_copy_constructible_v<E> && std::is_trivially_copy_assignable_v<E> &&
                  std::is_trivially_destructible_v<E>)
@@ -3604,9 +3600,6 @@ class expected<T&, E> {
     // -------------------------------------------------------------------------
 
     //! \at expected.ref.eq
-    //! \remarks The equality operators behave as specified for the primary
-    //! template, comparing referents through `operator*` and errors
-    //! through `error()`.
     //! \mandates `!is_void_v<T2>` is `true`. The expression `*x == *y` is
     //! well-formed and its result is convertible to `bool`. The expression
     //! `x.error() == y.error()` is well-formed and its result is
@@ -3614,6 +3607,9 @@ class expected<T&, E> {
     //! \returns If `x.has_value() != y.has_value()`, `false`; otherwise, if
     //! `x.has_value()` is `true`, `*x == *y`; otherwise `x.error() ==
     //! y.error()`.
+    //! \remarks The equality operators behave as specified for the primary
+    //! template, comparing referents through `operator*` and errors
+    //! through `error()`.
     template <class T2, class E2>
         requires(!std::is_void_v<T2>)
     friend constexpr bool operator==(const expected& x, const expected<T2, E2>& y) {
@@ -4174,12 +4170,6 @@ constexpr typename expected<T&, E>::error_value_type expected<T&, E>::error_or(G
 
 // \rSec3[expected.ref.monadic]{Monadic operations}
 
-//! \remarks The member templates `and_then`, `or_else`, `transform`, and
-//! `transform_error` behave as specified for the primary template, with
-//! one difference: the value is passed to the callable as `T&` for every
-//! ref-qualification of `*this`. An rvalue `expected<T&, E>` does not pass
-//! its referent as an rvalue; the object referred to is never moved from
-//! by these operations.
 //! \group ref-monadic-and-then-lval
 //! \constraints `is_constructible_v<E, decltype(error())>` is `true`.
 //! \mandates `remove_cvref_t<invoke_result_t<F, T&>>` is a specialization
@@ -4187,6 +4177,12 @@ constexpr typename expected<T&, E>::error_value_type expected<T&, E>::error_or(G
 //! \effects Equivalent to: `if (has_value()) return
 //! invoke(std::forward<F>(f), *val); else return U(unexpect, error());`
 //! where `U` is `remove_cvref_t<invoke_result_t<F, T&>>`.
+//! \remarks The member templates `and_then`, `or_else`, `transform`, and
+//! `transform_error` behave as specified for the primary template, with
+//! one difference: the value is passed to the callable as `T&` for every
+//! ref-qualification of `*this`. An rvalue `expected<T&, E>` does not pass
+//! its referent as an rvalue; the object referred to is never moved from
+//! by these operations.
 template <class T, class E>
 template <class F>
     requires std::is_constructible_v<E, E&>

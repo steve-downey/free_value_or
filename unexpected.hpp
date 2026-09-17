@@ -25,11 +25,11 @@ namespace beman {
 namespace expected {
 
 // [expected.unexpect]
-//! \omit
+//! \elsewhere
 struct unexpect_t {
     explicit unexpect_t() = default;
 };
-//! \omit
+//! \elsewhere
 inline constexpr unexpect_t unexpect{};
 
 // Forward declaration for is_unexpected_specialization trait
@@ -48,10 +48,10 @@ struct is_unexpected_specialization<unexpected<E>> : std::true_type {};
 // its builtin __reference_converts_from_temporary is absent on Clang 18, which has only the
 // __reference_constructs_from_temporary builtin.)
 #ifdef __cpp_lib_reference_from_temporary
-//! \expos
+//! \elsewhere
 using std::reference_constructs_from_temporary_v;
 #elif __has_builtin(__reference_constructs_from_temporary)
-//! \expos
+//! \elsewhere
 template <class T, class U>
 inline constexpr bool reference_constructs_from_temporary_v = __reference_constructs_from_temporary(T, U);
 #endif
