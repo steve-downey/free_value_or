@@ -1162,11 +1162,6 @@ constexpr T& expected<T, E>::emplace(std::initializer_list<U> il, Args&&... args
 
 // \rSec3[expected.object.swap]{Swap}
 
-//! \constraints `is_swappable_v<T>` is `true` and (`is_reference_v<E>` or
-//! `is_swappable_v<E>`) is `true`, and `is_move_constructible_v<T> &&
-//! is_move_constructible_v<E>` is `true`, and
-//! `is_nothrow_move_constructible_v<T> ||
-//! is_nothrow_move_constructible_v<E>` is `true`.
 //! \effects If `this->has_value()` and `rhs.has_value()`, equivalent to
 //! `using std::swap; swap(val, rhs.val);`. If neither `*this` nor `rhs`
 //! contains a value, equivalent to `using std::swap; swap(unex,
@@ -1418,8 +1413,6 @@ constexpr E&& expected<T, E>::error() && noexcept {
     return std::move(unex_).error();
 }
 
-//! \mandates `is_copy_constructible_v<T>` is `true` and
-//! `is_convertible_v<U, T>` is `true`.
 //! \returns `has_value() ? **this : static_cast<T>(std::forward<U>(def))`.
 template <class T, class E>
 template <class U>
@@ -1431,8 +1424,6 @@ constexpr T expected<T, E>::value_or(U&& def) const& {
     return static_cast<T>(std::forward<U>(def));
 }
 
-//! \mandates `is_move_constructible_v<T>` is `true` and
-//! `is_convertible_v<U, T>` is `true`.
 //! \returns `has_value() ? std::move(**this) :
 //! static_cast<T>(std::forward<U>(def))`.
 template <class T, class E>
@@ -2579,8 +2570,6 @@ constexpr void expected<void, E>::emplace() noexcept {
 // =============================================================================
 // \rSec3[expected.void.swap]{Swap}
 
-//! \constraints `is_swappable_v<E>` is `true` and
-//! `is_move_constructible_v<E>` is `true`.
 //! \effects If `this->has_value()` and `rhs.has_value()`, no effects. If
 //! neither `*this` nor `rhs` contains a value, equivalent to `using
 //! std::swap; swap(unex, rhs.unex);`. If `rhs.has_value()` is `false`
