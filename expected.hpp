@@ -741,8 +741,8 @@ constexpr expected<T, E>::expected(expected<U, G>&& rhs) : has_val_(rhs.has_valu
 }
 
 //! \group cvt-copy-ctor-ref
-//! \constraints `is_reference_v<G>` is `true` and `is_convertible_v<G, E>`
-//! is `true`.
+//! \constraints `is_constructible_v<T, const U&>` is `true`; and
+//! `is_reference_v<G>` is `true`; and `is_convertible_v<G, E>` is `true`.
 //! \effects If `rhs.has_value()`, direct-non-list-initializes `val` with
 //! `*rhs`. Otherwise, direct-non-list-initializes `unex` with
 //! `rhs.error()`.
