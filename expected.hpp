@@ -3762,8 +3762,9 @@ constexpr expected<T&, E>::expected(unexpected<G>&& e) : has_val_(false) {
 }
 
 //! \group ref-cvt-unexpected-ctor-ref
-//! \constraints `is_reference_v<G>` is `true`; `is_convertible_v<G, E>` is
-//! `true`; and `reference_constructs_from_temporary_v<E, G>` is `false`.
+//! \constraints `is_reference_v<G>` is `true`; `is_constructible_v<E, G>`
+//! is `true`; and `reference_constructs_from_temporary_v<E, G>` is
+//! `false`.
 //! \effects Initializes `unex` with the error of `e`.
 //! \ensures `has_value()` is `false`.
 //! \remarks This constructor never throws: the referent is bound, not
@@ -3920,8 +3921,9 @@ constexpr expected<T&, E>& expected<T&, E>::operator=(unexpected<G>&& e) {
 // Rebinding assignment for reference E from reference G. val_ is a T* (trivially destructible),
 // so no destroy is needed; repoint unex_ via construct_at (not `unex_.error() = ...`).
 //! \group ref-cvt-unexpected-assign-ref
-//! \constraints `is_reference_v<G>` is `true`; `is_convertible_v<G, E>` is
-//! `true`; and `reference_constructs_from_temporary_v<E, G>` is `false`.
+//! \constraints `is_reference_v<G>` is `true`; `is_constructible_v<E, G>`
+//! is `true`; and `reference_constructs_from_temporary_v<E, G>` is
+//! `false`.
 //! \effects Makes `*this` hold the error of `e`, reinitializing `unex`
 //! from `e` rather than assigning through it. `unex.error()` thereafter
 //! refers to the same object as `e.error()`; the previously referenced
