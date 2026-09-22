@@ -3715,6 +3715,9 @@ constexpr expected<T&, E>::expected(expected<U&, G>&& rhs) : has_val_(rhs.has_va
 //! `addressof(*rhs)`, so that `*this` refers to the object referred to by
 //! `rhs`; otherwise, initializes `unex` with the error of `rhs`. No object
 //! referred to by `rhs` is moved from.
+//! \remarks Unlike the value-`E` overload above, this overload
+//! participates in overload resolution only when `E` and `G` are both
+//! reference types, so the referenced error object is never copied.
 template <class T, class E>
 template <class U, class G>
     requires(std::is_reference_v<E> && std::is_reference_v<G> && std::is_constructible_v<T&, U&> &&
