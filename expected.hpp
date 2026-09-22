@@ -3070,7 +3070,8 @@ constexpr auto expected<void, E>::transform_error(F&& f) const&& {
 //! \at expected.ref.general
 //! \mandates A program that instantiates the definition of `expected<T&,
 //! E>` with an `E` that is not a valid template argument for `unexpected`
-//! is ill-formed. `T` shall be an object type that is not an array type.
+//! is ill-formed. `T` shall be an object type that is not an array type,
+//! `in_place_t`, `unexpect_t`, or a specialization of `unexpected`.
 //! \remarks An object of type `expected<T&, E>` either represents a
 //! reference to an object of type `T`, or holds an error. Member `has_val`
 //! indicates whether the object represents a reference. When it represents
