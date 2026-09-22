@@ -177,7 +177,8 @@ unexpected(E) -> unexpected<E>;
 // separate set of specializations just to hold a reference error type.
 //! \at expected.un.ref
 //! \mandates A program that instantiates the definition of `unexpected<E&>`
-//! for an array type or a specialization of `unexpected` is ill-formed.
+//! for a referenced type that is not an object type, an array type, or a
+//! specialization of `unexpected` is ill-formed.
 //! \remarks An object of type `unexpected<E&>` holds a pointer to an object
 //! of type `E`. The referenced object is not owned by the `unexpected<E&>`
 //! object. Unlike the primary template, `E` may be a cv-qualified type.
