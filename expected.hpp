@@ -2251,21 +2251,38 @@ class expected<void, E> {
     //! \expos
     bool has_val_;
     union {
+        struct {
+        } void_;
         //! \expos
         unexpected<E> unex_;
     };
 };
+
+// `void_` is the value state's active union member. It is not exposition-only
+// -- the draft's union holds `unex` alone, and specgen drops an unmarked
+// alternative from the synopsis -- and a comment on it would be carried into
+// the synopsis, which is why this one sits here.
+//
+// It is here for gcc. Under -fsanitize=address the use-after-scope markers
+// stop gcc forwarding a just-stored `has_val_` to the load that guards a
+// later read of `unex_`, so a value-state object whose union was never
+// written gets that read reported as -Wmaybe-uninitialized. Initializing
+// `void_` in every constructor that can end in the value state fixes it: the
+// front end folds the constructor to an aggregate, and because an empty
+// member does not fill the union, the gimplifier zero-clears the whole object
+// before storing the fields, which leaves nothing unwritten. libstdc++'s
+// expected<void, E> carries the same member for the same reason.
 
 // =============================================================================
 // \rSec3[expected.void.cons]{Constructors}
 
 //! \ensures `has_value()` is `true`.
 template <class E>
-constexpr expected<void, E>::expected() noexcept : has_val_(true) {}
+constexpr expected<void, E>::expected() noexcept : has_val_(true), void_() {}
 
 //! \ensures `has_value()` is `true`.
 template <class E>
-constexpr expected<void, E>::expected(std::in_place_t) noexcept : has_val_(true) {}
+constexpr expected<void, E>::expected(std::in_place_t) noexcept : has_val_(true), void_() {}
 
 //! \effects If `rhs.has_value()` is `false`, direct-non-list-initializes
 //! `unex` with `rhs.error()`.
@@ -2278,7 +2295,7 @@ constexpr expected<void, E>::expected(std::in_place_t) noexcept : has_val_(true)
 template <class E>
 constexpr expected<void, E>::expected(const expected& rhs) noexcept(std::is_nothrow_copy_constructible_v<E>)
     requires(std::is_copy_constructible_v<E> && !std::is_trivially_copy_constructible_v<E>)
-    : has_val_(rhs.has_val_) {
+    : has_val_(rhs.has_val_), void_() {
     if (!has_val_)
         std::construct_at(std::addressof(unex_), rhs.unex_);
 }
@@ -2293,7 +2310,7 @@ constexpr expected<void, E>::expected(const expected& rhs) noexcept(std::is_noth
 template <class E>
 constexpr expected<void, E>::expected(expected&& rhs) noexcept(std::is_nothrow_move_constructible_v<E>)
     requires(std::is_move_constructible_v<E> && !std::is_trivially_move_constructible_v<E>)
-    : has_val_(rhs.has_val_) {
+    : has_val_(rhs.has_val_), void_() {
     if (!has_val_)
         std::construct_at(std::addressof(unex_), std::move(rhs.unex_));
 }
@@ -2317,7 +2334,7 @@ template <class U, class G>
              !std::is_constructible_v<unexpected<E>, expected<U, G>&&> &&
              !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
              !std::is_constructible_v<unexpected<E>, const expected<U, G>&&>)
-constexpr expected<void, E>::expected(const expected<U, G>& rhs) : has_val_(rhs.has_value()) {
+constexpr expected<void, E>::expected(const expected<U, G>& rhs) : has_val_(rhs.has_value()), void_() {
     if (!has_val_)
         std::construct_at(std::addressof(unex_), rhs.error());
 }
@@ -2330,7 +2347,7 @@ template <class U, class G>
              !std::is_constructible_v<unexpected<E>, expected<U, G>&&> &&
              !std::is_constructible_v<unexpected<E>, const expected<U, G>&> &&
              !std::is_constructible_v<unexpected<E>, const expected<U, G>&&>)
-constexpr expected<void, E>::expected(expected<U, G>&& rhs) : has_val_(rhs.has_value()) {
+constexpr expected<void, E>::expected(expected<U, G>&& rhs) : has_val_(rhs.has_value()), void_() {
     if (!has_val_)
         std::construct_at(std::addressof(unex_), std::move(rhs).error());
 }
@@ -2423,7 +2440,7 @@ template <class E>
 template <class G>
     requires(std::is_reference_v<E> && std::is_convertible_v<G&, E> &&
              !detail::reference_constructs_from_temporary_v<E, G&>)
-constexpr expected<void, E>::expected(const expected<void, G&>& rhs) : has_val_(rhs.has_value()) {
+constexpr expected<void, E>::expected(const expected<void, G&>& rhs) : has_val_(rhs.has_value()), void_() {
     if (!has_val_)
         std::construct_at(std::addressof(unex_), rhs.error());
 }
@@ -2433,7 +2450,7 @@ template <class E>
 template <class G>
     requires(std::is_reference_v<E> && std::is_convertible_v<G&, E> &&
              !detail::reference_constructs_from_temporary_v<E, G&>)
-constexpr expected<void, E>::expected(expected<void, G&>&& rhs) : has_val_(rhs.has_value()) {
+constexpr expected<void, E>::expected(expected<void, G&>&& rhs) : has_val_(rhs.has_value()), void_() {
     if (!has_val_)
         std::construct_at(std::addressof(unex_), rhs.error());
 }
