@@ -7,4 +7,15 @@
 disabled_rules:
     # None
 ignored_paths:
-    # None
+    # Vendored git subtrees, checked by their own upstream repositories.
+    - include/beman/optional
+    - include/beman/expected
+    - tests/beman/optional
+    - tests/beman/expected
+    - papers/wg21-latex
+    # Local tooling and build outputs.
+    - .claude
+    - CLAUDE.md
+    - .venv
+    - build
+    - .build

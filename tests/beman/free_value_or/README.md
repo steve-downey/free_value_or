@@ -25,29 +25,28 @@ Tests for `beman::free_value_or` — the non-member `value_or`, `reference_or`,
 | `or_construct_laziness.test.cpp` | `or_construct` laziness: fallback constructed exactly once when disengaged, not constructed when engaged |
 | `or_construct_constexpr.test.cpp` | `or_construct` `static_assert`-level constant evaluation: both overloads, `optional`, `expected`, raw pointers, explicit `Ret` |
 | `or_construct_optional_ref.test.cpp` | `or_construct` with `optional<int&>` and `optional<string&>`: nullable proof, `R = int` return-type proof, engaged/disengaged, explicit `Ret`, init-list, rebinding |
-| `fail_not_nullable.cpp` | Negative compile: calling `value_or` with a non-nullable first arg must fail (`no matching function`) |
-| `ref_or_temp_from_prvalue_fail.cpp` | Negative compile: `reference_or` with prvalue fallback that would dangle must fail (`static assertion failed`) |
-| `ref_or_rvalue_string_fail.cpp` | Negative compile: `reference_or` with a `string`-from-literal fallback that would dangle must fail |
-| `ref_or_deref_temporary_fail.cpp` | Negative compile: converting the dereferenced value would bind the result to a temporary |
-| `ref_or_temporary_optional_fail.cpp` | Negative compile: temporary owning `optional` is not borrowed |
-| `ref_or_temporary_expected_fail.cpp` | Negative compile: temporary owning `expected` is not borrowed, when the standard type is available |
-| `ref_or_temporary_unique_ptr_fail.cpp` | Negative compile: temporary `unique_ptr` is not borrowed |
-| `ref_or_temporary_shared_ptr_fail.cpp` | Negative compile: a temporary last-owner `shared_ptr` is not borrowed |
-| `ref_or_non_reference_common_reference_fail.cpp` | Negative compile: `reference_or` cannot return a value-valued common reference |
-| `value_or_non_nullable_fail.cpp` | Negative compile: `value_or` with non-nullable first arg |
-| `reference_or_non_nullable_fail.cpp` | Negative compile: `reference_or` with non-nullable first arg |
-| `or_invoke_non_nullable_fail.cpp` | Negative compile: `or_invoke` with non-nullable first arg |
-| `or_construct_non_nullable_fail.cpp` | Negative compile: `or_construct` (pack) with non-nullable first arg |
-| `or_construct_initlist_non_nullable_fail.cpp` | Negative compile: `or_construct` (init-list) with non-nullable first arg |
-| `or_construct_payload_not_convertible_fail.cpp` | Negative compile: `or_construct` explicit `Ret` with payload that cannot be explicitly converted to `Ret` |
-| `or_construct_fallback_not_constructible_fail.cpp` | Negative compile: pack fallback arguments cannot construct the result |
-| `or_construct_initlist_fallback_not_constructible_fail.cpp` | Negative compile: initializer-list fallback arguments cannot construct the result |
-| `or_construct_reference_result_fail.cpp` | Negative compile: an explicitly selected reference result is forbidden |
+| `fail_not_nullable.test.cpp` | Negative compile: calling `value_or` with a non-nullable first arg must fail (`no matching function`) |
+| `ref_or_temp_from_prvalue_fail.test.cpp` | Negative compile: `reference_or` with prvalue fallback that would dangle must fail (`static assertion failed`) |
+| `ref_or_rvalue_string_fail.test.cpp` | Negative compile: `reference_or` with a `string`-from-literal fallback that would dangle must fail |
+| `ref_or_deref_temporary_fail.test.cpp` | Negative compile: converting the dereferenced value would bind the result to a temporary |
+| `ref_or_temporary_optional_fail.test.cpp` | Negative compile: temporary owning `optional` is not borrowed |
+| `ref_or_temporary_expected_fail.test.cpp` | Negative compile: temporary owning `expected` is not borrowed, when the standard type is available |
+| `ref_or_temporary_unique_ptr_fail.test.cpp` | Negative compile: temporary `unique_ptr` is not borrowed |
+| `ref_or_temporary_shared_ptr_fail.test.cpp` | Negative compile: a temporary last-owner `shared_ptr` is not borrowed |
+| `ref_or_non_reference_common_reference_fail.test.cpp` | Negative compile: `reference_or` cannot return a value-valued common reference |
+| `value_or_non_nullable_fail.test.cpp` | Negative compile: `value_or` with non-nullable first arg |
+| `reference_or_non_nullable_fail.test.cpp` | Negative compile: `reference_or` with non-nullable first arg |
+| `or_invoke_non_nullable_fail.test.cpp` | Negative compile: `or_invoke` with non-nullable first arg |
+| `or_construct_non_nullable_fail.test.cpp` | Negative compile: `or_construct` (pack) with non-nullable first arg |
+| `or_construct_initlist_non_nullable_fail.test.cpp` | Negative compile: `or_construct` (init-list) with non-nullable first arg |
+| `or_construct_payload_not_convertible_fail.test.cpp` | Negative compile: `or_construct` explicit `Ret` with payload that cannot be explicitly converted to `Ret` |
+| `or_construct_fallback_not_constructible_fail.test.cpp` | Negative compile: pack fallback arguments cannot construct the result |
+| `or_construct_initlist_fallback_not_constructible_fail.test.cpp` | Negative compile: initializer-list fallback arguments cannot construct the result |
+| `or_construct_reference_result_fail.test.cpp` | Negative compile: an explicitly selected reference result is forbidden |
 
 Shared infrastructure:
 
-- `test_types.hpp` — namespace alias `fvo = smd::free_value_or` (rename-proofing; update
-  this one line when the library moves to `beman::`), `fvo_opt = beman::optional` alias,
+- `test_types.hpp` — namespace alias `fvo = beman::free_value_or`, `fvo_opt = beman::optional` alias,
   `NullableFixture<T>` helpers, and anti-model types (`bool_only`, `deref_only`,
   `nonconst_nullable`).
 - `CMakeLists.txt` — `fvo_add_test` and `fvo_add_compile_fail_test` helpers; each test
@@ -132,12 +131,12 @@ For `optional<int&>`: `deref_t` = `int&`, so default `R = remove_cvref_t<int&> =
 | `or_construct_behavior.test.cpp` | Return type, engaged/disengaged, value categories, inward conversion, explicit `Ret` |
 | `or_construct_construct.test.cpp` | Zero-arg default-construction, multi-arg emplace-style, init-list overload |
 | `or_construct_laziness.test.cpp` | Fallback constructed exactly once when disengaged; not constructed when engaged |
-| `or_construct_non_nullable_fail.cpp` | Negative compile: non-nullable first arg (pack overload) |
-| `or_construct_initlist_non_nullable_fail.cpp` | Negative compile: non-nullable first arg (init-list overload) |
-| `or_construct_payload_not_convertible_fail.cpp` | Negative compile: payload cannot be explicitly converted to `Ret` |
-| `or_construct_fallback_not_constructible_fail.cpp` | Negative compile: pack fallback cannot construct `R` |
-| `or_construct_initlist_fallback_not_constructible_fail.cpp` | Negative compile: initializer-list fallback cannot construct `R` |
-| `or_construct_reference_result_fail.cpp` | Negative compile: explicit reference result |
+| `or_construct_non_nullable_fail.test.cpp` | Negative compile: non-nullable first arg (pack overload) |
+| `or_construct_initlist_non_nullable_fail.test.cpp` | Negative compile: non-nullable first arg (init-list overload) |
+| `or_construct_payload_not_convertible_fail.test.cpp` | Negative compile: payload cannot be explicitly converted to `Ret` |
+| `or_construct_fallback_not_constructible_fail.test.cpp` | Negative compile: pack fallback cannot construct `R` |
+| `or_construct_initlist_fallback_not_constructible_fail.test.cpp` | Negative compile: initializer-list fallback cannot construct `R` |
+| `or_construct_reference_result_fail.test.cpp` | Negative compile: explicit reference result |
 | `or_construct_constexpr.test.cpp` | `static_assert`-level constant evaluation: both overloads, `optional`, `expected`, raw pointers, explicit `Ret` |
 | `or_construct_optional_ref.test.cpp` | `optional<int&>` and `optional<string&>`: nullable proof, return-type proof (`R = int`), engaged/disengaged, explicit `Ret`, init-list, rebinding |
 
