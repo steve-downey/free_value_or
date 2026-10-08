@@ -6,5 +6,5 @@
 
 void check() {
     std::string a{"a"}, b{"b"};
-    (void)smd::free_value_or::reference_or(a, b);
+    (void)beman::free_value_or::reference_or(a, b);
 }

@@ -8,5 +8,5 @@
 
 void check() {
     std::optional<std::string> o;
-    (void)smd::free_value_or::reference_or(o, std::string{"x"});
+    (void)beman::free_value_or::reference_or(o, std::string{"x"});
 }

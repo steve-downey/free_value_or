@@ -8,5 +8,5 @@
 
 void check() {
     int fallback = 0;
-    (void)smd::free_value_or::reference_or(std::make_shared<int>(42), fallback);
+    (void)beman::free_value_or::reference_or(std::make_shared<int>(42), fallback);
 }

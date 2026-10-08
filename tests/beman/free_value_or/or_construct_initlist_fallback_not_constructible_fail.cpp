@@ -9,5 +9,5 @@
 
 void check() {
     std::optional<std::vector<int>> empty;
-    (void)smd::free_value_or::or_construct<std::vector<int>>(empty, {std::string{"x"}});
+    (void)beman::free_value_or::or_construct<std::vector<int>>(empty, {std::string{"x"}});
 }

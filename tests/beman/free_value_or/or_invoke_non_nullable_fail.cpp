@@ -6,5 +6,5 @@
 
 void check() {
     std::vector<int> v{};
-    (void)smd::free_value_or::or_invoke(v, [] { return 0; });
+    (void)beman::free_value_or::or_invoke(v, [] { return 0; });
 }

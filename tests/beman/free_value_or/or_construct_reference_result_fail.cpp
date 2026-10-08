@@ -8,5 +8,5 @@
 
 void check() {
     std::optional<int> empty;
-    (void)smd::free_value_or::or_construct<const int&>(empty, 42);
+    (void)beman::free_value_or::or_construct<const int&>(empty, 42);
 }

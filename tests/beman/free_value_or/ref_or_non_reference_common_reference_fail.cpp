@@ -9,5 +9,5 @@
 void check() {
     std::optional<int> value{42};
     long               fallback = 0;
-    (void)smd::free_value_or::reference_or(value, fallback);
+    (void)beman::free_value_or::reference_or(value, fallback);
 }

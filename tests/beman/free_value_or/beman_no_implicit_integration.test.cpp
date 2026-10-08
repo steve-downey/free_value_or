@@ -15,10 +15,10 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-static_assert(!smd::free_value_or::enable_borrowed_nullable<beman::optional::optional<int&>>);
+static_assert(!beman::free_value_or::enable_borrowed_nullable<beman::optional::optional<int&>>);
 
 #if defined(BEMAN_EXPECTED_HAS_REFERENCES) && BEMAN_EXPECTED_HAS_REFERENCES
-static_assert(!smd::free_value_or::enable_borrowed_nullable<beman::expected::expected<int&, int>>);
+static_assert(!beman::free_value_or::enable_borrowed_nullable<beman::expected::expected<int&, int>>);
 #endif
 
 TEST_CASE("core header does not implicitly integrate vendored nullables", "[reference_or][integration]") { SUCCEED(); }

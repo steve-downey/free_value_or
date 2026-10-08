@@ -27,5 +27,5 @@ struct std::basic_common_reference<source, target, SQ, TQ> {
 void check() {
     nullable_source nullable;
     target          fallback;
-    (void)smd::free_value_or::reference_or(nullable, fallback);
+    (void)beman::free_value_or::reference_or(nullable, fallback);
 }

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-#ifndef INCLUDED_BEMAN_FREE_VALUE_OR_BEMAN_OPTIONAL
-#define INCLUDED_BEMAN_FREE_VALUE_OR_BEMAN_OPTIONAL
+#ifndef BEMAN_FREE_VALUE_OR_BEMAN_OPTIONAL_HPP
+#define BEMAN_FREE_VALUE_OR_BEMAN_OPTIONAL_HPP
 
 #include <beman/free_value_or/config.hpp>
 
 // Follow the umbrella's configured module/header mode unless a caller has
 // deliberately selected the implementation header already. In either case,
 // establish the free_value_or declarations before adding the specialization.
-#ifdef INCLUDED_BEMAN_FREE_VALUE_OR_VALUE_OR
+#ifdef BEMAN_FREE_VALUE_OR_VALUE_OR_HPP
     #include <beman/optional/optional.hpp>
 #else
     #include <beman/free_value_or/free_value_or.hpp>
@@ -20,9 +20,9 @@
     #endif
 #endif
 
-namespace smd::free_value_or {
+namespace beman::free_value_or {
 template <class T>
 inline constexpr bool enable_borrowed_nullable<beman::optional::optional<T&>> = true;
-} // namespace smd::free_value_or
+} // namespace beman::free_value_or
 
-#endif
+#endif // BEMAN_FREE_VALUE_OR_BEMAN_OPTIONAL_HPP

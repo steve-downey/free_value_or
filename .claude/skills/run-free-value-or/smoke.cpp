@@ -12,7 +12,7 @@
 #include <type_traits>
 #include <cstdio>
 
-namespace fvo = smd::free_value_or;
+namespace fvo = beman::free_value_or;
 
 int main() {
     // ---- value_or: engaged / disengaged across nullable models ----

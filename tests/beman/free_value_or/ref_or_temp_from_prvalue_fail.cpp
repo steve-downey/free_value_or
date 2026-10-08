@@ -7,5 +7,5 @@
 
 void check() {
     std::optional<int> o;
-    (void)smd::free_value_or::reference_or(o, int{42});
+    (void)beman::free_value_or::reference_or(o, int{42});
 }
