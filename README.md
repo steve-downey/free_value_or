@@ -27,8 +27,8 @@ operations proposed by this project.
 
 ## Usage
 
-Include the public umbrella header and call the functions from
-`smd::free_value_or`.
+Include the public umbrella header `<beman/free_value_or/free_value_or.hpp>` and
+call the functions from `beman::free_value_or`.
 
 The vendored Beman reference types use explicit integration headers so the
 core header does not probe the include path or pull in optional dependencies:

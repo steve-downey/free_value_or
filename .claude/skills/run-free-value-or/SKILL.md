@@ -7,7 +7,7 @@ description: Build, run, and smoke-test the beman.free_value_or C++ header-only 
 
 `free_value_or` is a **header-only C++23 library** (a Beman project). There is
 no app, server, or GUI — the entire implementation is
-`include/beman/free_value_or/value_or.hpp` (namespace `smd::free_value_or`:
+`include/beman/free_value_or/value_or.hpp` (namespace `beman::free_value_or`:
 `value_or`, `reference_or`, `or_invoke`, `or_construct`). "Running" it means
 compiling a translation unit against the header and executing checks.
 
@@ -23,7 +23,8 @@ All were already present in this container; versions that worked:
 - For `make` / preset paths only: `cmake` 4.3, `ninja`, and (for `make`) `uv`
   + `ccache`. Check with `command -v g++ clang++ cmake ninja uv ccache`.
 - The full test suite also fetches **Catch2** from GitHub (network) and uses the
-  vendored **beman::optional** submodule under `vendored/` (already populated).
+  vendored **beman::optional** / **beman::expected** subtrees under
+  `include/beman/{optional,expected}` (wired in by `cmake/vendored-libs.cmake`).
 
 ## Run (agent path) — the driver
 
@@ -94,11 +95,11 @@ and git-clones Catch2 into `build/gcc-debug/_deps`.) Other presets:
   the `make compile-headers` target both pass because of this. The *test suite*
   and the driver's `smoke.cpp` additionally use `std::expected` (C++23), so
   compile those with `-std=c++23`.
-- **The umbrella header does not include the implementation.**
-  `free_value_or.hpp` includes the `todo.hpp` scaffold (namespace
-  `beman::free_value_or`), *not* `value_or.hpp`. Include
-  `<beman/free_value_or/value_or.hpp>` directly and use `smd::free_value_or`
-  (that is exactly what the tests and this driver do).
+- **The umbrella header switches on modules.** `free_value_or.hpp` includes
+  `value_or.hpp` in a textual build, but becomes `import beman.free_value_or;`
+  when `BEMAN_FREE_VALUE_OR_USE_MODULES` is on. Most tests and this driver
+  include `<beman/free_value_or/value_or.hpp>` directly so they compile the
+  same way in both builds; `public_header.test.cpp` covers the umbrella.
 - **`make` runs cmake/ctest through `uv run`** and uses a `ccache` compiler
   launcher; both must be on PATH or the Makefile paths fail.
 
