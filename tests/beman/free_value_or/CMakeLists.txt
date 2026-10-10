@@ -132,7 +132,7 @@ fvo_add_test(beman.free_value_or.tests.reference_or reference_or.test.cpp)
 # ---------------------------------------------------------------------------
 fvo_add_compile_fail_test(
     fvo.fail.not_nullable
-    fail_not_nullable.cpp
+    fail_not_nullable.test.cpp
     "no matching function for call to|no matching overloaded function|constraints are not satisfied"
 )
 
@@ -142,19 +142,19 @@ fvo_add_compile_fail_test(
 # ---------------------------------------------------------------------------
 fvo_add_compile_fail_test(
     fvo.fail.ref_or_temp_from_prvalue
-    ref_or_temp_from_prvalue_fail.cpp
+    ref_or_temp_from_prvalue_fail.test.cpp
     "reference_or alternative would bind the result to a temporary"
 )
 
 fvo_add_compile_fail_test(
     fvo.fail.ref_or_rvalue_string
-    ref_or_rvalue_string_fail.cpp
+    ref_or_rvalue_string_fail.test.cpp
     "reference_or alternative would bind the result to a temporary"
 )
 
 fvo_add_compile_fail_test(
     fvo.fail.ref_or_deref_temporary
-    ref_or_deref_temporary_fail.cpp
+    ref_or_deref_temporary_fail.test.cpp
     "reference_or dereferenced nullable would bind the result to a temporary"
 )
 
@@ -163,7 +163,7 @@ fvo_add_compile_fail_test(
 foreach(wrapper IN ITEMS optional unique_ptr shared_ptr)
     fvo_add_compile_fail_test(
         fvo.fail.ref_or_temporary_${wrapper}
-        ref_or_temporary_${wrapper}_fail.cpp
+        ref_or_temporary_${wrapper}_fail.test.cpp
         "reference_or requires an lvalue or borrowed nullable"
     )
 endforeach()
@@ -171,14 +171,14 @@ endforeach()
 if(FVO_TEST_HAS_STD_EXPECTED)
     fvo_add_compile_fail_test(
         fvo.fail.ref_or_temporary_expected
-        ref_or_temporary_expected_fail.cpp
+        ref_or_temporary_expected_fail.test.cpp
         "reference_or requires an lvalue or borrowed nullable"
     )
 endif()
 
 fvo_add_compile_fail_test(
     fvo.fail.ref_or_non_reference_common_reference
-    ref_or_non_reference_common_reference_fail.cpp
+    ref_or_non_reference_common_reference_fail.test.cpp
     "reference_or requires common_reference_t to be a reference"
 )
 
@@ -188,19 +188,19 @@ fvo_add_compile_fail_test(
 # ---------------------------------------------------------------------------
 fvo_add_compile_fail_test(
     fvo.fail.value_or_non_nullable
-    value_or_non_nullable_fail.cpp
+    value_or_non_nullable_fail.test.cpp
     "no matching function for call to|no matching overloaded function|constraints are not satisfied"
 )
 
 fvo_add_compile_fail_test(
     fvo.fail.reference_or_non_nullable
-    reference_or_non_nullable_fail.cpp
+    reference_or_non_nullable_fail.test.cpp
     "no matching function for call to|no matching overloaded function|constraints are not satisfied"
 )
 
 fvo_add_compile_fail_test(
     fvo.fail.or_invoke_non_nullable
-    or_invoke_non_nullable_fail.cpp
+    or_invoke_non_nullable_fail.test.cpp
     "no matching function for call to|no matching overloaded function|constraints are not satisfied"
 )
 
@@ -243,13 +243,13 @@ fvo_add_test(beman.free_value_or.tests.or_construct_laziness or_construct_lazine
 # ---------------------------------------------------------------------------
 fvo_add_compile_fail_test(
     fvo.fail.or_construct_non_nullable
-    or_construct_non_nullable_fail.cpp
+    or_construct_non_nullable_fail.test.cpp
     "no matching function for call to|no matching overloaded function|constraints are not satisfied"
 )
 
 fvo_add_compile_fail_test(
     fvo.fail.or_construct_initlist_non_nullable
-    or_construct_initlist_non_nullable_fail.cpp
+    or_construct_initlist_non_nullable_fail.test.cpp
     "no matching function for call to|no matching overloaded function|constraints are not satisfied"
 )
 
@@ -257,25 +257,25 @@ fvo_add_compile_fail_test(
 # the engaged branch, so explicit conversions remain supported.
 fvo_add_compile_fail_test(
     fvo.fail.or_construct_payload_not_convertible
-    or_construct_payload_not_convertible_fail.cpp
+    or_construct_payload_not_convertible_fail.test.cpp
     "or_construct requires static_cast"
 )
 
 fvo_add_compile_fail_test(
     fvo.fail.or_construct_fallback_not_constructible
-    or_construct_fallback_not_constructible_fail.cpp
+    or_construct_fallback_not_constructible_fail.test.cpp
     "or_construct requires is_constructible_v<R, Args...>"
 )
 
 fvo_add_compile_fail_test(
     fvo.fail.or_construct_initlist_fallback_not_constructible
-    or_construct_initlist_fallback_not_constructible_fail.cpp
+    or_construct_initlist_fallback_not_constructible_fail.test.cpp
     "or_construct requires is_constructible_v<R, initializer_list<E>&, Args...>"
 )
 
 fvo_add_compile_fail_test(
     fvo.fail.or_construct_reference_result
-    or_construct_reference_result_fail.cpp
+    or_construct_reference_result_fail.test.cpp
     "or_construct requires a non-reference result type"
 )
 

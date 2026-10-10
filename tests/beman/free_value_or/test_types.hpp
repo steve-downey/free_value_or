@@ -10,15 +10,14 @@
 #include <optional>
 #include <version>
 
-// Rename-proofing alias: all tests use fvo:: rather than smd:: inline.
-// When the library is renamed to beman::free_value_or, only this line changes.
-namespace fvo = smd::free_value_or; // rename point: smd:: -> beman::
+// Short alias for the library namespace; tests refer to the API as fvo::.
+namespace fvo = beman::free_value_or;
 
 // ---------------------------------------------------------------------------
 // Feature detection for optional<T&> (P2988).
 //
 // FVO_HAS_OPTIONAL_REF=1 is injected by CMake when the vendored
-// beman::optional library is linked (see vendored/CMakeLists.txt).
+// beman::optional library is linked (see fvo_add_test in CMakeLists.txt).
 // Falls back to __cpp_lib_optional for standard-library support.
 // ---------------------------------------------------------------------------
 #ifndef FVO_HAS_OPTIONAL_REF

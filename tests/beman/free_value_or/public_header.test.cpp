@@ -12,7 +12,7 @@
 
 #include <beman/free_value_or/free_value_or.hpp>
 
-namespace fvo = smd::free_value_or;
+namespace fvo = beman::free_value_or;
 
 TEST_CASE("public umbrella header exposes the free_value_or API", "[public_header]") {
     std::optional<int> engaged{42};

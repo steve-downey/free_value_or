@@ -203,4 +203,4 @@ R1 proposes nullable as a named public concept.
   - send fixes back: git subtree push --prefix=papers/wg21-latex \
       git@github.com:steve-downey/wg21-latex.git <branch>
 - Namespace rename smd::free_value_or -> beman::free_value_or (the "great
-  renaming") before upstreaming; paper text uses std:: spellings.
+  renaming") is done; paper text uses std:: spellings.

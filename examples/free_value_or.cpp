@@ -11,7 +11,7 @@
 #include <beman/free_value_or/free_value_or.hpp>
 
 int main() {
-    namespace fvo = smd::free_value_or;
+    namespace fvo = beman::free_value_or;
 
     std::optional<std::string> configured_name;
     const auto                 name = fvo::or_construct<std::string>(configured_name, "default");
