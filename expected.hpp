@@ -384,6 +384,16 @@ class expected {
                    std::is_trivially_destructible_v<T> && std::is_trivially_copy_constructible_v<E> &&
                    std::is_trivially_copy_assignable_v<E> && std::is_trivially_destructible_v<E>));
 
+    //! \omit
+    constexpr expected& operator=(const expected&)
+        requires(!(std::is_trivially_copy_constructible_v<T> && std::is_trivially_copy_assignable_v<T> &&
+                   std::is_trivially_destructible_v<T> && std::is_trivially_copy_constructible_v<E> &&
+                   std::is_trivially_copy_assignable_v<E> && std::is_trivially_destructible_v<E>) &&
+                 !(std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T> &&
+                   (std::is_reference_v<E> || (std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E>)) &&
+                   (std::is_nothrow_move_constructible_v<T> || std::is_nothrow_move_constructible_v<E>)))
+    = delete;
+
     // Move assignment (trivial path)
     //! \at expected.object.assign
     //! \effects Trivially moves `rhs`'s active member into `*this`.
@@ -638,6 +648,22 @@ class expected {
         unexpected<E> unex_;
     };
 };
+
+// The deleted copy assignment, the `\omit`ted one after the trivial and
+// non-trivial paths, is satisfied exactly when neither of them is, so some
+// candidate always is. It is here for clang. Clang (17 through at least 24)
+// treats a class whose copy-assignment candidates all have unsatisfied
+// constraints as not trivially copyable, although none of them is eligible
+// ([special]) and [class.prop] counts only eligible ones; gcc gets it right.
+// Without it, expected<int, MoveOnly> is trivially copyable under gcc and not
+// under clang, while libstdc++'s std::expected is under both. A deleted
+// candidate is not eligible either, so the triviality it restores is the one
+// the standard gives. It is copy assignment only: a satisfied deleted move
+// assignment would win overload resolution for an rvalue and stop it falling
+// back to copy assignment. expected<void, E> and expected<T&, E> carry the
+// same overload for the same reason. It is not wording, so it is `\omit`ted,
+// and a comment on it would be carried into the synopsis, which is why this
+// one sits here.
 
 // \rSec3[expected.object.cons]{Constructors}
 
@@ -2025,6 +2051,13 @@ class expected<void, E> {
                  !(std::is_trivially_copy_constructible_v<E> && std::is_trivially_copy_assignable_v<E> &&
                    std::is_trivially_destructible_v<E>));
 
+    //! \omit
+    constexpr expected& operator=(const expected&)
+        requires(!(std::is_trivially_copy_constructible_v<E> && std::is_trivially_copy_assignable_v<E> &&
+                   std::is_trivially_destructible_v<E>) &&
+                 !(std::is_reference_v<E> || (std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E>)))
+    = delete;
+
     // Move assignment (trivial path)
     //! \at expected.void.assign
     //! \merge
@@ -3362,6 +3395,13 @@ class expected<T&, E> {
         requires((std::is_reference_v<E> || (std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E>)) &&
                  !(std::is_trivially_copy_constructible_v<E> && std::is_trivially_copy_assignable_v<E> &&
                    std::is_trivially_destructible_v<E>));
+
+    //! \omit
+    constexpr expected& operator=(const expected&)
+        requires(!(std::is_trivially_copy_constructible_v<E> && std::is_trivially_copy_assignable_v<E> &&
+                   std::is_trivially_destructible_v<E>) &&
+                 !(std::is_reference_v<E> || (std::is_copy_constructible_v<E> && std::is_copy_assignable_v<E>)))
+    = delete;
 
     // Move assignment (trivial path)
     //! \at expected.ref.assign
