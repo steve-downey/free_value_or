@@ -160,6 +160,57 @@ TEST_CASE("expected<T&,E&>: move construct preserves error pointer", "[expected_
     CHECK(&b.error() == &err);
 }
 
+// Converting constructors from expected<U&, G&>: distinct overloads from the
+// copy/move constructors above, selected when U/G differ from T/E. Both the
+// value side (Derived& -> Base&) and the error side (int& -> const int&) are
+// reference binds, so nothing is copied.
+namespace {
+struct ConvBase {
+    virtual ~ConvBase() = default;
+    int v               = 0;
+};
+struct ConvDerived : ConvBase {
+    explicit ConvDerived(int i) { v = i; }
+};
+} // namespace
+
+TEST_CASE("expected<T&,E&>: converting constructors are available", "[expected_ref_both]") {
+    CHECK(std::is_constructible_v<expected<ConvBase&, const int&>, const expected<ConvDerived&, int&>&>);
+    CHECK(std::is_constructible_v<expected<ConvBase&, const int&>, expected<ConvDerived&, int&>&&>);
+}
+
+TEST_CASE("expected<T&,E&>: converting copy construct, value state", "[expected_ref_both]") {
+    ConvDerived                     d{7};
+    expected<ConvDerived&, int&>    src(d);
+    expected<ConvBase&, const int&> dst(src);
+    REQUIRE(dst.has_value());
+    CHECK(&*dst == static_cast<ConvBase*>(&d));
+}
+
+TEST_CASE("expected<T&,E&>: converting copy construct, error state", "[expected_ref_both]") {
+    int                             err = 5;
+    expected<ConvDerived&, int&>    src(unexpect, err);
+    expected<ConvBase&, const int&> dst(src);
+    REQUIRE(!dst.has_value());
+    CHECK(&dst.error() == &err);
+}
+
+TEST_CASE("expected<T&,E&>: converting move construct, value state", "[expected_ref_both]") {
+    ConvDerived                     d{9};
+    expected<ConvDerived&, int&>    src(d);
+    expected<ConvBase&, const int&> dst(std::move(src));
+    REQUIRE(dst.has_value());
+    CHECK(&*dst == static_cast<ConvBase*>(&d));
+}
+
+TEST_CASE("expected<T&,E&>: converting move construct, error state", "[expected_ref_both]") {
+    int                             err = 11;
+    expected<ConvDerived&, int&>    src(unexpect, err);
+    expected<ConvBase&, const int&> dst(std::move(src));
+    REQUIRE(!dst.has_value());
+    CHECK(&dst.error() == &err);
+}
+
 // =============================================================================
 // Value rebind semantics
 // =============================================================================

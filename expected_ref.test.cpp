@@ -12,6 +12,7 @@
 
 #include <string>
 #include <type_traits>
+#include <utility>
 
 using namespace beman::expected;
 
@@ -141,6 +142,61 @@ TEST_CASE("expected<T&>: construct from derived expected<U&, G>", "[expected_ref
     CHECK(&*dst == static_cast<Base*>(&d));
 }
 
+// The rvalue converting constructor is a separate overload from the lvalue one
+// above: it moves the source's error rather than copying it.
+TEST_CASE("expected<T&>: move-construct from expected<U&, G>&&", "[expected_ref]") {
+    struct Base {
+        virtual ~Base() = default;
+        int v;
+    };
+    struct Derived : Base {
+        Derived(int i) { v = i; }
+    };
+
+    Derived                 d{7};
+    expected<Derived&, int> src(d);
+    expected<Base&, long>   dst = std::move(src);
+    REQUIRE(dst.has_value());
+    CHECK(&*dst == static_cast<Base*>(&d));
+}
+
+TEST_CASE("expected<T&>: move-construct error state from expected<U&, G>&&", "[expected_ref]") {
+    expected<int&, testing::narrowed> src(unexpect, testing::narrowed(7));
+    expected<int&, testing::widened>  dst = std::move(src);
+    REQUIRE(!dst.has_value());
+    CHECK(dst.error().val == 7);
+}
+
+// The const& constructor from unexpected<G> is a separate overload from the &&
+// one exercised above: it copies the source's error and leaves it intact.
+TEST_CASE("expected<T&>: construct from a const unexpected lvalue", "[expected_ref]") {
+    const unexpected<std::string> u("copied");
+    expected<int&, std::string>   e = u;
+    REQUIRE(!e.has_value());
+    CHECK(e.error() == "copied");
+    CHECK(u.error() == "copied");
+}
+
+// The trailing argument is deliberately a runtime lvalue. Every argument being
+// a constant expression would make the whole initializer constant-evaluated —
+// this constructor and init_list_type's are both constexpr — and GCC folds that
+// at compile time even under the Gcov profile's -O0 -fno-inline, emitting no
+// runtime code and therefore no coverage record. The constexpr path is asserted
+// separately below, with a static_assert because constant evaluation is the
+// thing under test.
+TEST_CASE("expected<T&>: construct from unexpect_t with initializer_list", "[expected_ref]") {
+    int                                     extra = 10;
+    expected<int&, testing::init_list_type> e(unexpect, {1, 2, 3}, extra);
+    REQUIRE(!e.has_value());
+    CHECK(e.error().sum == 16);
+    CHECK(e.error().count == 3);
+}
+
+static_assert([] {
+    expected<int&, testing::init_list_type> e(unexpect, {1, 2, 3}, 10);
+    return e.error().sum;
+}() == 16);
+
 // =============================================================================
 // Rebind semantics on assignment
 // =============================================================================
@@ -169,6 +225,26 @@ TEST_CASE("expected<T&>: assign from unexpected transitions to error state", "[e
     REQUIRE(!e.has_value());
     CHECK(e.error() == 99);
     CHECK(x == 5);
+}
+
+// The const& assignment operator is a separate overload from the && one above:
+// it copies the source's error and leaves it intact.
+TEST_CASE("expected<T&>: assign from a const unexpected lvalue when value", "[expected_ref]") {
+    const unexpected<std::string> u("copied");
+    int                           x = 5;
+    expected<int&, std::string>   e(x);
+    e = u;
+    REQUIRE(!e.has_value());
+    CHECK(e.error() == "copied");
+    CHECK(u.error() == "copied");
+}
+
+TEST_CASE("expected<T&>: assign from a const unexpected lvalue when already error", "[expected_ref]") {
+    const unexpected<std::string> u("second");
+    expected<int&, std::string>   e(unexpect, "first");
+    e = u;
+    REQUIRE(!e.has_value());
+    CHECK(e.error() == "second");
 }
 
 TEST_CASE("expected<T&>: assign lvalue rebinds from error state", "[expected_ref]") {
@@ -210,6 +286,38 @@ TEST_CASE("expected<T&>: copy assignment error-to-value", "[expected_ref]") {
     a = b;
     REQUIRE(a.has_value());
     CHECK(&*a == &x);
+}
+
+// With a non-trivial E the non-trivial copy assignment is selected, and the
+// mixed-state cases are the ones that construct or destroy the error.
+TEST_CASE("expected<T&>: copy assignment value-to-error (non-trivial E)", "[expected_ref]") {
+    int                               x = 5;
+    expected<int&, std::string>       a(x);
+    const expected<int&, std::string> b(unexpect, "err");
+    a = b;
+    REQUIRE(!a.has_value());
+    CHECK(a.error() == "err");
+    CHECK(b.error() == "err");
+    CHECK(x == 5);
+}
+
+TEST_CASE("expected<T&>: copy assignment error-to-value (non-trivial E)", "[expected_ref]") {
+    int                               x = 5;
+    expected<int&, std::string>       a(unexpect, "err");
+    const expected<int&, std::string> b(x);
+    a = b;
+    REQUIRE(a.has_value());
+    CHECK(&*a == &x);
+}
+
+TEST_CASE("expected<T&>: copy assignment value-value rebinds (non-trivial E)", "[expected_ref]") {
+    int                               x = 1, y = 2;
+    expected<int&, std::string>       a(x);
+    const expected<int&, std::string> b(y);
+    a = b;
+    REQUIRE(a.has_value());
+    CHECK(&*a == &y);
+    CHECK(x == 1);
 }
 
 TEST_CASE("expected<T&>: move assignment value-to-value (non-trivial E)", "[expected_ref]") {
@@ -301,9 +409,37 @@ TEST_CASE("expected<T&>: value() throws bad_expected_access on error", "[expecte
     REQUIRE_THROWS_AS(e.value(), beman::expected::bad_expected_access<int>);
 }
 
+// value() && on expected<T&, E> still yields T& — the referent is external, so
+// there is nothing to move out of.
+TEST_CASE("expected<T&>: rvalue value() returns T&", "[expected_ref]") {
+    int                 x = 1;
+    expected<int&, int> e(x);
+    CHECK(type_name<decltype(std::move(e).value())>() == type_name<int&>());
+    CHECK(&std::move(e).value() == &x);
+}
+
+TEST_CASE("expected<T&>: rvalue value() throws bad_expected_access on error", "[expected_ref]") {
+    expected<int&, int> e = unexpected(5);
+    REQUIRE_THROWS_AS(std::move(e).value(), beman::expected::bad_expected_access<int>);
+}
+
 TEST_CASE("expected<T&>: error() returns error", "[expected_ref]") {
     expected<int&, int> e = unexpected(42);
     CHECK(e.error() == 42);
+}
+
+TEST_CASE("expected<T&>: error() ref-qualified overloads", "[expected_ref]") {
+    expected<int&, std::string> e(unexpect, "err");
+    CHECK(type_name<decltype(e.error())>() == type_name<std::string&>());
+    CHECK(type_name<decltype(std::as_const(e).error())>() == type_name<const std::string&>());
+    CHECK(type_name<decltype(std::move(std::as_const(e)).error())>() == type_name<const std::string&&>());
+    CHECK(type_name<decltype(std::move(e).error())>() == type_name<std::string&&>());
+
+    CHECK(std::as_const(e).error() == "err");
+    CHECK(std::move(std::as_const(e)).error() == "err");
+    // Move out last: this leaves e's error in a moved-from state.
+    std::string moved = std::move(e).error();
+    CHECK(moved == "err");
 }
 
 TEST_CASE("expected<T&>: value_or returns referred value when has value", "[expected_ref]") {
@@ -328,6 +464,17 @@ TEST_CASE("expected<T&>: error_or returns default when has value", "[expected_re
     int                 x = 5;
     expected<int&, int> e(x);
     CHECK(e.error_or(99) == 99);
+}
+
+TEST_CASE("expected<T&>: rvalue error_or moves the error when has error", "[expected_ref]") {
+    expected<int&, std::string> e(unexpect, "held");
+    CHECK(std::move(e).error_or("fallback") == "held");
+}
+
+TEST_CASE("expected<T&>: rvalue error_or returns default when has value", "[expected_ref]") {
+    int                         x = 5;
+    expected<int&, std::string> e(x);
+    CHECK(std::move(e).error_or("fallback") == "fallback");
 }
 
 TEST_CASE("expected<T&>: bool conversion", "[expected_ref]") {
@@ -535,6 +682,27 @@ TEST_CASE("expected<T&>: const and_then", "[expected_ref]") {
     auto                      r = e.and_then([](int& v) -> expected<int, int> { return v + 1; });
     REQUIRE(r.has_value());
     CHECK(*r == 11);
+}
+
+TEST_CASE("expected<T&>: const or_else on error calls F", "[expected_ref]") {
+    const expected<int&, int> e(unexpect, 5);
+    auto                      r = e.or_else([](const int& v) -> expected<int&, int> { return unexpected(v + 1); });
+    REQUIRE(!r.has_value());
+    CHECK(r.error() == 6);
+    CHECK(e.error() == 5);
+}
+
+TEST_CASE("expected<T&>: const or_else on value short-circuits", "[expected_ref]") {
+    int                       x = 10;
+    const expected<int&, int> e(x);
+    bool                      called = false;
+    auto                      r      = e.or_else([&](const int&) -> expected<int&, int> {
+        called = true;
+        return unexpected(0);
+    });
+    CHECK(!called);
+    REQUIRE(r.has_value());
+    CHECK(&*r == &x);
 }
 
 TEST_CASE("expected<T&>: const transform", "[expected_ref]") {

@@ -515,6 +515,15 @@ TEST_CASE("expected: value() rvalue ref", "[ExpectedTest]") {
     CHECK(s == "rval");
 }
 
+TEST_CASE("expected: value() const rvalue ref", "[ExpectedTest]") {
+    const expt::expected<std::string, int> e("crval");
+    CHECK(type_name<decltype(std::move(e).value())>() == type_name<const std::string&&>());
+    std::string s = std::move(e).value();
+    CHECK(s == "crval");
+    // const rvalue value() yields a const rvalue: the copy above leaves e intact.
+    CHECK(*e == "crval");
+}
+
 TEST_CASE("expected: value() throws bad_expected_access from lvalue", "[ExpectedTest]") {
     expt::expected<int, std::string> e(expt::unexpected<std::string>("bad"));
     CHECK_THROWS_AS(e.value(), expt::bad_expected_access<std::string>);
