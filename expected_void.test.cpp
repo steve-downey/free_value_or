@@ -212,6 +212,24 @@ TEST_CASE("expected<void>: copy assign error-to-error", "[expected_void]") {
     CHECK(a.error() == 2);
 }
 
+// With a non-trivial E the non-trivial copy assignment is selected, and the
+// mixed-state cases are the ones that construct or destroy the error.
+TEST_CASE("expected<void>: copy assign error-to-value (non-trivial E)", "[expected_void]") {
+    expected<void, std::string>       a;
+    const expected<void, std::string> b(unexpect, "err");
+    a = b;
+    REQUIRE(!a.has_value());
+    CHECK(a.error() == "err");
+    CHECK(b.error() == "err");
+}
+
+TEST_CASE("expected<void>: copy assign value-to-error (non-trivial E)", "[expected_void]") {
+    expected<void, std::string>       a(unexpect, "err");
+    const expected<void, std::string> b;
+    a = b;
+    CHECK(a.has_value());
+}
+
 // --- Move assignment ---
 
 TEST_CASE("expected<void>: move assignment is noexcept", "[expected_void]") {

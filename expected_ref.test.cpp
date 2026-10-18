@@ -288,6 +288,38 @@ TEST_CASE("expected<T&>: copy assignment error-to-value", "[expected_ref]") {
     CHECK(&*a == &x);
 }
 
+// With a non-trivial E the non-trivial copy assignment is selected, and the
+// mixed-state cases are the ones that construct or destroy the error.
+TEST_CASE("expected<T&>: copy assignment value-to-error (non-trivial E)", "[expected_ref]") {
+    int                               x = 5;
+    expected<int&, std::string>       a(x);
+    const expected<int&, std::string> b(unexpect, "err");
+    a = b;
+    REQUIRE(!a.has_value());
+    CHECK(a.error() == "err");
+    CHECK(b.error() == "err");
+    CHECK(x == 5);
+}
+
+TEST_CASE("expected<T&>: copy assignment error-to-value (non-trivial E)", "[expected_ref]") {
+    int                               x = 5;
+    expected<int&, std::string>       a(unexpect, "err");
+    const expected<int&, std::string> b(x);
+    a = b;
+    REQUIRE(a.has_value());
+    CHECK(&*a == &x);
+}
+
+TEST_CASE("expected<T&>: copy assignment value-value rebinds (non-trivial E)", "[expected_ref]") {
+    int                               x = 1, y = 2;
+    expected<int&, std::string>       a(x);
+    const expected<int&, std::string> b(y);
+    a = b;
+    REQUIRE(a.has_value());
+    CHECK(&*a == &y);
+    CHECK(x == 1);
+}
+
 TEST_CASE("expected<T&>: move assignment value-to-value (non-trivial E)", "[expected_ref]") {
     int                         x1 = 1, x2 = 2;
     expected<int&, std::string> a(x1), b(x2);
