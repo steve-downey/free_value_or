@@ -127,9 +127,9 @@ TEST_CASE("expected<void,E&>: move construct copies pointer", "[expected_void_re
 }
 
 TEST_CASE("expected<void,E&>: convert from expected<void, G&>", "[expected_void_ref_e]") {
-    int                  err = 7;
-    expected<void, int&> src(unexpect, err);
-    expected<void, int&> dst(src);
+    int                        err = 7;
+    expected<void, int&>       src(unexpect, err);
+    expected<void, const int&> dst(src);
     REQUIRE(!dst.has_value());
     CHECK(&dst.error() == &err);
 }
@@ -138,9 +138,9 @@ TEST_CASE("expected<void,E&>: convert from expected<void, G&>", "[expected_void_
 // only the const& form existed. Verify the && form works and still binds the external
 // referent (never dangles — G is itself a reference to the caller's object).
 TEST_CASE("expected<void,E&>: convert from expected<void, G&>&& binds external referent", "[expected_void_ref_e]") {
-    int                  err = 9;
-    expected<void, int&> src(unexpect, err);
-    expected<void, int&> dst(std::move(src));
+    int                        err = 9;
+    expected<void, int&>       src(unexpect, err);
+    expected<void, const int&> dst(std::move(src));
     REQUIRE(!dst.has_value());
     CHECK(&dst.error() == &err);
 }
