@@ -41,6 +41,7 @@ set(beman_expected_beman_only_tests
     expected_review_corrections.test.cpp
     expected_smf_regressions.test.cpp
     header_idempotence.test.cpp
+    type_name.test.cpp
 )
 
 include(Catch)
