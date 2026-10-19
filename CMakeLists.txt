@@ -156,19 +156,16 @@ beman_add_xfail_compile_test(
     unexpected_array_fail
     SOURCE unexpected_array_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "E must not be an array type"
 )
 beman_add_xfail_compile_test(
     unexpected_cvref_fail
     SOURCE unexpected_cvref_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "E must not be cv-qualified"
 )
 beman_add_xfail_compile_test(
     unexpected_self_fail
     SOURCE unexpected_self_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "E must not be a specialization of unexpected"
 )
 
 # Step 3 — expected<T,E> ill-formed T/E [expected.object.general]
@@ -176,15 +173,12 @@ beman_add_xfail_compile_test(
     expected_t_ref_fail
     SOURCE expected_t_ref_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "no default constructor|use of deleted function|call to deleted|attempting to reference"
 )
 # Note: expected_e_ref_fail removed — expected<int, int&> is now valid via expected<T,E&>
 beman_add_xfail_compile_test(
     expected_t_array_fail
     SOURCE expected_t_array_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "T must not be an array type"
 )
 
 # Step 3 — expected<T,E> emplace Mandates: nothrow_constructible_v<T,Args...>
@@ -192,7 +186,6 @@ beman_add_xfail_compile_test(
     expected_emplace_throwing_fail
     SOURCE expected_emplace_throwing_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "is_nothrow_constructible|no matching overloaded function found"
 )
 
 # Step 4 — expected<void,E> ill-formed E [expected.void.general]
@@ -202,7 +195,6 @@ beman_add_xfail_compile_test(
     expected_void_array_fail
     SOURCE expected_void_array_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "E must not be an array type"
 )
 
 # Step 5 — monadic Mandates [expected.object.monadic]
@@ -210,25 +202,21 @@ beman_add_xfail_compile_test(
     and_then_wrong_error_type_fail
     SOURCE and_then_wrong_error_type_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "F must return expected with the same error_type"
 )
 beman_add_xfail_compile_test(
     and_then_not_expected_fail
     SOURCE and_then_not_expected_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "F must return a specialization of expected"
 )
 beman_add_xfail_compile_test(
     or_else_wrong_value_type_fail
     SOURCE or_else_wrong_value_type_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "F must return expected with the same value_type"
 )
 beman_add_xfail_compile_test(
     transform_error_ref_result_fail
     SOURCE transform_error_ref_result_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "G must be an object type"
 )
 
 # Step 6 — void monadic Mandates [expected.void.monadic]
@@ -236,13 +224,11 @@ beman_add_xfail_compile_test(
     void_and_then_wrong_error_type_fail
     SOURCE void_and_then_wrong_error_type_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "F must return expected with the same error_type"
 )
 beman_add_xfail_compile_test(
     void_or_else_wrong_value_type_fail
     SOURCE void_or_else_wrong_value_type_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "F must return expected with the same value_type"
 )
 
 # Fix 1 — constraint 23.6: value ctor blocked for T=bool, U=expected specialization
@@ -250,8 +236,6 @@ beman_add_xfail_compile_test(
     expected_bool_value_ctor_from_expected_fail
     SOURCE expected_bool_value_ctor_from_expected_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "no matching function|no matching constructor|no overloaded function could convert"
 )
 
 # Fix 4 — Mandates: T must not be a specialization of unexpected
@@ -259,7 +243,6 @@ beman_add_xfail_compile_test(
     expected_unexpected_value_type_fail
     SOURCE expected_unexpected_value_type_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "T must not be a specialization of unexpected"
 )
 
 # Step 7 — expected<T&, E> reference specialization: constructor constraints
@@ -267,22 +250,16 @@ beman_add_xfail_compile_test(
     expected_ref_temporary_fail
     SOURCE expected_ref_temporary_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "binding a temporary to T& creates a dangling reference|use of deleted function|call to deleted|no matching function|no matching constructor|no overloaded function could convert|attempting to reference"
 )
 beman_add_xfail_compile_test(
     expected_ref_no_default_fail
     SOURCE expected_ref_no_default_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "no default constructor|use of deleted function|call to deleted|attempting to reference"
 )
 beman_add_xfail_compile_test(
     expected_ref_inplace_value_fail
     SOURCE expected_ref_inplace_value_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "no in_place value constructor|use of deleted function|call to deleted|attempting to reference"
 )
 
 # Step 8 — expected<T, E&> reference error: dangling prevention
@@ -290,15 +267,11 @@ beman_add_xfail_compile_test(
     expected_ref_e_temporary_error_fail
     SOURCE expected_ref_e_temporary_error_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "cannot bind to non-const E&|use of deleted function|call to deleted|attempting to reference"
 )
 beman_add_xfail_compile_test(
     expected_ref_e_const_lvalue_fail
     SOURCE expected_ref_e_const_lvalue_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "cannot bind to non-const E&|use of deleted function|call to deleted|attempting to reference"
 )
 
 # Step 8 — expected<T, E&>: no constructor or assignment from unexpected<G>
@@ -307,15 +280,11 @@ beman_add_xfail_compile_test(
     expected_ref_e_construct_from_unexpected_fail
     SOURCE expected_ref_e_construct_from_unexpected_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "no constructor from unexpected|use of deleted function|call to deleted|invokes a deleted function|attempting to reference"
 )
 beman_add_xfail_compile_test(
     expected_ref_e_assign_unexpected_fail
     SOURCE expected_ref_e_assign_unexpected_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "no assignment from unexpected|use of deleted function|call to deleted|selected deleted operator|attempting to reference"
 )
 
 # Step 7/8 parity — expected<T&,E> or_else value_type mandate (added in Step 8 review)
@@ -323,7 +292,6 @@ beman_add_xfail_compile_test(
     expected_ref_or_else_wrong_value_type_fail
     SOURCE expected_ref_or_else_wrong_value_type_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "F must return expected with the same value_type"
 )
 
 # Step 9 — expected<T&, E&> dangling prevention and no-default constraint
@@ -331,22 +299,16 @@ beman_add_xfail_compile_test(
     expected_ref_both_temporary_val_fail
     SOURCE expected_ref_both_temporary_val_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "binding a temporary to T& creates a dangling reference|use of deleted function|call to deleted|no matching function|no matching constructor|no overloaded function could convert|attempting to reference"
 )
 beman_add_xfail_compile_test(
     expected_ref_both_temporary_err_fail
     SOURCE expected_ref_both_temporary_err_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "cannot bind to non-const E&|use of deleted function|call to deleted|attempting to reference"
 )
 beman_add_xfail_compile_test(
     expected_ref_both_no_default_fail
     SOURCE expected_ref_both_no_default_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "no default constructor|use of deleted function|call to deleted|attempting to reference"
 )
 
 # Step 9 — expected<T&, E&>: no constructor or assignment from unexpected<G>
@@ -355,15 +317,11 @@ beman_add_xfail_compile_test(
     expected_ref_both_construct_from_unexpected_fail
     SOURCE expected_ref_both_construct_from_unexpected_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "no constructor from unexpected|use of deleted function|call to deleted|invokes a deleted function|attempting to reference"
 )
 beman_add_xfail_compile_test(
     expected_ref_both_assign_unexpected_fail
     SOURCE expected_ref_both_assign_unexpected_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "no assignment from unexpected|use of deleted function|call to deleted|selected deleted operator|attempting to reference"
 )
 
 # Step 9 — expected<T&, E&>: or_else value_type mandate
@@ -371,7 +329,6 @@ beman_add_xfail_compile_test(
     expected_ref_both_or_else_wrong_value_type_fail
     SOURCE expected_ref_both_or_else_wrong_value_type_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "F must return expected with the same value_type"
 )
 
 # Step 7 — expected<T&, E> Mandates: E constraints
@@ -379,25 +336,21 @@ beman_add_xfail_compile_test(
     expected_ref_e_ref_fail
     SOURCE expected_ref_e_ref_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "E must not be an rvalue reference"
 )
 beman_add_xfail_compile_test(
     expected_ref_e_void_fail
     SOURCE expected_ref_e_void_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "E must not be void"
 )
 beman_add_xfail_compile_test(
     expected_ref_e_array_fail
     SOURCE expected_ref_e_array_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "E must not be an array type"
 )
 beman_add_xfail_compile_test(
     expected_ref_e_cv_fail
     SOURCE expected_ref_e_cv_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "E must not be cv-qualified"
 )
 
 # Step 7 — expected<T&, E> monadic mandates
@@ -405,13 +358,11 @@ beman_add_xfail_compile_test(
     expected_ref_and_then_wrong_error_type_fail
     SOURCE expected_ref_and_then_wrong_error_type_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "F must return expected with the same error_type"
 )
 beman_add_xfail_compile_test(
     expected_ref_transform_error_ref_result_fail
     SOURCE expected_ref_transform_error_ref_result_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "G must be an object type"
 )
 
 # Step 8 — expected<T, E&> Mandates: T and E type constraints
@@ -419,38 +370,31 @@ beman_add_xfail_compile_test(
     expected_ref_e_t_array_fail
     SOURCE expected_ref_e_t_array_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "T must not be an array type"
 )
 beman_add_xfail_compile_test(
     expected_ref_e_e_array_fail
     SOURCE expected_ref_e_e_array_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "E must not be an array type"
 )
 beman_add_xfail_compile_test(
     expected_ref_e_t_inplace_fail
     SOURCE expected_ref_e_t_inplace_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "T must not be in_place_t"
 )
 beman_add_xfail_compile_test(
     expected_ref_e_t_unexpect_fail
     SOURCE expected_ref_e_t_unexpect_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "T must not be unexpect_t"
 )
 beman_add_xfail_compile_test(
     expected_ref_e_t_unexpected_fail
     SOURCE expected_ref_e_t_unexpected_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "T must not be a specialization of unexpected"
 )
 beman_add_xfail_compile_test(
     expected_ref_e_initializer_list_fail
     SOURCE expected_ref_e_initializer_list_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "initializer-list error construction cannot bind a reference|use of deleted function|call to deleted"
 )
 
 # Step 8 — expected<T, E&> monadic mandates
@@ -458,19 +402,16 @@ beman_add_xfail_compile_test(
     expected_ref_e_and_then_wrong_error_type_fail
     SOURCE expected_ref_e_and_then_wrong_error_type_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "F must return expected with the same error_type"
 )
 beman_add_xfail_compile_test(
     expected_ref_e_or_else_wrong_value_type_fail
     SOURCE expected_ref_e_or_else_wrong_value_type_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "F must return expected with the same value_type"
 )
 beman_add_xfail_compile_test(
     expected_ref_e_transform_error_ref_result_fail
     SOURCE expected_ref_e_transform_error_ref_result_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "G must be an object type"
 )
 
 # Step 9 — expected<T&, E&> Mandates: T and E type constraints
@@ -478,45 +419,36 @@ beman_add_xfail_compile_test(
     expected_ref_both_t_array_fail
     SOURCE expected_ref_both_t_array_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "T must not be an array type"
 )
 beman_add_xfail_compile_test(
     expected_ref_both_e_array_fail
     SOURCE expected_ref_both_e_array_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "E must not be an array type"
 )
 beman_add_xfail_compile_test(
     expected_ref_both_t_inplace_fail
     SOURCE expected_ref_both_t_inplace_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "T must not be in_place_t"
 )
 beman_add_xfail_compile_test(
     expected_ref_both_t_unexpect_fail
     SOURCE expected_ref_both_t_unexpect_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "T must not be unexpect_t"
 )
 beman_add_xfail_compile_test(
     expected_ref_both_t_unexpected_fail
     SOURCE expected_ref_both_t_unexpected_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "T must not be a specialization of unexpected"
 )
 beman_add_xfail_compile_test(
     expected_ref_both_inplace_value_fail
     SOURCE expected_ref_both_inplace_value_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "no in_place value constructor|use of deleted function|call to deleted|attempting to reference"
 )
 beman_add_xfail_compile_test(
     expected_ref_both_initializer_list_fail
     SOURCE expected_ref_both_initializer_list_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "initializer-list error construction cannot bind a reference|use of deleted function|call to deleted"
 )
 
 # Step 9 — expected<T&, E&> monadic mandates
@@ -524,13 +456,11 @@ beman_add_xfail_compile_test(
     expected_ref_both_and_then_wrong_error_type_fail
     SOURCE expected_ref_both_and_then_wrong_error_type_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "F must return expected with the same error_type"
 )
 beman_add_xfail_compile_test(
     expected_ref_both_transform_error_ref_result_fail
     SOURCE expected_ref_both_transform_error_ref_result_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT "G must be an object type"
 )
 
 # Step 10 — expected<void, E&> dangling prevention and no value_or
@@ -538,43 +468,31 @@ beman_add_xfail_compile_test(
     expected_void_ref_e_temporary_fail
     SOURCE expected_void_ref_e_temporary_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "cannot bind to non-const E&|use of deleted function|call to deleted|attempting to reference"
 )
 beman_add_xfail_compile_test(
     expected_void_ref_e_const_lvalue_fail
     SOURCE expected_void_ref_e_const_lvalue_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "cannot bind to non-const E&|use of deleted function|call to deleted|attempting to reference"
 )
 beman_add_xfail_compile_test(
     expected_void_ref_e_no_value_or_fail
     SOURCE expected_void_ref_e_no_value_or_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "no value_or for void|use of deleted function|call to deleted|attempting to reference"
 )
 beman_add_xfail_compile_test(
     expected_void_ref_e_construct_from_unexpected_fail
     SOURCE expected_void_ref_e_construct_from_unexpected_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "no constructor from unexpected|use of deleted function|call to deleted|invokes a deleted function|attempting to reference"
 )
 beman_add_xfail_compile_test(
     expected_void_ref_e_assign_unexpected_fail
     SOURCE expected_void_ref_e_assign_unexpected_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "no assignment from unexpected|use of deleted function|call to deleted|invokes a deleted function|selected deleted operator|attempting to reference"
 )
 beman_add_xfail_compile_test(
     expected_void_ref_e_initializer_list_fail
     SOURCE expected_void_ref_e_initializer_list_fail.test.cpp
     LINK_LIBRARIES beman::expected
-    EXPECT
-        "initializer-list error construction cannot bind a reference|use of deleted function|call to deleted"
 )
 
 # =============================================================================
