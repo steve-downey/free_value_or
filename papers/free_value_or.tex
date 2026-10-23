@@ -197,7 +197,7 @@ independently, and this paper carries the fix for each.
 convertible to \tcode{T}. Every use therefore funnels both the contained
 value and the alternative through \tcode{T}, whether or not \tcode{T} is the
 right type for the result. The consequences are familiar: sentinels truncate
-(\tcode{optional<uint16_t>{}.value_or(-1)} is \tcode{65535}), wider
+(\tcode{optional<uint16_t>\{\}.value_or(-1)} is \tcode{65535}), wider
 alternatives narrow, and reference results are simply impossible, so
 \tcode{value_or} forces a copy even when both candidate results are
 references to long-lived objects.
@@ -260,7 +260,7 @@ to learn and one place to get the corner cases right.
 \section{The cost of the alternative}
 
 The second defect is independent of the first, and older in the committee's
-record. \tcode{o.value_or(Config{"/etc/default"})} constructs a
+record. \tcode{o.value_or(Config\{"/etc/default"\})} constructs a
 \tcode{Config} on every call and destroys it unused on every engaged one.
 The parameter is an ordinary function parameter, so the alternative is
 evaluated whether or not it is reached, and the cost is unbounded: an
