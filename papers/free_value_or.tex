@@ -260,8 +260,8 @@ to learn and one place to get the corner cases right.
 \section{The cost of the alternative}
 
 The second defect is independent of the first, and older in the committee's
-record. \tcode{o.value_or(Config\{"/etc/default"\})} constructs a
-\tcode{Config} on every call and destroys it unused on every engaged one.
+record. Passing a \tcode{Config} as the alternative constructs it on every
+call and destroys it unused on every engaged one.
 The parameter is an ordinary function parameter, so the alternative is
 evaluated whether or not it is reached, and the cost is unbounded: an
 expensive construction, an allocation, a lookup, a computation whose result
@@ -738,7 +738,7 @@ nullary invocable whose result must convert to \tcode{T}. Neither touches
 the fallback on the engaged path. \tcode{expected<void,E>} gains neither;
 there is no value to construct.
 
-Two things follow from the halves being one paper. The names do not collide:
+The names do not collide:
 \tcode{x.value_or_construct(args...)} and \tcode{or_construct<R>(m, args...)}
 are different spellings of the same model, and \tcode{x.value_or_else(f)}
 and \tcode{or_invoke(x, f)} differ in return type (see \tcode{or_invoke} and
@@ -882,10 +882,10 @@ otherwise C++20 material.
 The test suite exercises a matrix:
 
 \begin{itemize}
-\item the nullable types \tcode{std::optional<T>},
-  \tcode{std::expected<T,E>}, \tcode{T*}, \tcode{std::shared_ptr<T>},
-  \tcode{std::unique_ptr<T>}, and --- gated on a C++26 toolchain, via the
-  Beman reference implementations --- \tcode{std::optional<T\&>} and
+\item \tcode{std::optional<T>}, \tcode{std::expected<T,E>}, \tcode{T*},
+  \tcode{std::shared_ptr<T>}, and \tcode{std::unique_ptr<T>} as the
+  nullable; and, gated on a C++26 toolchain via the Beman implementations,
+  \tcode{std::optional<T\&>} and
   \tcode{std::expected<T\&,E>};
 \item engaged and disengaged;
 \item the nullable as lvalue, const lvalue, and rvalue, the rvalue cases
