@@ -285,11 +285,12 @@ the two types that have the member to grow.
 \section{Two defects, two shapes}
 
 The fixes take different shapes because the defects are of different kinds.
-The cost is a defect in the parameters, and a new member name fixes it in
-place: \tcode{value_or_construct} and \tcode{value_or_else} sit beside
+The cost of the alternative is a defect in the parameters, and a new member
+name fixes it in place: \tcode{value_or_construct} and \tcode{value_or_else} sit beside
 \tcode{value_or} on \tcode{optional} and \tcode{expected}, spelled the way
 the member they join is spelled, and nothing existing changes meaning. The
-type is a defect in the signature, and no member can fix it. The return type
+type of the answer is a defect in the signature, and no member can fix it.
+The return type
 of a member shipping since C++17 can not change. A corrected second member
 would have to coexist with the first forever, written and kept in sync by
 hand on every class that has members at all, including each smart pointer. A
