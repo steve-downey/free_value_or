@@ -186,7 +186,7 @@ Logger& l = std::reference_or(
 \tcode{std::optional<T>::value_or} answers the most common question asked of
 an optional --- ``the value, or this instead'' --- and gets two things
 wrong. It answers with the wrong type, funneling both the contained value
-and the alternative through \tcode{T}. And it pays for the alternative
+and the alternative through \tcode{T}. And it evaluates the alternative
 whether or not it is wanted, because the alternative is an ordinary function
 argument. The two defects are independent, they have been pursued
 independently, and this paper carries the fix for each.
@@ -206,8 +206,8 @@ This is not fixable in place. Changing the return type of a member function
 that has been shipping since C++17 is both an API and an ABI break, and the
 \&\&-qualified overload set compounds the problem. During the work on
 \tcode{std::optional<T\&>} \cite{P2988R12} the question was reopened in
-earnest, because for an optional reference the cost of the wrong answer is
-no longer a pessimization but a wrong program: returning \tcode{T} from
+earnest, because for an optional reference the wrong answer is a wrong
+program: returning \tcode{T} from
 \tcode{optional<T\&>::value_or} copies, returning \tcode{T\&} dangles when
 the alternative is a temporary. After extensive discussion in LEWG, P2988
 concluded that ``there is no particularly wonderful solution for
@@ -257,16 +257,17 @@ type-specific spelling of ``the value, or this instead.'' A single
 constrained free function family covers them all, with one set of semantics
 to learn and one place to get the corner cases right.
 
-\section{The cost of the alternative}
+\section{Eager evaluation of the alternative}
 
 The second defect is independent of the first, and older in the committee's
 record. Passing a \tcode{Config} as the alternative constructs it on every
 call and destroys it unused on every engaged one.
 The parameter is an ordinary function parameter, so the alternative is
-evaluated whether or not it is reached, and the cost is unbounded: an
-expensive construction, an allocation, a lookup, a computation whose result
-is thrown away. The workaround is the conditional expression the member was
-supposed to replace, and callers who care about the cost write it.
+evaluated whether or not it is reached, and what is evaluated and discarded
+is unbounded: a construction, an allocation, a lookup, a computation whose
+result is thrown away. The workaround is the conditional expression the
+member was supposed to replace, and callers who need the alternative
+deferred write it.
 
 The cure has been proposed before. \cite{P2218R0}, by Marc Mutz, proposed
 \tcode{value_or_construct}, taking the fallback's constructor arguments
@@ -285,8 +286,8 @@ the two types that have the member to grow.
 \section{Two defects, two shapes}
 
 The fixes take different shapes because the defects are of different kinds.
-The cost of the alternative is a defect in the parameters, and a new member
-name fixes it in place: \tcode{value_or_construct} and \tcode{value_or_else} sit beside
+Eager evaluation of the alternative is a defect in the parameters, and a new
+member name fixes it in place: \tcode{value_or_construct} and \tcode{value_or_else} sit beside
 \tcode{value_or} on \tcode{optional} and \tcode{expected}, spelled the way
 the member they join is spelled, and nothing existing changes meaning. The
 type of the answer is a defect in the signature, and no member can fix it.
@@ -425,8 +426,8 @@ admits them (a function pointer is contextually convertible to \tcode{bool}
 and dereferenceable), and they are then rejected only downstream, when
 \tcode{common_type} fails. We keep the concept minimal. Requiring
 \tcode{is_object_v} of the referent would move that rejection to the
-constraint, which reads better in a diagnostic, at the cost of a concept
-users can no longer reproduce from its one-line statement.
+constraint, which reads better in a diagnostic, but the concept could then
+no longer be reproduced from its one-line statement.
 
 \section{Borrowed nullables}
 
@@ -466,8 +467,7 @@ the end of the full-expression. A custom deleter that happens not to delete is
 not the lifetime guarantee on which a generic reference-returning function
 may rely. Users may still pass every one of these types as an lvalue.
 
-This rule has an ergonomic cost for an owning nullable returned by
-value. Even if the selected reference would be consumed immediately, the
+This rule is inconvenient for an owning nullable returned by value. Even if the selected reference would be consumed immediately, the
 temporary wrapper cannot promise that its referent survives the return:
 
 \begin{minted}[fontsize=\small]{c++}
@@ -518,7 +518,7 @@ The semantics a public name has to carry are stated with it: the contextual
 conversion is equality-preserving and does not modify the object; \tcode{*t}
 may be evaluated only when that conversion yields \tcode{true}; and both
 are valid on a const lvalue. Making the concept exposition-only instead would
-cost nothing but the spelling, but this paper proposes the public name.
+change nothing but the spelling, but this paper proposes the public name.
 
 \section{Return type computation}
 
@@ -579,14 +579,13 @@ do with its payload.
 
 The alternative is to compute the dereference type from \tcode{T\&}
 always, as \tcode{std::iter_reference_t} does, so that the functions
-observe and never consume. It buys a rule that fits in a sentence: the
+observe and never consume. It gives a rule that fits in a sentence: the
 result is what the lvalue conditional expression would have produced. And
 two smaller things. The return type of the value-producing functions stops
 depending on the value category of the nullable, and there is no moved-from
-path to reason about. However, it
-buys them by making every owning nullable
+path to reason about. However, it gets them by making every owning nullable
 copy a payload that is going away, which is the wrong answer stated
-uniformly. We would rather be correct and pay the ergonomics.
+uniformly. We would rather be correct and accept the inconvenience.
 
 The behavior is pinned either way. The engaged path is copy-counted for
 \tcode{optional}, \tcode{expected}, and both smart pointers, so the
@@ -656,8 +655,8 @@ library's general preference for unabbreviated names.
 \section{\tcode{or_invoke} and laziness}
 
 \tcode{value_or} and \tcode{reference_or} evaluate their alternative
-unconditionally. When it is expensive to construct, that cost is unwelcome
-on the engaged path, and the established cure is to pass a nullary invocable
+unconditionally. When it is expensive to construct, the engaged path should
+not construct it, and the established cure is to pass a nullary invocable
 that is called only when needed. \tcode{or_invoke(m, f)} returns
 \tcode{*m} converted to \tcode{R} when \tcode{m} is engaged and
 \tcode{f()} converted to \tcode{R} otherwise, with
@@ -810,8 +809,8 @@ The member half). The free half is untouched by the unification; where it
 has changed since R0, in the rvalue rule of Design, it changed for its own
 reasons.
 
-The member half fixes the \emph{cost} of the alternative and leaves the
-type alone: \tcode{optional} and \tcode{expected} each grow six functions,
+The member half makes evaluation of the alternative \emph{lazy} and leaves
+the type alone: \tcode{optional} and \tcode{expected} each grow six functions,
 all returning \tcode{T}, and pointers of any kind get nothing. The free half
 fixes the \emph{type} of the answer and its \emph{reach}. Side by side:
 
