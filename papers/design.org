@@ -1,7 +1,7 @@
-#+TITLE: D4270R1 Free Value Or Else — design notes
+#+TITLE: P4270R1 Free Value Or Else — design notes
 #+AUTHOR: Steve Downey
 
-Working notes for D4270R1. The paper source is [[file:free_value_or.tex]].
+Working notes for P4270R1. The paper source is [[file:free_value_or.tex]].
 
 * Provenance
 
@@ -31,7 +31,7 @@ Working notes for D4270R1. The paper source is [[file:free_value_or.tex]].
   value_or_construct (lazy in-place fallback, init-list overloads) and
   value_or_else (lazy callable) on optional and expected; return type stays
   T, no references, no pointers, optional<T&> deferred to P2988. Fixes the
-  *cost* of the alternative; D4270 fixes the *type* and the *reach*. Overlap
+  *cost* of the alternative; P4270 fixes the *type* and the *reach*. Overlap
   is the lazy case (value_or_else vs or_invoke) — flagged in the paper's
   "Relation to P3413R0" chapter so LEWG picks one spelling deliberately.
   Also relevant: LWG3886 (Monad mo' problems), left out of P3413.
@@ -159,7 +159,7 @@ It models nullable. These functions deliberately discard the error; an
 error-observing family is out of scope.
 
 ** yield_if / fate of P1255 — RESOLVED in R0
-P1255 is concluded; D4270 inherits its remaining deliverables (the concept
+P1255 is concluded; P4270 inherits its remaining deliverables (the concept
 and the free functions). Range optional (P3168, C++26) supplanted
 views::maybe and views::nullable — an optional IS the 0-or-1 view, and a
 pointer gets there via `p ? optional<T&>(*p) : nullopt` (P2988).

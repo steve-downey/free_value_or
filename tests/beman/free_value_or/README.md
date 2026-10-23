@@ -1,7 +1,7 @@
 # `free_value_or` test suite
 
 Tests for `beman::free_value_or` — the non-member `value_or`, `reference_or`,
-`or_invoke`, and `or_construct` family (WG21 P1255 / D4270R1). All tests use
+`or_invoke`, and `or_construct` family (WG21 P1255 / P4270R1). All tests use
 **Catch2 v3** and build at **C++23 minimum** (required by `reference_or`'s
 `reference_constructs_from_temporary_v` guards).
 
