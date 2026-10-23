@@ -270,9 +270,8 @@ member was supposed to replace, and callers who need the alternative
 deferred write it.
 
 The cure has been proposed before. \cite{P2218R0}, by Marc Mutz, proposed
-\tcode{value_or_construct}, taking the fallback's constructor arguments
-rather than a constructed fallback, so that nothing is built on the engaged
-path; it did not proceed at the time. \cite{P3413R0} revived it, added
+\tcode{value_or_construct}, taking the fallback's constructor arguments, so
+that nothing is built on the engaged path; it did not proceed at the time. \cite{P3413R0} revived it, added
 \tcode{value_or_else} for the general case of a lazily evaluated nullary
 callable, and specified both on \tcode{std::optional} and
 \tcode{std::expected}. Those members are the member half of this paper, and
@@ -558,7 +557,7 @@ conditional expression produces.
 
 The value category of the nullable reaches its payload. \tcode{deref_t<T>}
 is \tcode{decltype(*declval<T>())}, so an expiring nullable dereferences to
-an expiring payload, and the engaged path moves rather than copies:
+an expiring payload, and the engaged path moves:
 \tcode{value_or(std::move(opt), u)} matches
 \tcode{std::move(opt).value_or(u)}. The free functions do not lose the
 member's efficiency.
@@ -611,8 +610,8 @@ The common reference of two unrelated
 lvalue references need not be a reference.
 \tcode{common_reference_t<int\&, long\&>} is \tcode{long}, and
 \tcode{common_reference_t<string\&, const char(\&)[2]>} is \tcode{string};
-in such calls the common-reference computation creates a result object rather
-than selecting either source object. \tcode{reference_or} therefore mandates
+in such calls the common-reference computation creates a result object and
+selects neither source object. \tcode{reference_or} therefore mandates
 that its result type is a reference. Calls whose common reference is a value
 are ill-formed and should use \tcode{value_or}; a function named for reference
 semantics does not silently copy.
@@ -626,7 +625,7 @@ static_assert(
     !std::reference_constructs_from_temporary_v<R, deref_t<T>>);
 \end{minted}
 
-These checks complement, rather than replace, \tcode{borrowed_nullable}.
+These checks complement \tcode{borrowed_nullable}.
 The first rejects the alternative materializing a temporary: in
 \tcode{reference_or(opt, 0)} the computed common reference of \tcode{int\&}
 and \tcode{int\&\&} is \tcode{const int\&}, which would bind to a temporary
@@ -751,8 +750,7 @@ its own, and the wording says so.
 
 \section{Why not customization point objects}
 
-These are ordinary function templates rather than customization point
-objects. There is nothing to customize: the semantics are fully determined
+These are ordinary function templates. There is nothing to customize: the semantics are fully determined
 by the protocol, and a type that wants different behavior for ``value or
 default'' wants something other than \tcode{nullable}. The usual
 argument for a CPO, dispatching to a type's own implementation, is
@@ -853,8 +851,7 @@ a temporary.
 no address and extend no lifetime; \tcode{reference_or}'s result always
 refers to an object that existed before the call. The second guard is stated
 on \tcode{deref_t<T>}, the type \tcode{*m} yields; stated on
-\tcode{T\&} it would name the nullable rather than its payload, and could
-never fire. The rejected cases are those where the core language would
+\tcode{T\&} it would test the nullable itself, and could never fire. The rejected cases are those where the core language would
 have materialized a temporary: a prvalue alternative whose common reference
 with the dereference type is a const reference
 (\tcode{reference_or(opt, 0)}), and conversions of the contained value
@@ -890,7 +887,7 @@ The test suite exercises a matrix:
 \item engaged and disengaged;
 \item the nullable as lvalue, const lvalue, and rvalue, the rvalue cases
   copy- and move-counted on the engaged path, so that dereference behavior is
-  pinned rather than assumed;
+  pinned;
 \item the alternative as lvalue and rvalue, and mixed-type combinations;
 \item constant evaluation of all four functions;
 \item laziness of \tcode{or_invoke} and \tcode{or_construct}, and
