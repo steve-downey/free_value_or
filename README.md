@@ -64,7 +64,6 @@ You can disable building tests by setting CMake option `BEMAN_FREE_VALUE_OR_BUIL
 | GCC        | 16-13   | C++26-C++17   | libstdc++         |
 | Clang      | 22-19   | C++26-C++17   | libstdc++, libc++ |
 | Clang      | 18      | C++26-C++17   | libc++            |
-| Clang      | 18      | C++23-C++17   | libstdc++         |
 | AppleClang | latest  | C++26-C++17   | libc++            |
 | MSVC       | latest  | C++23         | MSVC STL          |
 
@@ -72,6 +71,10 @@ GCC 12 and earlier lack the `__reference_constructs_from_temporary` builtin. Cla
 is excluded by the vendored `beman::optional` test suite, which needs range adaptors
 (`std::views::join`) that libc++ 17 does not provide; nothing in `free_value_or` itself
 requires it.
+
+Clang 18 is tested against libc++ only. The CI images now pair it with libstdc++ 16,
+whose headers Clang 18 cannot parse, so that combination fails inside the standard
+library before reaching any code here.
 
 The MSVC row is C++23 only, and the `msvc-debug` / `msvc-release` presets configure at
 C++23 rather than inheriting the C++20 default the other presets use. Below C++23 the
