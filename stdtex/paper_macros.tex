@@ -4,6 +4,17 @@
 \renewcommand{\iref}[1]{}
 \renewcommand{\indexhdr}[1]{}
 
+%% Author contact address: typeset after the name as a mailto link, but
+%% omitted from the PDF Author metadata that hyperref's pdfusetitle
+%% extracts from \author. It supplies its own leading space, so write it
+%% directly after the name, and end lines inside \author with %: a stray
+%% space before it, \\, or \and leaks into the metadata.
+%%   \author{%
+%%     Jane Roe\authoremail{jr@example.com}\\%
+%%     John Doe\authoremail{jd@example.com}%
+%%   }
+\newcommand{\authoremail}[1]{\texorpdfstring{ \small<\href{mailto:#1}{#1}>}{}}
+
 \usepackage{amssymb,graphicx,stackengine,xcolor}
 \protected\def\ucr{\scalebox{1}{\stackinset{c}{}{c}{-.2pt}{%
       \textcolor{white}{\sffamily\bfseries\small ?}}{%
