@@ -3,7 +3,7 @@
 //
 // NEGATIVE: expected<bool, E> cannot be constructed from expected<U, G> via
 // the value ctor when the converting ctor is not viable.
-// EXPECT: "no matching function"
+// EXPECT: "no matching function|no matching constructor|no overloaded function could convert"
 //
 // Constraint 23.6: if T is cv bool, remove_cvref_t<U> must not be a
 // specialization of expected. This blocks the value ctor from selecting

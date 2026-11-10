@@ -2,7 +2,8 @@
 // NEGATIVE: expected<void, E&> cannot be assigned from unexpected<G>.
 // No operator=(unexpected<G>...) exists: binding E& to temporary unexpected
 // storage would create a dangling reference.
-// EXPECT: "no matching function"
+// EXPECT: "no assignment from unexpected|use of deleted function|call to deleted|invokes a deleted function"
+// EXPECT: "selected deleted operator|attempting to reference"
 #include <beman/expected/expected.hpp>
 using namespace beman::expected;
 void test() {

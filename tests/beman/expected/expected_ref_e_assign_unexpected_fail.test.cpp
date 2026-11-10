@@ -3,7 +3,8 @@
 // No operator=(unexpected<G>...) exists: binding E& to temporary unexpected
 // storage would create a dangling reference. Use copy-assign from another
 // expected<T, E&> to rebind the error reference safely.
-// EXPECT: "no matching function"
+// EXPECT: "no assignment from unexpected|use of deleted function|call to deleted|selected deleted operator"
+// EXPECT: "attempting to reference"
 #include <beman/expected/expected.hpp>
 using namespace beman::expected;
 void test() {

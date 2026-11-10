@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Negative compile test: binding a temporary to T& in expected<T&, E&> must fail.
+// NEGATIVE: binding a temporary to T& in expected<T&, E&> must fail
+// EXPECT: "binding a temporary to T& creates a dangling reference|use of deleted function|call to deleted"
+// EXPECT: "no matching function|no matching constructor|no overloaded function could convert|attempting to reference"
 #include <beman/expected/expected.hpp>
 
 using namespace beman::expected;

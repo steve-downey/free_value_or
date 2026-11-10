@@ -167,6 +167,60 @@ TEST_CASE("rebinding assignment from unexpected<E&> repoints the error reference
     }
 }
 
+// The const& constructor and assignment overloads are separate from the &&
+// overloads exercised above. For reference E they behave identically — the
+// stored reference is rebound to the source's external referent either way —
+// but they are only selected when the source unexpected is an lvalue.
+
+TEST_CASE("reference-error construction from a const unexpected<E&> lvalue", "[ref][unexpected]") {
+    int                    err = 41;
+    const unexpected<int&> u(err);
+
+    expected<void, int&> a{u};
+    expected<int, int&>  b{u};
+    expected<int&, int&> c{u};
+
+    REQUIRE(&a.error() == &err);
+    REQUIRE(&b.error() == &err);
+    REQUIRE(&c.error() == &err);
+
+    err = 99;
+    REQUIRE(a.error() == 99);
+    REQUIRE(b.error() == 99);
+    REQUIRE(c.error() == 99);
+}
+
+TEST_CASE("rebinding assignment from a const unexpected<E&> lvalue", "[ref][unexpected][assign]") {
+    int                    g1 = 1, g2 = 2;
+    const unexpected<int&> u(g2);
+
+    SECTION("error -> error rebind (expected<int, int&>)") {
+        expected<int, int&> e{unexpect, g1};
+        e = u;
+        REQUIRE(&e.error() == &g2);
+        REQUIRE(g1 == 1); // previously-referenced object untouched
+    }
+    SECTION("value -> error transition (expected<int, int&>)") {
+        expected<int, int&> e{7};
+        e = u;
+        REQUIRE_FALSE(e.has_value());
+        REQUIRE(&e.error() == &g2);
+    }
+    SECTION("both references (expected<int&, int&>)") {
+        int                  target = 5;
+        expected<int&, int&> e{target};
+        e = u;
+        REQUIRE_FALSE(e.has_value());
+        REQUIRE(&e.error() == &g2);
+    }
+    SECTION("void value (expected<void, int&>)") {
+        expected<void, int&> e{};
+        e = u;
+        REQUIRE_FALSE(e.has_value());
+        REQUIRE(&e.error() == &g2);
+    }
+}
+
 // =============================================================================
 // F4 / F5 — value constructor and emplace are noexcept only when the reference
 // bind cannot throw, so a throwing conversion propagates instead of terminating.

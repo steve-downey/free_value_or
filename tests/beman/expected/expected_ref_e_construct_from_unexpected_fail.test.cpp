@@ -3,7 +3,8 @@
 // A value-typed unexpected<G> stores G by value; binding E& to it would create a
 // dangling reference when the unexpected object is destroyed. Construction from a
 // reference-typed unexpected<G&> (which holds an external object) is allowed.
-// EXPECT: "no matching function"
+// EXPECT: "no constructor from unexpected|use of deleted function|call to deleted|invokes a deleted function"
+// EXPECT: "attempting to reference"
 #include <beman/expected/expected.hpp>
 using namespace beman::expected;
 void test() {

@@ -1,5 +1,6 @@
 // tests/beman/expected/value_or_construct_bad_init_list_fail.test.cpp  -*-C++-*-
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// EXPECT: "value_or_construct requires is_constructible_v<T, initializer_list<U>&, Args\.\.\.>"
 
 #include <beman/expected/expected.hpp>
 

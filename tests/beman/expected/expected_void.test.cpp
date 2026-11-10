@@ -106,12 +106,29 @@ TEST_CASE("expected<void>: convert from expected<void, G> with error", "[expecte
     CHECK(dst.error() == 7L);
 }
 
+// The rvalue converting constructor is a distinct overload: it moves out of the
+// source's error rather than copying it.
+TEST_CASE("expected<void>: convert from expected<void, G>&& with value", "[expected_void]") {
+    expected<void, int>  src;
+    expected<void, long> dst = std::move(src);
+    CHECK(dst.has_value());
+}
+
+TEST_CASE("expected<void>: convert from expected<void, G>&& with error", "[expected_void]") {
+    expected<void, int>  src(unexpect, 7);
+    expected<void, long> dst = std::move(src);
+    REQUIRE(!dst.has_value());
+    CHECK(dst.error() == 7L);
+}
+
 // --- Constructor from unexpected<G> ---
 
 TEST_CASE("expected<void>: construct from unexpected const&", "[expected_void]") {
-    expected<void, std::string> e = unexpected<std::string>("fail");
+    const unexpected<std::string> u("fail");
+    expected<void, std::string>   e = u;
     REQUIRE(!e.has_value());
     CHECK(e.error() == "fail");
+    CHECK(u.error() == "fail"); // copied, not moved from
 }
 
 TEST_CASE("expected<void>: construct from unexpected&&", "[expected_void]") {
@@ -195,6 +212,24 @@ TEST_CASE("expected<void>: copy assign error-to-error", "[expected_void]") {
     CHECK(a.error() == 2);
 }
 
+// With a non-trivial E the non-trivial copy assignment is selected, and the
+// mixed-state cases are the ones that construct or destroy the error.
+TEST_CASE("expected<void>: copy assign error-to-value (non-trivial E)", "[expected_void]") {
+    expected<void, std::string>       a;
+    const expected<void, std::string> b(unexpect, "err");
+    a = b;
+    REQUIRE(!a.has_value());
+    CHECK(a.error() == "err");
+    CHECK(b.error() == "err");
+}
+
+TEST_CASE("expected<void>: copy assign value-to-error (non-trivial E)", "[expected_void]") {
+    expected<void, std::string>       a(unexpect, "err");
+    const expected<void, std::string> b;
+    a = b;
+    CHECK(a.has_value());
+}
+
 // --- Move assignment ---
 
 TEST_CASE("expected<void>: move assignment is noexcept", "[expected_void]") {
@@ -221,6 +256,26 @@ TEST_CASE("expected<void>: assign from unexpected when already error", "[expecte
     expected<void, int> e(unexpect, 1);
     e = unexpected(2);
     CHECK(e.error() == 2);
+}
+
+// The const& assignment operator is a distinct overload from the && one above:
+// it copies the source's error instead of moving it.
+TEST_CASE("expected<void>: assign from unexpected const& when value", "[expected_void]") {
+    const unexpected<std::string> u("copied");
+    expected<void, std::string>   e;
+    e = u;
+    REQUIRE(!e.has_value());
+    CHECK(e.error() == "copied");
+    CHECK(u.error() == "copied");
+}
+
+TEST_CASE("expected<void>: assign from unexpected const& when already error", "[expected_void]") {
+    const unexpected<std::string> u("second");
+    expected<void, std::string>   e(unexpect, "first");
+    e = u;
+    REQUIRE(!e.has_value());
+    CHECK(e.error() == "second");
+    CHECK(u.error() == "second");
 }
 
 // --- emplace() ---
@@ -313,6 +368,13 @@ TEST_CASE("expected<void>: rvalue value() throws on error", "[expected_void]") {
     REQUIRE_THROWS_AS(std::move(e).value(), bad_expected_access<int>);
 }
 
+TEST_CASE("expected<void>: rvalue value() on success is no-op", "[expected_void]") {
+    expected<void, int> e;
+    CHECK(type_name<decltype(std::move(e).value())>() == type_name<void>());
+    std::move(e).value(); // should not throw
+    CHECK(e.has_value());
+}
+
 // --- error() ---
 
 TEST_CASE("expected<void>: error() all ref qualifications", "[expected_void]") {
@@ -333,6 +395,16 @@ TEST_CASE("expected<void>: error_or with value", "[expected_void]") {
 TEST_CASE("expected<void>: error_or with error", "[expected_void]") {
     expected<void, int> e(unexpect, 7);
     CHECK(e.error_or(0) == 7);
+}
+
+TEST_CASE("expected<void>: rvalue error_or with error moves the error", "[expected_void]") {
+    expected<void, std::string> e(unexpect, "held");
+    CHECK(std::move(e).error_or("fallback") == "held");
+}
+
+TEST_CASE("expected<void>: rvalue error_or with value uses the default", "[expected_void]") {
+    expected<void, std::string> e;
+    CHECK(std::move(e).error_or("fallback") == "fallback");
 }
 
 // =============================================================================
