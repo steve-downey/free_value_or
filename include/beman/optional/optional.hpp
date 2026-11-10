@@ -404,7 +404,7 @@ class optional {
      */
     template <class U>
     constexpr explicit(!std::is_convertible_v<U, T>) optional(optional<U>&& rhs)
-        requires(detail::enable_from_other<T, U, U &&>);
+        requires(detail::enable_from_other<T, U, U&&>);
 
     // \ref{optional.dtor}, destructor
     /**
@@ -924,7 +924,7 @@ inline constexpr optional<T>::optional(const optional<U>& rhs)
 template <class T>
 template <class U>
 inline constexpr optional<T>::optional(optional<U>&& rhs)
-    requires(detail::enable_from_other<T, U, U &&>)
+    requires(detail::enable_from_other<T, U, U&&>)
 {
     if (rhs.has_value()) {
         construct(*std::move(rhs));
