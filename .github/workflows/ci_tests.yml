@@ -34,6 +34,10 @@ jobs:
           {"preset": "msvc-release", "runner": "windows-latest"}
         ]
 
+  # No Release.TSan for now: inside the Beman containers ThreadSanitizer
+  # aborts before any test runs ("unable to disable ASLR"), on main too.
+  # Tracked as bemanproject/infra-workflows#44; restore it in both the gcc
+  # and clang lists when that is fixed.
   build-and-test:
     uses: bemanproject/infra-workflows/.github/workflows/reusable-beman-build-and-test.yml@1.7.3
     with:
@@ -46,7 +50,7 @@ jobs:
                   "tests": [
                     { "stdlibs": ["libstdc++"],
                       "tests": [
-                        "Debug.Default", "Release.Default", "Release.TSan",
+                        "Debug.Default", "Release.Default",
                         "Release.MaxSan", "Debug.Werror",
                         "Debug.Coverage", "Debug.-DBEMAN_FREE_VALUE_OR_USE_MODULES=On"
                       ]
@@ -98,7 +102,7 @@ jobs:
                   "tests": [
                     { "stdlibs": ["libstdc++", "libc++"],
                       "tests": [
-                        "Debug.Default", "Release.Default", "Release.TSan",
+                        "Debug.Default", "Release.Default",
                         "Release.MaxSan", "Debug.Werror",
                         "Debug.-DBEMAN_FREE_VALUE_OR_USE_MODULES=On"
                       ]
