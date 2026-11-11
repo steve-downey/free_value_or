@@ -10,6 +10,7 @@
 #include "testing/types.hpp"
 
 #include <string>
+#include <type_traits>
 #include <utility>
 
 using namespace test_ns;
@@ -338,6 +339,85 @@ TEST_CASE("transform_error const rvalue on error calls F", "[expected_void_monad
     auto                      r = std::move(e).transform_error([](int v) { return v + 1; });
     REQUIRE(!r.has_value());
     CHECK(r.error() == 4);
+}
+
+// --- Monadic: const lvalue overloads ---
+// Distinct from the const rvalue overloads above: these invoke F with a
+// `const E&` drawn from a const lvalue expected, without moving out of it.
+
+TEST_CASE("or_else const lvalue on error calls F", "[expected_void_monadic]") {
+    const expected<void, int> e(unexpect, 5);
+    auto                      r = e.or_else([](const int& v) -> expected<void, int> { return unexpected(v + 1); });
+    REQUIRE(!r.has_value());
+    CHECK(r.error() == 6);
+    CHECK(e.error() == 5);
+}
+
+TEST_CASE("or_else const lvalue on value short-circuits", "[expected_void_monadic]") {
+    const expected<void, int> e;
+    bool                      called = false;
+    auto                      r      = e.or_else([&](const int&) -> expected<void, int> {
+        called = true;
+        return unexpected(0);
+    });
+    CHECK(!called);
+    REQUIRE(r.has_value());
+}
+
+TEST_CASE("transform const lvalue on value calls F", "[expected_void_monadic]") {
+    const expected<void, int> e;
+    auto                      r = e.transform([]() { return 42; });
+    REQUIRE(r.has_value());
+    CHECK(*r == 42);
+}
+
+TEST_CASE("transform const lvalue on error short-circuits", "[expected_void_monadic]") {
+    const expected<void, int> e(unexpect, 9);
+    bool                      called = false;
+    auto                      r      = e.transform([&]() {
+        called = true;
+        return 0;
+    });
+    CHECK(!called);
+    REQUIRE(!r.has_value());
+    CHECK(r.error() == 9);
+}
+
+TEST_CASE("transform const lvalue with void result", "[expected_void_monadic]") {
+    const expected<void, int> e;
+    int                       count = 0;
+    auto                      r     = e.transform([&]() { ++count; });
+    CHECK(count == 1);
+    REQUIRE(r.has_value());
+    CHECK(type_name<decltype(r)>() == type_name<expected<void, int>>());
+}
+
+TEST_CASE("transform const lvalue with void result on error", "[expected_void_monadic]") {
+    const expected<void, int> e(unexpect, 4);
+    int                       count = 0;
+    auto                      r     = e.transform([&]() { ++count; });
+    CHECK(count == 0);
+    REQUIRE(!r.has_value());
+    CHECK(r.error() == 4);
+}
+
+TEST_CASE("transform_error const lvalue on error calls F", "[expected_void_monadic]") {
+    const expected<void, int> e(unexpect, 3);
+    auto                      r = e.transform_error([](const int& v) { return v * 2; });
+    REQUIRE(!r.has_value());
+    CHECK(r.error() == 6);
+    CHECK(e.error() == 3);
+}
+
+TEST_CASE("transform_error const lvalue on value short-circuits", "[expected_void_monadic]") {
+    const expected<void, int> e;
+    bool                      called = false;
+    auto                      r      = e.transform_error([&](const int& v) {
+        called = true;
+        return v;
+    });
+    CHECK(!called);
+    REQUIRE(r.has_value());
 }
 
 // ---------------------------------------------------------------------------

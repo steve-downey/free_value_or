@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// Negative compile test: expected<T&, E&> has no default constructor.
+// NEGATIVE: expected<T&, E&> has no default constructor
+// EXPECT: "no default constructor|use of deleted function|call to deleted|attempting to reference"
 #include <beman/expected/expected.hpp>
 
 using namespace beman::expected;

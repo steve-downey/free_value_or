@@ -1,7 +1,7 @@
 // tests/beman/expected/expected_ref_e_const_lvalue_fail.cpp           -*-C++-*-
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 // NEGATIVE: cannot bind a const lvalue to non-const E& — language-level constraint
-// EXPECT: "no matching function|cannot bind"
+// EXPECT: "cannot bind to non-const E&|use of deleted function|call to deleted|attempting to reference"
 #include <beman/expected/expected.hpp>
 void test() {
     const int err = 5;

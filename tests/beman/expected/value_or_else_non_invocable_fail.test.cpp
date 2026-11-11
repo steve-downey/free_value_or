@@ -1,5 +1,6 @@
 // tests/beman/expected/value_or_else_non_invocable_fail.test.cpp       -*-C++-*-
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// EXPECT: "invoke_result|no type named.*type|not invocable"
 
 #include <beman/expected/expected.hpp>
 

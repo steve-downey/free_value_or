@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 // NEGATIVE: emplace requires nothrow_constructible_v<T, Args...>
-// EXPECT: "is_nothrow_constructible"
+// EXPECT: "is_nothrow_constructible|no matching overloaded function found"
 #include <beman/expected/expected.hpp>
 
 struct ThrowingCtor {

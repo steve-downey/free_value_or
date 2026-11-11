@@ -87,3 +87,42 @@ TEST_CASE("trivial SMFs: expected<void,int> is trivially copyable", "[trivial]")
     CHECK(!b.has_value());
     CHECK(b.error() == 7);
 }
+
+// ---------------------------------------------------------------------------
+// A trivially movable, non-copyable E: no copy assignment is eligible
+// ---------------------------------------------------------------------------
+
+namespace {
+struct MoveOnly {
+    MoveOnly()                           = default;
+    MoveOnly(const MoveOnly&)            = delete;
+    MoveOnly(MoveOnly&&)                 = default;
+    MoveOnly& operator=(const MoveOnly&) = delete;
+    MoveOnly& operator=(MoveOnly&&)      = default;
+};
+} // namespace
+
+// Neither the trivial nor the non-trivial copy assignment is satisfied for a
+// move-only E. The class is still trivially copyable -- [class.prop] counts
+// only eligible members -- but clang said otherwise until a deleted candidate
+// was added for this case (see the note after the primary template).
+TEST_CASE("trivial SMFs: a trivially movable, non-copyable E stays trivially copyable", "[trivial]") {
+    int i = 0;
+    CHECK(std::is_trivially_copyable_v<expected<int, MoveOnly>>);
+    CHECK(std::is_trivially_copyable_v<expected<void, MoveOnly>>);
+    CHECK(std::is_trivially_copyable_v<expected<int&, MoveOnly>>);
+    CHECK_FALSE(std::is_copy_assignable_v<expected<int, MoveOnly>>);
+    CHECK_FALSE(std::is_copy_assignable_v<expected<void, MoveOnly>>);
+    CHECK_FALSE(std::is_copy_assignable_v<expected<int&, MoveOnly>>);
+
+    expected<int, MoveOnly> a(42);
+    expected<int, MoveOnly> b(unexpect);
+    b = std::move(a);
+    CHECK(b.has_value());
+    CHECK(*b == 42);
+
+    expected<int&, MoveOnly> r(i);
+    expected<int&, MoveOnly> s(unexpect);
+    s = std::move(r);
+    CHECK(&*s == &i);
+}
