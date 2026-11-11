@@ -78,6 +78,8 @@ $(DEPS_DIR):
 .PHONY: papers
 papers: example-paper.pdf ## Compile papers
 
+export TEXINPUTS=.//:
+export BIBINPUTS=.//:
 %.pdf : %.tex $(DEPS_DIR) | $(VENV)
 	$(SOURCE_VENV) latexmk -f -shell-escape -pdflua -use-make -deps -deps-out=$(DEPS_DIR)/$@.d -MP $<
 
